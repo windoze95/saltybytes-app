@@ -1,0 +1,41 @@
+name: saltybytes_app
+description: SaltyBytes - AI-powered recipe platform
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.0
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  go_router: ^14.8.1
+  dio: ^5.7.0
+  web_socket_channel: ^3.0.2
+  flutter_secure_storage: ^9.2.4
+  image_picker: ^1.1.2
+  image_cropper: ^8.0.2
+  flutter_image_compress: ^2.3.0
+  speech_to_text: ^7.0.0
+  wakelock_plus: ^1.2.8
+  card_swiper: ^3.0.1
+  json_annotation: ^4.9.0
+  freezed_annotation: ^2.4.4
+  cached_network_image: ^3.4.1
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.14
+  freezed: ^2.5.8
+  json_serializable: ^6.9.3
+  riverpod_generator: ^2.6.3
+
+flutter:
+  uses-material-design: true
