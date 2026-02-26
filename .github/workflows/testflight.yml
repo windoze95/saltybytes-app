@@ -1,4 +1,4 @@
-name: frontend-testflight
+name: testflight
 
 on:
   workflow_dispatch:
