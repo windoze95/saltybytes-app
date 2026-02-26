@@ -47,6 +47,14 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SaltyBytes uses the microphone for voice commands during cooking mode, so you can navigate recipes hands-free.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SaltyBytes uses speech recognition to understand your voice commands while cooking.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>SaltyBytes uses the camera to scan recipe photos and import them into your collection.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SaltyBytes accesses your photo library to import recipe images.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
