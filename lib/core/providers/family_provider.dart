@@ -33,6 +33,10 @@ class FamilyNotifier extends AsyncNotifier<models.Family?> {
       return models.Family.fromJson(data[0] as Map<String, dynamic>);
     }
     if (data is Map<String, dynamic>) {
+      // Backend returns {"family": null} when no family exists
+      if (data.containsKey('family') && data['family'] == null) {
+        return null;
+      }
       if (data['families'] is List) {
         final families = data['families'] as List;
         if (families.isNotEmpty) {
