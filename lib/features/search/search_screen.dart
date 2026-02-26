@@ -31,21 +31,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
-  Future<void> _importResult(WebSearchResult result) async {
-    try {
-      final recipe = await ref.read(searchProvider.notifier).importResult(result);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Imported "${recipe.title}"!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to import: $e')),
-        );
-      }
-    }
+  void _previewResult(WebSearchResult result) {
+    context.push('/search/preview', extra: result);
   }
 
   @override
@@ -148,7 +135,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       itemBuilder: (context, index) {
         return _SearchResultCard(
           result: searchState.results[index],
-          onImport: () => _importResult(searchState.results[index]),
+          onTap: () => _previewResult(searchState.results[index]),
         );
       },
       layout: SwiperLayout.STACK,
@@ -161,17 +148,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 class _SearchResultCard extends StatelessWidget {
   const _SearchResultCard({
     required this.result,
-    required this.onImport,
+    required this.onTap,
   });
 
   final WebSearchResult result;
-  final VoidCallback onImport;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
       elevation: 4,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,13 +273,13 @@ class _SearchResultCard extends StatelessWidget {
 
                   const Spacer(),
 
-                  // Import button
+                  // Preview button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: onImport,
-                      icon: const Icon(Icons.download, size: 18),
-                      label: const Text('Import Recipe'),
+                      onPressed: onTap,
+                      icon: const Icon(Icons.visibility, size: 18),
+                      label: const Text('Preview Recipe'),
                     ),
                   ),
                 ],
@@ -299,6 +288,7 @@ class _SearchResultCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

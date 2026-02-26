@@ -33,6 +33,9 @@ class ApiEndpoints {
   static const String importFromText = '$apiVersion/recipes/import/text';
   static const String importManual = '$apiVersion/recipes/import/manual';
 
+  // Recipe Preview
+  static const String previewFromUrl = '$apiVersion/recipes/preview/url';
+
   // Allergens
   static String allergenAnalysis(String recipeId) =>
       '$apiVersion/recipes/$recipeId/allergens';

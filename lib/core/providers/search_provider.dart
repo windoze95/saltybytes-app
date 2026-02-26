@@ -45,6 +45,124 @@ class WebSearchResult {
   }
 }
 
+class RecipePreview {
+  const RecipePreview({
+    required this.title,
+    this.ingredients = const [],
+    this.instructions = const [],
+    this.cookTime,
+    this.portions,
+    this.portionSize,
+    this.sourceUrl,
+    this.hashtags = const [],
+    this.imagePrompt,
+    this.linkedSuggestions = const [],
+  });
+
+  final String title;
+  final List<PreviewIngredient> ingredients;
+  final List<String> instructions;
+  final int? cookTime;
+  final int? portions;
+  final String? portionSize;
+  final String? sourceUrl;
+  final List<String> hashtags;
+  final String? imagePrompt;
+  final List<String> linkedSuggestions;
+
+  String? get sourceDomain {
+    if (sourceUrl == null) return null;
+    try {
+      return Uri.parse(sourceUrl!).host.replaceFirst('www.', '');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  factory RecipePreview.fromJson(Map<String, dynamic> json) {
+    return RecipePreview(
+      title: json['title'] as String? ?? 'Untitled',
+      ingredients: (json['ingredients'] as List?)
+              ?.map(
+                (e) => PreviewIngredient.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
+      instructions: (json['instructions'] as List?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      cookTime: json['cook_time'] as int?,
+      portions: json['portions'] as int?,
+      portionSize: json['portion_size'] as String?,
+      sourceUrl: json['source_url'] as String?,
+      hashtags: (json['hashtags'] as List?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      imagePrompt: json['image_prompt'] as String?,
+      linkedSuggestions: (json['linked_recipe_suggestions'] as List?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, dynamic> toManualImportJson() {
+    return {
+      'title': title,
+      'ingredients': ingredients
+          .map((i) => {
+                'name': i.name,
+                'unit': i.unit,
+                'amount': i.amount,
+              })
+          .toList(),
+      'instructions': instructions,
+      'cook_time': cookTime ?? 0,
+      'portions': portions ?? 0,
+      'portion_size': portionSize ?? '',
+      'hashtags': hashtags,
+      if (sourceUrl != null) 'source_url': sourceUrl,
+    };
+  }
+}
+
+class PreviewIngredient {
+  const PreviewIngredient({
+    required this.name,
+    this.unit,
+    this.amount,
+  });
+
+  final String name;
+  final String? unit;
+  final double? amount;
+
+  factory PreviewIngredient.fromJson(Map<String, dynamic> json) {
+    return PreviewIngredient(
+      name: json['name'] as String? ?? '',
+      unit: json['unit'] as String?,
+      amount: (json['amount'] as num?)?.toDouble(),
+    );
+  }
+
+  String get displayText {
+    final parts = <String>[];
+    if (amount != null && amount! > 0) {
+      // Format as integer if whole number
+      parts.add(amount! == amount!.roundToDouble()
+          ? amount!.toInt().toString()
+          : amount.toString());
+    }
+    if (unit != null && unit!.isNotEmpty) {
+      parts.add(unit!);
+    }
+    parts.add(name);
+    return parts.join(' ');
+  }
+}
+
 class SearchState {
   const SearchState({
     this.query = '',
@@ -126,6 +244,26 @@ class SearchNotifier extends StateNotifier<SearchState> {
         error: e.toString(),
       );
     }
+  }
+
+  Future<RecipePreview> previewResult(WebSearchResult result) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.previewFromUrl,
+      data: {'url': result.sourceUrl},
+    );
+    final data = response.data as Map<String, dynamic>;
+    final recipe = data['recipe'] as Map<String, dynamic>;
+    return RecipePreview.fromJson(recipe);
+  }
+
+  Future<Recipe> importPreview(RecipePreview preview) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.importManual,
+      data: preview.toManualImportJson(),
+    );
+    final data = response.data as Map<String, dynamic>;
+    final recipe = data['recipe'] as Map<String, dynamic>;
+    return Recipe.fromJson(recipe);
   }
 
   Future<Recipe> importResult(WebSearchResult result) async {

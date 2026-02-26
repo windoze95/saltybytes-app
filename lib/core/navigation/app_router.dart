@@ -19,7 +19,9 @@ import '../../features/recipe/recipe_branches_screen.dart';
 import '../../features/recipe/recipe_detail_screen.dart';
 import '../../features/recipe/recipe_edit_screen.dart';
 import '../../features/recipe/recipe_fork_screen.dart';
+import '../../features/search/search_preview_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../providers/search_provider.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/subscription_screen.dart';
 import '../providers/auth_provider.dart';
@@ -82,6 +84,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SettingsScreen(),
           ),
         ],
+      ),
+
+      // Search preview route (outside shell for full-screen)
+      GoRoute(
+        path: '/search/preview',
+        name: 'search-preview',
+        builder: (context, state) {
+          final searchResult = state.extra as WebSearchResult;
+          return SearchPreviewScreen(searchResult: searchResult);
+        },
       ),
 
       // Recipe detail routes (outside shell for full-screen)
