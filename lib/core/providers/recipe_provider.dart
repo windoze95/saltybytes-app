@@ -105,7 +105,9 @@ final recipeDetailProvider =
     FutureProvider.family<Recipe, String>((ref, id) async {
   final apiClient = ref.watch(apiClientProvider);
   final response = await apiClient.get(ApiEndpoints.recipeById(id));
-  return Recipe.fromJson(response.data as Map<String, dynamic>);
+  final data = response.data as Map<String, dynamic>;
+  final recipe = data['recipe'] as Map<String, dynamic>;
+  return Recipe.fromJson(recipe);
 });
 
 // Recipe CRUD operations
@@ -123,7 +125,9 @@ class RecipeCrud {
       ApiEndpoints.recipes,
       data: recipe.toJson(),
     );
-    return Recipe.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data as Map<String, dynamic>;
+    return Recipe.fromJson(
+        data.containsKey('recipe') ? data['recipe'] as Map<String, dynamic> : data);
   }
 
   Future<Recipe> update(Recipe recipe) async {
@@ -131,7 +135,9 @@ class RecipeCrud {
       ApiEndpoints.recipeById(recipe.id),
       data: recipe.toJson(),
     );
-    return Recipe.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data as Map<String, dynamic>;
+    return Recipe.fromJson(
+        data.containsKey('recipe') ? data['recipe'] as Map<String, dynamic> : data);
   }
 
   Future<void> delete(String id) async {
@@ -143,7 +149,9 @@ class RecipeCrud {
       ApiEndpoints.recipeFork(recipeId),
       data: branchName != null ? {'branch': branchName} : null,
     );
-    return Recipe.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data as Map<String, dynamic>;
+    return Recipe.fromJson(
+        data.containsKey('recipe') ? data['recipe'] as Map<String, dynamic> : data);
   }
 
   Future<Recipe> importFromUrl(String url) async {
@@ -151,6 +159,8 @@ class RecipeCrud {
       ApiEndpoints.importFromUrl,
       data: {'url': url},
     );
-    return Recipe.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data as Map<String, dynamic>;
+    return Recipe.fromJson(
+        data.containsKey('recipe') ? data['recipe'] as Map<String, dynamic> : data);
   }
 }
