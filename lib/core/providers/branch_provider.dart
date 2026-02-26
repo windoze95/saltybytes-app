@@ -7,7 +7,7 @@ import '../network/api_endpoints.dart';
 final recipeBranchesProvider =
     FutureProvider.family<List<RecipeNode>, String>((ref, recipeId) async {
   final apiClient = ref.watch(apiClientProvider);
-  final response = await apiClient.get(ApiEndpoints.recipeVersions(recipeId));
+  final response = await apiClient.get(ApiEndpoints.recipeTree(recipeId));
 
   final data = response.data;
   if (data is Map<String, dynamic> && data['nodes'] is List) {

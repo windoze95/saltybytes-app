@@ -41,7 +41,7 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.post(
-        ApiEndpoints.importRecipe,
+        ApiEndpoints.importFromText,
         data: {'text': text},
       );
 

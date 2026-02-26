@@ -147,7 +147,7 @@ final searchSuggestionsProvider =
 
   final apiClient = ref.watch(apiClientProvider);
   final response = await apiClient.get(
-    ApiEndpoints.searchSuggestions,
+    ApiEndpoints.search,
     queryParameters: {'q': query},
   );
 

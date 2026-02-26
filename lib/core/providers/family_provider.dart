@@ -26,7 +26,7 @@ class FamilyNotifier extends AsyncNotifier<models.Family?> {
   }
 
   Future<models.Family?> _fetchFamily() async {
-    final response = await _apiClient.get(ApiEndpoints.families);
+    final response = await _apiClient.get(ApiEndpoints.family);
     final data = response.data;
 
     if (data is List && data.isNotEmpty) {
@@ -58,7 +58,7 @@ class FamilyNotifier extends AsyncNotifier<models.Family?> {
     if (family == null) throw Exception('No family loaded');
 
     final response = await _apiClient.post(
-      ApiEndpoints.familyMembers(family.id),
+      ApiEndpoints.familyMembers,
       data: {'name': name, 'role': role},
     );
     final member =
@@ -84,7 +84,7 @@ class FamilyNotifier extends AsyncNotifier<models.Family?> {
 
     try {
       await _apiClient.delete(
-        ApiEndpoints.familyMember(family.id, memberId),
+        ApiEndpoints.familyMember(memberId),
       );
     } catch (e) {
       state = AsyncData(family.copyWith(members: previousMembers));
@@ -97,7 +97,7 @@ class FamilyNotifier extends AsyncNotifier<models.Family?> {
     if (family == null) throw Exception('No family loaded');
 
     final response = await _apiClient.put(
-      ApiEndpoints.familyMember(family.id, member.id),
+      ApiEndpoints.familyMember(member.id),
       data: member.toJson(),
     );
     final updated =

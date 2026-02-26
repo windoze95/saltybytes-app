@@ -81,7 +81,7 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
       });
 
       final response = await apiClient.post(
-        ApiEndpoints.importFromImage,
+        ApiEndpoints.importFromPhoto,
         data: formData,
         options: Options(contentType: 'multipart/form-data'),
       );

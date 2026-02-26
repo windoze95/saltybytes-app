@@ -6,49 +6,64 @@ class ApiEndpoints {
 
   // Auth
   static const String login = '$apiVersion/auth/login';
-  static const String register = '$apiVersion/auth/register';
+  static const String register = '$apiVersion/users';
   static const String refreshToken = '$apiVersion/auth/refresh';
-  static const String logout = '$apiVersion/auth/logout';
 
   // User
-  static const String userProfile = '$apiVersion/user/profile';
-  static const String userSettings = '$apiVersion/user/settings';
-  static const String userPersonalization = '$apiVersion/user/personalization';
+  static const String userProfile = '$apiVersion/users/me';
+  static const String userSettings = '$apiVersion/users/me/settings';
+  static const String userPersonalization = '$apiVersion/users/me/personalization';
+  static const String verifyToken = '$apiVersion/users/verify';
 
   // Recipes
   static const String recipes = '$apiVersion/recipes';
   static String recipeById(String id) => '$apiVersion/recipes/$id';
-  static String recipeVersions(String id) => '$apiVersion/recipes/$id/versions';
-  static String recipeBranch(String id) => '$apiVersion/recipes/$id/branch';
+  static String recipeChat(String id) => '$apiVersion/recipes/$id/chat';
   static String recipeFork(String id) => '$apiVersion/recipes/$id/fork';
-  static String recipeMerge(String id) => '$apiVersion/recipes/$id/merge';
+  static String recipeBranch(String id) => '$apiVersion/recipes/$id/branch';
+  static String recipeTree(String id) => '$apiVersion/recipes/$id/tree';
+  static String recipeHistory(String id) => '$apiVersion/recipes/chat-history/$id';
 
   // Recipe Similarity
   static String recipeSimilar(String id) => '$apiVersion/recipes/similar/$id';
 
   // Recipe Import
-  static const String importRecipe = '$apiVersion/import';
-  static const String importFromUrl = '$apiVersion/import/url';
-  static const String importFromImage = '$apiVersion/import/image';
+  static const String importFromUrl = '$apiVersion/recipes/import/url';
+  static const String importFromPhoto = '$apiVersion/recipes/import/photo';
+  static const String importFromText = '$apiVersion/recipes/import/text';
+  static const String importManual = '$apiVersion/recipes/import/manual';
 
   // Allergens
   static String allergenAnalysis(String recipeId) =>
       '$apiVersion/recipes/$recipeId/allergens';
+  static String allergenAnalyze(String recipeId) =>
+      '$apiVersion/recipes/$recipeId/allergens/analyze';
+  static String allergenCheckFamily(String recipeId) =>
+      '$apiVersion/recipes/$recipeId/allergens/check-family';
 
   // Cooking Mode
   static String cookingSession(String recipeId) =>
       '$apiVersion/recipes/$recipeId/cook';
 
   // Family
-  static const String families = '$apiVersion/families';
-  static String familyById(String id) => '$apiVersion/families/$id';
-  static String familyMembers(String id) => '$apiVersion/families/$id/members';
-  static String familyMember(String familyId, String memberId) =>
-      '$apiVersion/families/$familyId/members/$memberId';
+  static const String family = '$apiVersion/family';
+  static const String familyMembers = '$apiVersion/family/members';
+  static String familyMember(String memberId) =>
+      '$apiVersion/family/members/$memberId';
+  static String familyMemberDietary(String memberId) =>
+      '$apiVersion/family/members/$memberId/dietary';
+  static String familyMemberInterview(String memberId) =>
+      '$apiVersion/family/members/$memberId/dietary/interview';
 
   // Search
-  static const String search = '$apiVersion/search';
-  static const String searchSuggestions = '$apiVersion/search/suggestions';
+  static const String search = '$apiVersion/recipes/search';
+
+  // Subscription
+  static const String subscription = '$apiVersion/subscription';
+  static const String subscriptionUpgrade = '$apiVersion/subscription/upgrade';
+
+  // Images
+  static const String imageUpload = '$apiVersion/images/upload';
 
   // WebSocket
   static const String wsBaseUrl = 'wss://api.saltybytes.ai';

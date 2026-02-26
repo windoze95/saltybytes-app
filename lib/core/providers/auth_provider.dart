@@ -131,7 +131,7 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
 
   Future<void> logout() async {
     try {
-      await _apiClient.post(ApiEndpoints.logout);
+      // No server-side logout endpoint; just clear local tokens
     } catch (_) {
       // Best-effort server logout
     }
