@@ -102,7 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Your AI-powered recipe companion',
+                      'Your AI-powered kitchen companion',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
