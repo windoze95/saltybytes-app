@@ -85,8 +85,12 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
       );
 
       if (data['user'] != null) {
-        final user = User.fromJson(data['user'] as Map<String, dynamic>);
-        await _secureStorage.saveUserId(user.id);
+        try {
+          final user = User.fromJson(data['user'] as Map<String, dynamic>);
+          await _secureStorage.saveUserId(user.id);
+        } catch (_) {
+          // User parsing is best-effort; tokens are already saved
+        }
       }
 
       return AuthStatus.authenticated;
@@ -117,8 +121,12 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
       );
 
       if (data['user'] != null) {
-        final user = User.fromJson(data['user'] as Map<String, dynamic>);
-        await _secureStorage.saveUserId(user.id);
+        try {
+          final user = User.fromJson(data['user'] as Map<String, dynamic>);
+          await _secureStorage.saveUserId(user.id);
+        } catch (_) {
+          // User parsing is best-effort; tokens are already saved
+        }
       }
 
       return AuthStatus.authenticated;

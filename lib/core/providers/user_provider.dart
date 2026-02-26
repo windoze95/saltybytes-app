@@ -25,7 +25,8 @@ class CurrentUserNotifier extends AsyncNotifier<User?> {
 
   Future<User?> _fetchProfile() async {
     final response = await _apiClient.get(ApiEndpoints.userProfile);
-    return User.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data as Map<String, dynamic>;
+    return User.fromJson(data['user'] as Map<String, dynamic>);
   }
 
   Future<void> refreshProfile() async {
