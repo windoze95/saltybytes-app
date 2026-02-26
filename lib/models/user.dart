@@ -24,7 +24,7 @@ class User with _$User {
 class UserSettings with _$UserSettings {
   const factory UserSettings({
     @Default('system') String themeMode,
-    @Default('metric') String measurementSystem,
+    @Default('us_customary') String measurementSystem,
     @Default(4) int defaultServings,
     @Default(true) bool notificationsEnabled,
     @Default(true) bool cookingModeWakelock,

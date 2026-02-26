@@ -507,7 +507,7 @@ class __$$UserSettingsImplCopyWithImpl<$Res>
 class _$UserSettingsImpl implements _UserSettings {
   const _$UserSettingsImpl(
       {this.themeMode = 'system',
-      this.measurementSystem = 'metric',
+      this.measurementSystem = 'us_customary',
       this.defaultServings = 4,
       this.notificationsEnabled = true,
       this.cookingModeWakelock = true});

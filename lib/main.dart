@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/navigation/app_router.dart';
+import 'core/providers/theme_provider.dart';
 import 'core/theme/app_theme.dart';
 
 void main() {
@@ -27,9 +28,11 @@ class SaltyBytesApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
     final brightness =
         MediaQuery.platformBrightnessOf(context);
-    final isDark = brightness == Brightness.dark;
+    final isDark = themeMode == ThemeMode.dark ||
+        (themeMode == ThemeMode.system && brightness == Brightness.dark);
 
     // Adapt system chrome to current brightness
     SystemChrome.setSystemUIOverlayStyle(
@@ -49,7 +52,7 @@ class SaltyBytesApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }

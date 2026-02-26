@@ -40,15 +40,15 @@ class _SettingsBody extends ConsumerStatefulWidget {
 }
 
 class _SettingsBodyState extends ConsumerState<_SettingsBody> {
-  late bool _usMetric;
   late bool _wakelockEnabled;
+  late String _themeMode;
   late TextEditingController _requirementsController;
 
   @override
   void initState() {
     super.initState();
-    _usMetric = widget.user.settings.measurementSystem == 'metric';
     _wakelockEnabled = widget.user.settings.cookingModeWakelock;
+    _themeMode = widget.user.settings.themeMode;
     _requirementsController = TextEditingController(
       text: widget.user.personalization.dietaryRestrictions.join(', '),
     );
@@ -60,12 +60,10 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
     super.dispose();
   }
 
-  Future<void> _toggleMeasurementSystem(bool isMetric) async {
-    setState(() => _usMetric = isMetric);
+  Future<void> _changeThemeMode(String mode) async {
+    setState(() => _themeMode = mode);
     await ref.read(currentUserProvider.notifier).updateSettings(
-          widget.user.settings.copyWith(
-            measurementSystem: isMetric ? 'metric' : 'us_customary',
-          ),
+          widget.user.settings.copyWith(themeMode: mode),
         );
   }
 
@@ -166,20 +164,31 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
         Card(
           child: Column(
             children: [
-              // Unit system toggle
+              // Unit system (Metric disabled until fully tested)
               ListTile(
                 leading: const Icon(Icons.straighten),
                 title: const Text('Unit System'),
-                subtitle: Text(_usMetric ? 'Metric' : 'US Customary'),
+                subtitle: const Text('US Customary'),
                 trailing: SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: false, label: Text('US')),
-                    ButtonSegment(value: true, label: Text('Metric')),
+                  segments: [
+                    const ButtonSegment(value: false, label: Text('US')),
+                    ButtonSegment(
+                      value: true,
+                      label: Text(
+                        'Metric',
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.38),
+                        ),
+                      ),
+                      enabled: false,
+                    ),
                   ],
-                  selected: {_usMetric},
-                  onSelectionChanged: (v) =>
-                      _toggleMeasurementSystem(v.first),
-                  style: ButtonStyle(
+                  selected: const {false},
+                  onSelectionChanged: (_) {},
+                  style: const ButtonStyle(
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -242,6 +251,40 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
         Card(
           child: Column(
             children: [
+              ListTile(
+                leading: const Icon(Icons.brightness_6),
+                title: const Text('Theme'),
+                subtitle: Text(
+                  _themeMode == 'light'
+                      ? 'Light'
+                      : _themeMode == 'dark'
+                          ? 'Dark'
+                          : 'System',
+                ),
+                trailing: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'system',
+                      icon: Icon(Icons.settings_brightness, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: 'light',
+                      icon: Icon(Icons.light_mode, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: 'dark',
+                      icon: Icon(Icons.dark_mode, size: 18),
+                    ),
+                  ],
+                  selected: {_themeMode},
+                  onSelectionChanged: (v) => _changeThemeMode(v.first),
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
               SwitchListTile(
                 title: const Text('Keep Screen Awake'),
                 subtitle:

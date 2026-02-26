@@ -41,7 +41,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
 _$UserSettingsImpl _$$UserSettingsImplFromJson(Map<String, dynamic> json) =>
     _$UserSettingsImpl(
       themeMode: json['themeMode'] as String? ?? 'system',
-      measurementSystem: json['measurementSystem'] as String? ?? 'metric',
+      measurementSystem: json['measurementSystem'] as String? ?? 'us_customary',
       defaultServings: (json['defaultServings'] as num?)?.toInt() ?? 4,
       notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
       cookingModeWakelock: json['cookingModeWakelock'] as bool? ?? true,
