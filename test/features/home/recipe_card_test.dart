@@ -1,0 +1,115 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import 'package:saltybytes_app/features/home/widgets/recipe_card.dart';
+import 'package:saltybytes_app/models/recipe.dart';
+
+import '../../helpers/fixtures.dart';
+import '../../helpers/pump_helpers.dart';
+
+void main() {
+  setUpAll(() {
+    GoogleFonts.config.allowRuntimeFetching = false;
+  });
+
+  Recipe buildRecipe({
+    String title = 'Classic Margherita Pizza',
+    int? cookTimeMinutes = 15,
+    int servings = 4,
+    String? imageUrl = 'https://cdn.saltybytes.ai/images/pizza.jpg',
+    List<String> allergenTags = const ['gluten', 'dairy'],
+    String? createdAt,
+  }) {
+    return Recipe.fromJson(testRecipeJson(
+      title: title,
+      cookTimeMinutes: cookTimeMinutes,
+      servings: servings,
+      imageUrl: imageUrl,
+      allergenTags: allergenTags,
+      createdAt: createdAt,
+    ));
+  }
+
+  // flutter_animate creates repeating timers, so pumpAndSettle will never
+  // complete. Use pump() with a short duration instead.
+  Future<void> pumpCard(WidgetTester tester, Widget card) async {
+    await tester.pumpWidget(testApp(
+      SizedBox(width: 200, height: 300, child: card),
+    ));
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+
+  group('RecipeCard', () {
+    testWidgets('displays recipe title text', (tester) async {
+      await pumpCard(
+        tester,
+        RecipeCard(recipe: buildRecipe(title: 'Spaghetti Carbonara')),
+      );
+
+      expect(find.text('Spaghetti Carbonara'), findsOneWidget);
+    });
+
+    testWidgets('displays cook time with timer icon when set', (tester) async {
+      await pumpCard(
+        tester,
+        RecipeCard(recipe: buildRecipe(cookTimeMinutes: 25)),
+      );
+
+      expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
+      expect(find.text('25m'), findsOneWidget);
+    });
+
+    testWidgets('displays servings count with restaurant icon', (tester) async {
+      await pumpCard(
+        tester,
+        RecipeCard(recipe: buildRecipe(servings: 6)),
+      );
+
+      expect(find.byIcon(Icons.restaurant_outlined), findsOneWidget);
+      expect(find.text('6'), findsOneWidget);
+    });
+
+    testWidgets('shows NEW badge when isNew is true', (tester) async {
+      await pumpCard(
+        tester,
+        RecipeCard(recipe: buildRecipe(), isNew: true),
+      );
+
+      expect(find.text('NEW'), findsOneWidget);
+    });
+
+    testWidgets('does NOT show NEW badge when isNew is false', (tester) async {
+      await pumpCard(
+        tester,
+        RecipeCard(recipe: buildRecipe(), isNew: false),
+      );
+
+      expect(find.text('NEW'), findsNothing);
+    });
+
+    testWidgets('shows placeholder icon when imageUrl is null', (tester) async {
+      await pumpCard(
+        tester,
+        RecipeCard(recipe: buildRecipe(imageUrl: null)),
+      );
+
+      // The _ImagePlaceholder shows Icons.restaurant
+      expect(find.byIcon(Icons.restaurant), findsOneWidget);
+    });
+
+    testWidgets('calls onTap callback when card is tapped', (tester) async {
+      var tapped = false;
+      await pumpCard(
+        tester,
+        RecipeCard(
+          recipe: buildRecipe(),
+          onTap: () => tapped = true,
+        ),
+      );
+
+      await tester.tap(find.byType(InkWell));
+      expect(tapped, true);
+    });
+  });
+}
