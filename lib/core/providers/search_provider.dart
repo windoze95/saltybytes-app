@@ -271,7 +271,9 @@ class SearchNotifier extends StateNotifier<SearchState> {
       ApiEndpoints.importFromUrl,
       data: {'url': result.sourceUrl},
     );
-    return Recipe.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data as Map<String, dynamic>;
+    final recipe = data['recipe'] as Map<String, dynamic>;
+    return Recipe.fromJson(recipe);
   }
 
   void clear() {
