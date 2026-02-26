@@ -16,6 +16,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Calculate build number
+        run: |
+          # Read version from pubspec.yaml (e.g., "1.0.0+3" → "1.0.0")
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          echo "App version: $VERSION"
+
+          # Find the commit where this version was first set
+          FIRST_COMMIT=$(git log --all --reverse --format='%H' -S "version: $VERSION" -- pubspec.yaml | head -1)
+
+          if [ -z "$FIRST_COMMIT" ]; then
+            # Version has been there since the beginning
+            BUILD_NUMBER=$(git rev-list --count HEAD)
+          else
+            # Count commits from that point to HEAD (inclusive)
+            BUILD_NUMBER=$(git rev-list --count "$FIRST_COMMIT"..HEAD)
+            BUILD_NUMBER=$((BUILD_NUMBER + 1))
+          fi
+
+          echo "Build number: $BUILD_NUMBER"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+
       - name: Select Xcode 16 (iOS 18 SDK)
         uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -93,4 +115,12 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_B64: ${{ secrets.APP_STORE_CONNECT_API_KEY_B64 }}
-        run: fastlane beta
+        run: |
+          # Override the version+build from pubspec with the calculated build number
+          cd ..
+          flutter build ipa --release \
+            --build-name="$VERSION" \
+            --build-number="$BUILD_NUMBER" \
+            --export-options-plist=ios/ExportOptions.plist
+          cd ios
+          fastlane beta
