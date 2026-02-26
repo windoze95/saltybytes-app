@@ -58,16 +58,39 @@ jobs:
           echo "PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
           echo "PROVISIONING_PROFILE_SPECIFIER=$PROFILE_NAME" >> "$GITHUB_ENV"
 
-      - name: Inject provisioning profile into Release.xcconfig
+      - name: Configure signing
         run: |
+          # Inject into Release.xcconfig
           echo "PROVISIONING_PROFILE_SPECIFIER=$PROVISIONING_PROFILE_UUID" >> ios/Flutter/Release.xcconfig
           cat ios/Flutter/Release.xcconfig
+
+          # Generate ExportOptions.plist with the resolved UUID
+          cat > ios/ExportOptions.plist << PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>2M54LKDR89</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>codes.julian.saltybytes</key>
+              <string>$PROVISIONING_PROFILE_UUID</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+          echo "ExportOptions.plist:"
+          cat ios/ExportOptions.plist
 
       - name: Build and upload to TestFlight
         working-directory: ios
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_API_KEY_B64: ${{ secrets.APP_STORE_CONNECT_API_KEY_B64 }}
         run: fastlane beta
