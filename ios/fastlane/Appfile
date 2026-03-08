@@ -1,2 +1,2 @@
-app_identifier("codes.julian.saltybytes")
-team_id("2M54LKDR89")
+app_identifier(ENV["APP_BUNDLE_ID"] || "codes.julian.saltybytes")
+team_id(ENV["APPLE_TEAM_ID"] || "2M54LKDR89")

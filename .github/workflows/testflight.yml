@@ -95,12 +95,12 @@ jobs:
             <key>method</key>
             <string>app-store</string>
             <key>teamID</key>
-            <string>2M54LKDR89</string>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
             <key>signingStyle</key>
             <string>manual</string>
             <key>provisioningProfiles</key>
             <dict>
-              <key>codes.julian.saltybytes</key>
+              <key>${{ secrets.APP_BUNDLE_ID }}</key>
               <string>$PROVISIONING_PROFILE_UUID</string>
             </dict>
           </dict>
@@ -115,12 +115,15 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_B64: ${{ secrets.APP_STORE_CONNECT_API_KEY_B64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
         run: |
           # Override the version+build from pubspec with the calculated build number
           cd ..
           flutter build ipa --release \
             --build-name="$VERSION" \
             --build-number="$BUILD_NUMBER" \
+            --dart-define=SALTYBYTES_ID=${{ secrets.SALTYBYTES_ID_HEADER }} \
             --export-options-plist=ios/ExportOptions.plist
           cd ios
           fastlane beta

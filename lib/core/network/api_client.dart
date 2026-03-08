@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../storage/secure_storage.dart';
 import 'api_endpoints.dart';
 
+const _saltyId = String.fromEnvironment('SALTYBYTES_ID');
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
   return ApiClient(secureStorage: secureStorage);
@@ -22,6 +24,7 @@ class ApiClient {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          if (_saltyId.isNotEmpty) 'X-SaltyBytes-Identifier': _saltyId,
         },
       ),
     );
@@ -187,6 +190,7 @@ class _AuthInterceptor extends Interceptor {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          if (_saltyId.isNotEmpty) 'X-SaltyBytes-Identifier': _saltyId,
         },
       ));
 
