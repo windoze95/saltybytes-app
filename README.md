@@ -1,4 +1,4 @@
-# SaltyBytes App
+# SaltyBytes
 
 iOS client for [SaltyBytes](https://saltybytes.ai) — a recipe app that gets out of your way. Search the web for recipes without the ads and life stories, import from any source, generate with AI, and cook hands-free with voice-guided cooking mode.
 
