@@ -1,9 +1,20 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/allergen.dart';
 import '../../models/recipe.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
+
+class PreviewException implements Exception {
+  const PreviewException({required this.message, this.code});
+
+  final String message;
+  final String? code;
+
+  @override
+  String toString() => message;
+}
 
 class WebSearchResult {
   const WebSearchResult({
@@ -250,13 +261,39 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 
   Future<RecipePreview> previewResult(WebSearchResult result) async {
-    final response = await _apiClient.post(
-      ApiEndpoints.previewFromUrl,
-      data: {'url': result.sourceUrl},
-    );
-    final data = response.data as Map<String, dynamic>;
-    final recipe = data['recipe'] as Map<String, dynamic>;
-    return RecipePreview.fromJson(recipe);
+    try {
+      final response = await _apiClient.post(
+        ApiEndpoints.previewFromUrl,
+        data: {'url': result.sourceUrl},
+        options: Options(receiveTimeout: const Duration(seconds: 45)),
+      );
+      final data = response.data as Map<String, dynamic>;
+      final recipe = data['recipe'] as Map<String, dynamic>;
+      return RecipePreview.fromJson(recipe);
+    } on DioException catch (e) {
+      final apiError = e.error;
+      if (apiError is ApiError) {
+        switch (apiError.errorCode) {
+          case 'site_blocked':
+            throw const PreviewException(
+              message:
+                  'This website blocks automated access. Try copying the recipe text and using Import from Text instead.',
+              code: 'site_blocked',
+            );
+          case 'not_found':
+            throw const PreviewException(
+              message: 'Recipe page not found. The URL may have changed.',
+              code: 'not_found',
+            );
+          case 'fetch_failed':
+            throw PreviewException(
+              message: 'Could not reach the recipe website. Please try again.',
+              code: apiError.errorCode,
+            );
+        }
+      }
+      rethrow;
+    }
   }
 
   Future<Recipe> importPreview(RecipePreview preview) async {
@@ -273,6 +310,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
     final response = await _apiClient.post(
       ApiEndpoints.importFromUrl,
       data: {'url': result.sourceUrl},
+      options: Options(receiveTimeout: const Duration(seconds: 45)),
     );
     final data = response.data as Map<String, dynamic>;
     final recipe = data['recipe'] as Map<String, dynamic>;

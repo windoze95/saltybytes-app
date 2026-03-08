@@ -65,7 +65,7 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
 
           if (snapshot.hasError) {
             return _ErrorState(
-              error: snapshot.error.toString(),
+              error: snapshot.error!,
               onRetry: () {
                 setState(() {
                   _previewFuture = ref
@@ -122,26 +122,52 @@ class _LoadingState extends StatelessWidget {
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.error, required this.onRetry});
 
-  final String error;
+  final Object error;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final IconData icon;
+    final String title;
+    final String detail;
+
+    if (error is PreviewException) {
+      final pe = error as PreviewException;
+      switch (pe.code) {
+        case 'site_blocked':
+          icon = Icons.block;
+          title = 'Website blocked access';
+          break;
+        case 'not_found':
+          icon = Icons.search_off;
+          title = 'Page not found';
+          break;
+        default:
+          icon = Icons.error_outline;
+          title = 'Failed to load preview';
+      }
+      detail = pe.message;
+    } else {
+      icon = Icons.error_outline;
+      title = 'Failed to load preview';
+      detail = error.toString();
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline,
+            Icon(icon,
                 size: 48,
                 color: theme.colorScheme.error.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
-            Text('Failed to load preview',
-                style: theme.textTheme.titleMedium),
+            Text(title, style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text(error,
+            Text(detail,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall),
             const SizedBox(height: 16),
