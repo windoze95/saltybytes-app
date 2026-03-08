@@ -290,6 +290,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
               message: 'Could not reach the recipe website. Please try again.',
               code: apiError.errorCode,
             );
+          default:
+            throw PreviewException(
+              message: apiError.message,
+              code: apiError.errorCode,
+            );
         }
       }
       rethrow;
