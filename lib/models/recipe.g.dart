@@ -62,6 +62,8 @@ _$IngredientImpl _$$IngredientImplFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       amount: (json['amount'] as num?)?.toDouble(),
       unit: json['unit'] as String?,
+      metricUnit: json['metric_unit'] as String?,
+      metricAmount: (json['metric_amount'] as num?)?.toDouble(),
       originalText: json['original_text'] as String?,
     );
 
@@ -70,6 +72,8 @@ Map<String, dynamic> _$$IngredientImplToJson(_$IngredientImpl instance) =>
       'name': instance.name,
       'amount': instance.amount,
       'unit': instance.unit,
+      'metric_unit': instance.metricUnit,
+      'metric_amount': instance.metricAmount,
       'original_text': instance.originalText,
     };
 

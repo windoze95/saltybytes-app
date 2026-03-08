@@ -527,6 +527,10 @@ mixin _$Ingredient {
   @JsonKey(name: 'amount')
   double? get amount => throw _privateConstructorUsedError;
   String? get unit => throw _privateConstructorUsedError;
+  @JsonKey(name: 'metric_unit')
+  String? get metricUnit => throw _privateConstructorUsedError;
+  @JsonKey(name: 'metric_amount')
+  double? get metricAmount => throw _privateConstructorUsedError;
   @JsonKey(name: 'original_text')
   String? get originalText => throw _privateConstructorUsedError;
 
@@ -550,6 +554,8 @@ abstract class $IngredientCopyWith<$Res> {
       {String name,
       @JsonKey(name: 'amount') double? amount,
       String? unit,
+      @JsonKey(name: 'metric_unit') String? metricUnit,
+      @JsonKey(name: 'metric_amount') double? metricAmount,
       @JsonKey(name: 'original_text') String? originalText});
 }
 
@@ -571,6 +577,8 @@ class _$IngredientCopyWithImpl<$Res, $Val extends Ingredient>
     Object? name = null,
     Object? amount = freezed,
     Object? unit = freezed,
+    Object? metricUnit = freezed,
+    Object? metricAmount = freezed,
     Object? originalText = freezed,
   }) {
     return _then(_value.copyWith(
@@ -586,6 +594,14 @@ class _$IngredientCopyWithImpl<$Res, $Val extends Ingredient>
           ? _value.unit
           : unit // ignore: cast_nullable_to_non_nullable
               as String?,
+      metricUnit: freezed == metricUnit
+          ? _value.metricUnit
+          : metricUnit // ignore: cast_nullable_to_non_nullable
+              as String?,
+      metricAmount: freezed == metricAmount
+          ? _value.metricAmount
+          : metricAmount // ignore: cast_nullable_to_non_nullable
+              as double?,
       originalText: freezed == originalText
           ? _value.originalText
           : originalText // ignore: cast_nullable_to_non_nullable
@@ -606,6 +622,8 @@ abstract class _$$IngredientImplCopyWith<$Res>
       {String name,
       @JsonKey(name: 'amount') double? amount,
       String? unit,
+      @JsonKey(name: 'metric_unit') String? metricUnit,
+      @JsonKey(name: 'metric_amount') double? metricAmount,
       @JsonKey(name: 'original_text') String? originalText});
 }
 
@@ -625,6 +643,8 @@ class __$$IngredientImplCopyWithImpl<$Res>
     Object? name = null,
     Object? amount = freezed,
     Object? unit = freezed,
+    Object? metricUnit = freezed,
+    Object? metricAmount = freezed,
     Object? originalText = freezed,
   }) {
     return _then(_$IngredientImpl(
@@ -640,6 +660,14 @@ class __$$IngredientImplCopyWithImpl<$Res>
           ? _value.unit
           : unit // ignore: cast_nullable_to_non_nullable
               as String?,
+      metricUnit: freezed == metricUnit
+          ? _value.metricUnit
+          : metricUnit // ignore: cast_nullable_to_non_nullable
+              as String?,
+      metricAmount: freezed == metricAmount
+          ? _value.metricAmount
+          : metricAmount // ignore: cast_nullable_to_non_nullable
+              as double?,
       originalText: freezed == originalText
           ? _value.originalText
           : originalText // ignore: cast_nullable_to_non_nullable
@@ -655,6 +683,8 @@ class _$IngredientImpl implements _Ingredient {
       {required this.name,
       @JsonKey(name: 'amount') this.amount,
       this.unit,
+      @JsonKey(name: 'metric_unit') this.metricUnit,
+      @JsonKey(name: 'metric_amount') this.metricAmount,
       @JsonKey(name: 'original_text') this.originalText});
 
   factory _$IngredientImpl.fromJson(Map<String, dynamic> json) =>
@@ -668,12 +698,18 @@ class _$IngredientImpl implements _Ingredient {
   @override
   final String? unit;
   @override
+  @JsonKey(name: 'metric_unit')
+  final String? metricUnit;
+  @override
+  @JsonKey(name: 'metric_amount')
+  final double? metricAmount;
+  @override
   @JsonKey(name: 'original_text')
   final String? originalText;
 
   @override
   String toString() {
-    return 'Ingredient(name: $name, amount: $amount, unit: $unit, originalText: $originalText)';
+    return 'Ingredient(name: $name, amount: $amount, unit: $unit, metricUnit: $metricUnit, metricAmount: $metricAmount, originalText: $originalText)';
   }
 
   @override
@@ -684,14 +720,18 @@ class _$IngredientImpl implements _Ingredient {
             (identical(other.name, name) || other.name == name) &&
             (identical(other.amount, amount) || other.amount == amount) &&
             (identical(other.unit, unit) || other.unit == unit) &&
+            (identical(other.metricUnit, metricUnit) ||
+                other.metricUnit == metricUnit) &&
+            (identical(other.metricAmount, metricAmount) ||
+                other.metricAmount == metricAmount) &&
             (identical(other.originalText, originalText) ||
                 other.originalText == originalText));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, name, amount, unit, originalText);
+  int get hashCode => Object.hash(
+      runtimeType, name, amount, unit, metricUnit, metricAmount, originalText);
 
   /// Create a copy of Ingredient
   /// with the given fields replaced by the non-null parameter values.
@@ -714,6 +754,8 @@ abstract class _Ingredient implements Ingredient {
           {required final String name,
           @JsonKey(name: 'amount') final double? amount,
           final String? unit,
+          @JsonKey(name: 'metric_unit') final String? metricUnit,
+          @JsonKey(name: 'metric_amount') final double? metricAmount,
           @JsonKey(name: 'original_text') final String? originalText}) =
       _$IngredientImpl;
 
@@ -727,6 +769,12 @@ abstract class _Ingredient implements Ingredient {
   double? get amount;
   @override
   String? get unit;
+  @override
+  @JsonKey(name: 'metric_unit')
+  String? get metricUnit;
+  @override
+  @JsonKey(name: 'metric_amount')
+  double? get metricAmount;
   @override
   @JsonKey(name: 'original_text')
   String? get originalText;

@@ -91,6 +91,14 @@ Ingredient convertIngredient(
   // Identity units: no conversion
   if (_identityUnits.contains(unitLower) || unit.isEmpty) return ing;
 
+  // Converting TO metric: use AI-provided metric data if available
+  if (toSystem == 'metric' &&
+      ing.metricUnit != null && ing.metricUnit!.isNotEmpty &&
+      ing.metricAmount != null && ing.metricAmount! > 0) {
+    return ing.copyWith(amount: ing.metricAmount, unit: ing.metricUnit);
+  }
+
+  // Fallback: legacy client-side conversion
   if (fromSystem == 'us_customary' && toSystem == 'metric') {
     return _convertUsToMetric(ing, unit);
   } else if (fromSystem == 'metric' && toSystem == 'us_customary') {

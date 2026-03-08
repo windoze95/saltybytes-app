@@ -34,6 +34,8 @@ class Ingredient with _$Ingredient {
     required String name,
     @JsonKey(name: 'amount') double? amount,
     String? unit,
+    @JsonKey(name: 'metric_unit') String? metricUnit,
+    @JsonKey(name: 'metric_amount') double? metricAmount,
     @JsonKey(name: 'original_text') String? originalText,
   }) = _Ingredient;
 
