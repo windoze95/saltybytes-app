@@ -42,6 +42,7 @@ class _SettingsBody extends ConsumerStatefulWidget {
 class _SettingsBodyState extends ConsumerState<_SettingsBody> {
   late bool _wakelockEnabled;
   late String _themeMode;
+  late String _unitSystem;
   late TextEditingController _requirementsController;
 
   @override
@@ -49,6 +50,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
     super.initState();
     _wakelockEnabled = widget.user.settings.cookingModeWakelock;
     _themeMode = widget.user.settings.themeMode;
+    _unitSystem = widget.user.personalization.unitSystem;
     _requirementsController = TextEditingController(
       text: widget.user.personalization.dietaryRestrictions.join(', '),
     );
@@ -64,6 +66,13 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
     setState(() => _themeMode = mode);
     await ref.read(currentUserProvider.notifier).updateSettings(
           widget.user.settings.copyWith(themeMode: mode),
+        );
+  }
+
+  Future<void> _changeUnitSystem(String system) async {
+    setState(() => _unitSystem = system);
+    await ref.read(currentUserProvider.notifier).updatePersonalization(
+          widget.user.personalization.copyWith(unitSystem: system),
         );
   }
 
@@ -164,30 +173,21 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
         Card(
           child: Column(
             children: [
-              // Unit system (Metric disabled until fully tested)
               ListTile(
                 leading: const Icon(Icons.straighten),
                 title: const Text('Unit System'),
-                subtitle: const Text('US Customary'),
-                trailing: SegmentedButton<bool>(
-                  segments: [
-                    const ButtonSegment(value: false, label: Text('US')),
+                subtitle: Text(
+                  _unitSystem == 'metric' ? 'Metric' : 'US Customary',
+                ),
+                trailing: SegmentedButton<String>(
+                  segments: const [
                     ButtonSegment(
-                      value: true,
-                      label: Text(
-                        'Metric',
-                        style: TextStyle(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.38),
-                        ),
-                      ),
-                      enabled: false,
-                    ),
+                        value: 'us_customary', label: Text('US')),
+                    ButtonSegment(
+                        value: 'metric', label: Text('Metric')),
                   ],
-                  selected: const {false},
-                  onSelectionChanged: (_) {},
+                  selected: {_unitSystem},
+                  onSelectionChanged: (v) => _changeUnitSystem(v.first),
                   style: const ButtonStyle(
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,

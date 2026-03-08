@@ -5,16 +5,18 @@
 
 Map<String, dynamic> testIngredientJson({
   String name = 'all-purpose flour',
-  String? quantity = '2',
+  double? amount = 2.0,
   String? unit = 'cups',
+  String? originalText,
   String? notes,
   bool optional = false,
   String? category = 'dry',
 }) =>
     {
       'name': name,
-      'quantity': quantity,
+      'amount': amount,
       'unit': unit,
+      'original_text': originalText,
       'notes': notes,
       'optional': optional,
       'category': category,
@@ -51,9 +53,9 @@ Map<String, dynamic> testRecipeJson({
       'imageUrl': imageUrl,
       'ingredients': ingredients ??
           [
-            testIngredientJson(name: 'pizza dough', quantity: '1', unit: 'ball', category: 'dough'),
-            testIngredientJson(name: 'mozzarella', quantity: '200', unit: 'g', category: 'dairy'),
-            testIngredientJson(name: 'fresh basil', quantity: '6', unit: 'leaves', optional: true, category: 'herb'),
+            testIngredientJson(name: 'pizza dough', amount: 1.0, unit: 'ball', category: 'dough'),
+            testIngredientJson(name: 'mozzarella', amount: 200.0, unit: 'g', category: 'dairy'),
+            testIngredientJson(name: 'fresh basil', amount: 6.0, unit: 'leaves', optional: true, category: 'herb'),
           ],
       'instructions': instructions ??
           [
@@ -119,7 +121,7 @@ Map<String, dynamic> testRecipeDefJson({
       'description': description,
       'ingredients': ingredients ??
           [
-            testIngredientJson(name: 'pizza dough', quantity: '1', unit: 'ball'),
+            testIngredientJson(name: 'pizza dough', amount: 1.0, unit: 'ball'),
           ],
       'instructions': instructions ?? ['Preheat oven', 'Bake for 12 minutes'],
       'commitMessage': commitMessage,

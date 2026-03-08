@@ -22,6 +22,7 @@ class Recipe with _$Recipe {
     String? sourceUrl,
     @Default(false) bool isPublic,
     @Default([]) List<String> allergenTags,
+    @Default('us_customary') String unitSystem,
     @Default('main') String currentBranch,
     String? parentRecipeId,
     int? version,
@@ -37,10 +38,11 @@ class Recipe with _$Recipe {
 class Ingredient with _$Ingredient {
   const factory Ingredient({
     required String name,
-    String? quantity,
+    @JsonKey(name: 'amount') double? amount,
     String? unit,
-    String? notes,
+    @JsonKey(name: 'original_text') String? originalText,
     @Default(false) bool optional,
+    String? notes,
     String? category,
   }) = _Ingredient;
 

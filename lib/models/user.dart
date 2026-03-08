@@ -41,6 +41,7 @@ class Personalization with _$Personalization {
     @Default([]) List<String> cuisinePreferences,
     @Default('intermediate') String skillLevel,
     @Default([]) List<String> allergens,
+    @Default('us_customary') String unitSystem,
   }) = _Personalization;
 
   factory Personalization.fromJson(Map<String, dynamic> json) =>
