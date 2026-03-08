@@ -7,7 +7,6 @@ import '../../core/providers/allergen_provider.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/recipe.dart';
-import 'widgets/allergen_badge.dart';
 import 'widgets/ingredient_list.dart';
 import 'widgets/instruction_list.dart';
 
@@ -169,54 +168,16 @@ class _RecipeDetailBody extends ConsumerWidget {
                         icon: Icons.timer_outlined,
                         label: '${recipe.cookTimeMinutes} min',
                       ),
-                    if (recipe.prepTimeMinutes != null)
+                    if (recipe.portions != null)
                       _MetadataChip(
-                        icon: Icons.hourglass_bottom,
-                        label: '${recipe.prepTimeMinutes} min prep',
-                      ),
-                    _MetadataChip(
-                      icon: Icons.restaurant_outlined,
-                      label: '${recipe.servings} servings',
-                    ),
-                    if (recipe.difficulty != null)
-                      _MetadataChip(
-                        icon: Icons.signal_cellular_alt,
-                        label: recipe.difficulty!,
-                      ),
-                    if (recipe.cuisine != null)
-                      _MetadataChip(
-                        icon: Icons.public,
-                        label: recipe.cuisine!,
+                        icon: Icons.restaurant_outlined,
+                        label: recipe.portionSize != null &&
+                                recipe.portionSize!.isNotEmpty
+                            ? '${recipe.portions} ${recipe.portionSize}'
+                            : '${recipe.portions} servings',
                       ),
                   ],
                 ),
-                const SizedBox(height: 8),
-
-                // Allergen badges
-                if (recipe.allergenTags.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: recipe.allergenTags
-                        .map((tag) => AllergenBadge(
-                              label: tag,
-                              severity: AllergenSeverity.unsafe,
-                            ))
-                        .toList(),
-                  ),
-                ],
-
-                const SizedBox(height: 8),
-                if (recipe.description != null) ...[
-                  Text(
-                    recipe.description!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
 
                 const Divider(height: 32),
 
@@ -228,7 +189,6 @@ class _RecipeDetailBody extends ConsumerWidget {
                 const SizedBox(height: 12),
                 IngredientList(
                   ingredients: recipe.ingredients,
-                  servings: recipe.servings,
                   recipeUnitSystem: recipe.unitSystem,
                 ),
 
@@ -255,47 +215,6 @@ class _RecipeDetailBody extends ConsumerWidget {
                                   MaterialTapTargetSize.shrinkWrap,
                             ))
                         .toList(),
-                  ),
-                ],
-
-                // Branch info
-                if (recipe.currentBranch != 'main') ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colors.primary.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: colors.primary.withValues(alpha: 0.15),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.account_tree_outlined,
-                          size: 18,
-                          color: colors.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Branch: ${recipe.currentBranch}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (recipe.version != null) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            'v${recipe.version}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colors.primary.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
                   ),
                 ],
 

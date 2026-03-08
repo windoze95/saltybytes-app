@@ -23,8 +23,8 @@ mixin _$User {
   String get id => throw _privateConstructorUsedError;
   String get username => throw _privateConstructorUsedError;
   String get email => throw _privateConstructorUsedError;
-  String? get displayName => throw _privateConstructorUsedError;
-  String? get avatarUrl => throw _privateConstructorUsedError;
+  @JsonKey(name: 'first_name')
+  String? get firstName => throw _privateConstructorUsedError;
   UserSettings get settings => throw _privateConstructorUsedError;
   Personalization get personalization => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
@@ -48,8 +48,7 @@ abstract class $UserCopyWith<$Res> {
       {String id,
       String username,
       String email,
-      String? displayName,
-      String? avatarUrl,
+      @JsonKey(name: 'first_name') String? firstName,
       UserSettings settings,
       Personalization personalization,
       DateTime createdAt,
@@ -77,8 +76,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? id = null,
     Object? username = null,
     Object? email = null,
-    Object? displayName = freezed,
-    Object? avatarUrl = freezed,
+    Object? firstName = freezed,
     Object? settings = null,
     Object? personalization = null,
     Object? createdAt = null,
@@ -97,13 +95,9 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.email
           : email // ignore: cast_nullable_to_non_nullable
               as String,
-      displayName: freezed == displayName
-          ? _value.displayName
-          : displayName // ignore: cast_nullable_to_non_nullable
-              as String?,
-      avatarUrl: freezed == avatarUrl
-          ? _value.avatarUrl
-          : avatarUrl // ignore: cast_nullable_to_non_nullable
+      firstName: freezed == firstName
+          ? _value.firstName
+          : firstName // ignore: cast_nullable_to_non_nullable
               as String?,
       settings: null == settings
           ? _value.settings
@@ -156,8 +150,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       {String id,
       String username,
       String email,
-      String? displayName,
-      String? avatarUrl,
+      @JsonKey(name: 'first_name') String? firstName,
       UserSettings settings,
       Personalization personalization,
       DateTime createdAt,
@@ -184,8 +177,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? id = null,
     Object? username = null,
     Object? email = null,
-    Object? displayName = freezed,
-    Object? avatarUrl = freezed,
+    Object? firstName = freezed,
     Object? settings = null,
     Object? personalization = null,
     Object? createdAt = null,
@@ -204,13 +196,9 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.email
           : email // ignore: cast_nullable_to_non_nullable
               as String,
-      displayName: freezed == displayName
-          ? _value.displayName
-          : displayName // ignore: cast_nullable_to_non_nullable
-              as String?,
-      avatarUrl: freezed == avatarUrl
-          ? _value.avatarUrl
-          : avatarUrl // ignore: cast_nullable_to_non_nullable
+      firstName: freezed == firstName
+          ? _value.firstName
+          : firstName // ignore: cast_nullable_to_non_nullable
               as String?,
       settings: null == settings
           ? _value.settings
@@ -239,8 +227,7 @@ class _$UserImpl implements _User {
       {required this.id,
       required this.username,
       required this.email,
-      this.displayName,
-      this.avatarUrl,
+      @JsonKey(name: 'first_name') this.firstName,
       this.settings = const UserSettings(),
       this.personalization = const Personalization(),
       required this.createdAt,
@@ -256,9 +243,8 @@ class _$UserImpl implements _User {
   @override
   final String email;
   @override
-  final String? displayName;
-  @override
-  final String? avatarUrl;
+  @JsonKey(name: 'first_name')
+  final String? firstName;
   @override
   @JsonKey()
   final UserSettings settings;
@@ -272,7 +258,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(id: $id, username: $username, email: $email, displayName: $displayName, avatarUrl: $avatarUrl, settings: $settings, personalization: $personalization, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'User(id: $id, username: $username, email: $email, firstName: $firstName, settings: $settings, personalization: $personalization, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -284,10 +270,8 @@ class _$UserImpl implements _User {
             (identical(other.username, username) ||
                 other.username == username) &&
             (identical(other.email, email) || other.email == email) &&
-            (identical(other.displayName, displayName) ||
-                other.displayName == displayName) &&
-            (identical(other.avatarUrl, avatarUrl) ||
-                other.avatarUrl == avatarUrl) &&
+            (identical(other.firstName, firstName) ||
+                other.firstName == firstName) &&
             (identical(other.settings, settings) ||
                 other.settings == settings) &&
             (identical(other.personalization, personalization) ||
@@ -300,8 +284,8 @@ class _$UserImpl implements _User {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, username, email, displayName,
-      avatarUrl, settings, personalization, createdAt, updatedAt);
+  int get hashCode => Object.hash(runtimeType, id, username, email, firstName,
+      settings, personalization, createdAt, updatedAt);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -324,8 +308,7 @@ abstract class _User implements User {
       {required final String id,
       required final String username,
       required final String email,
-      final String? displayName,
-      final String? avatarUrl,
+      @JsonKey(name: 'first_name') final String? firstName,
       final UserSettings settings,
       final Personalization personalization,
       required final DateTime createdAt,
@@ -340,9 +323,8 @@ abstract class _User implements User {
   @override
   String get email;
   @override
-  String? get displayName;
-  @override
-  String? get avatarUrl;
+  @JsonKey(name: 'first_name')
+  String? get firstName;
   @override
   UserSettings get settings;
   @override
@@ -366,11 +348,8 @@ UserSettings _$UserSettingsFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$UserSettings {
-  String get themeMode => throw _privateConstructorUsedError;
-  String get measurementSystem => throw _privateConstructorUsedError;
-  int get defaultServings => throw _privateConstructorUsedError;
-  bool get notificationsEnabled => throw _privateConstructorUsedError;
-  bool get cookingModeWakelock => throw _privateConstructorUsedError;
+  @JsonKey(name: 'keep_screen_awake')
+  bool get keepScreenAwake => throw _privateConstructorUsedError;
 
   /// Serializes this UserSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -388,12 +367,7 @@ abstract class $UserSettingsCopyWith<$Res> {
           UserSettings value, $Res Function(UserSettings) then) =
       _$UserSettingsCopyWithImpl<$Res, UserSettings>;
   @useResult
-  $Res call(
-      {String themeMode,
-      String measurementSystem,
-      int defaultServings,
-      bool notificationsEnabled,
-      bool cookingModeWakelock});
+  $Res call({@JsonKey(name: 'keep_screen_awake') bool keepScreenAwake});
 }
 
 /// @nodoc
@@ -411,32 +385,12 @@ class _$UserSettingsCopyWithImpl<$Res, $Val extends UserSettings>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? themeMode = null,
-    Object? measurementSystem = null,
-    Object? defaultServings = null,
-    Object? notificationsEnabled = null,
-    Object? cookingModeWakelock = null,
+    Object? keepScreenAwake = null,
   }) {
     return _then(_value.copyWith(
-      themeMode: null == themeMode
-          ? _value.themeMode
-          : themeMode // ignore: cast_nullable_to_non_nullable
-              as String,
-      measurementSystem: null == measurementSystem
-          ? _value.measurementSystem
-          : measurementSystem // ignore: cast_nullable_to_non_nullable
-              as String,
-      defaultServings: null == defaultServings
-          ? _value.defaultServings
-          : defaultServings // ignore: cast_nullable_to_non_nullable
-              as int,
-      notificationsEnabled: null == notificationsEnabled
-          ? _value.notificationsEnabled
-          : notificationsEnabled // ignore: cast_nullable_to_non_nullable
-              as bool,
-      cookingModeWakelock: null == cookingModeWakelock
-          ? _value.cookingModeWakelock
-          : cookingModeWakelock // ignore: cast_nullable_to_non_nullable
+      keepScreenAwake: null == keepScreenAwake
+          ? _value.keepScreenAwake
+          : keepScreenAwake // ignore: cast_nullable_to_non_nullable
               as bool,
     ) as $Val);
   }
@@ -450,12 +404,7 @@ abstract class _$$UserSettingsImplCopyWith<$Res>
       __$$UserSettingsImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String themeMode,
-      String measurementSystem,
-      int defaultServings,
-      bool notificationsEnabled,
-      bool cookingModeWakelock});
+  $Res call({@JsonKey(name: 'keep_screen_awake') bool keepScreenAwake});
 }
 
 /// @nodoc
@@ -471,32 +420,12 @@ class __$$UserSettingsImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? themeMode = null,
-    Object? measurementSystem = null,
-    Object? defaultServings = null,
-    Object? notificationsEnabled = null,
-    Object? cookingModeWakelock = null,
+    Object? keepScreenAwake = null,
   }) {
     return _then(_$UserSettingsImpl(
-      themeMode: null == themeMode
-          ? _value.themeMode
-          : themeMode // ignore: cast_nullable_to_non_nullable
-              as String,
-      measurementSystem: null == measurementSystem
-          ? _value.measurementSystem
-          : measurementSystem // ignore: cast_nullable_to_non_nullable
-              as String,
-      defaultServings: null == defaultServings
-          ? _value.defaultServings
-          : defaultServings // ignore: cast_nullable_to_non_nullable
-              as int,
-      notificationsEnabled: null == notificationsEnabled
-          ? _value.notificationsEnabled
-          : notificationsEnabled // ignore: cast_nullable_to_non_nullable
-              as bool,
-      cookingModeWakelock: null == cookingModeWakelock
-          ? _value.cookingModeWakelock
-          : cookingModeWakelock // ignore: cast_nullable_to_non_nullable
+      keepScreenAwake: null == keepScreenAwake
+          ? _value.keepScreenAwake
+          : keepScreenAwake // ignore: cast_nullable_to_non_nullable
               as bool,
     ));
   }
@@ -506,34 +435,18 @@ class __$$UserSettingsImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$UserSettingsImpl implements _UserSettings {
   const _$UserSettingsImpl(
-      {this.themeMode = 'system',
-      this.measurementSystem = 'us_customary',
-      this.defaultServings = 4,
-      this.notificationsEnabled = true,
-      this.cookingModeWakelock = true});
+      {@JsonKey(name: 'keep_screen_awake') this.keepScreenAwake = true});
 
   factory _$UserSettingsImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserSettingsImplFromJson(json);
 
   @override
-  @JsonKey()
-  final String themeMode;
-  @override
-  @JsonKey()
-  final String measurementSystem;
-  @override
-  @JsonKey()
-  final int defaultServings;
-  @override
-  @JsonKey()
-  final bool notificationsEnabled;
-  @override
-  @JsonKey()
-  final bool cookingModeWakelock;
+  @JsonKey(name: 'keep_screen_awake')
+  final bool keepScreenAwake;
 
   @override
   String toString() {
-    return 'UserSettings(themeMode: $themeMode, measurementSystem: $measurementSystem, defaultServings: $defaultServings, notificationsEnabled: $notificationsEnabled, cookingModeWakelock: $cookingModeWakelock)';
+    return 'UserSettings(keepScreenAwake: $keepScreenAwake)';
   }
 
   @override
@@ -541,22 +454,13 @@ class _$UserSettingsImpl implements _UserSettings {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$UserSettingsImpl &&
-            (identical(other.themeMode, themeMode) ||
-                other.themeMode == themeMode) &&
-            (identical(other.measurementSystem, measurementSystem) ||
-                other.measurementSystem == measurementSystem) &&
-            (identical(other.defaultServings, defaultServings) ||
-                other.defaultServings == defaultServings) &&
-            (identical(other.notificationsEnabled, notificationsEnabled) ||
-                other.notificationsEnabled == notificationsEnabled) &&
-            (identical(other.cookingModeWakelock, cookingModeWakelock) ||
-                other.cookingModeWakelock == cookingModeWakelock));
+            (identical(other.keepScreenAwake, keepScreenAwake) ||
+                other.keepScreenAwake == keepScreenAwake));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, themeMode, measurementSystem,
-      defaultServings, notificationsEnabled, cookingModeWakelock);
+  int get hashCode => Object.hash(runtimeType, keepScreenAwake);
 
   /// Create a copy of UserSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -576,25 +480,15 @@ class _$UserSettingsImpl implements _UserSettings {
 
 abstract class _UserSettings implements UserSettings {
   const factory _UserSettings(
-      {final String themeMode,
-      final String measurementSystem,
-      final int defaultServings,
-      final bool notificationsEnabled,
-      final bool cookingModeWakelock}) = _$UserSettingsImpl;
+          {@JsonKey(name: 'keep_screen_awake') final bool keepScreenAwake}) =
+      _$UserSettingsImpl;
 
   factory _UserSettings.fromJson(Map<String, dynamic> json) =
       _$UserSettingsImpl.fromJson;
 
   @override
-  String get themeMode;
-  @override
-  String get measurementSystem;
-  @override
-  int get defaultServings;
-  @override
-  bool get notificationsEnabled;
-  @override
-  bool get cookingModeWakelock;
+  @JsonKey(name: 'keep_screen_awake')
+  bool get keepScreenAwake;
 
   /// Create a copy of UserSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -610,11 +504,10 @@ Personalization _$PersonalizationFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$Personalization {
-  List<String> get dietaryRestrictions => throw _privateConstructorUsedError;
-  List<String> get cuisinePreferences => throw _privateConstructorUsedError;
-  String get skillLevel => throw _privateConstructorUsedError;
-  List<String> get allergens => throw _privateConstructorUsedError;
+  @JsonKey(name: 'unit_system')
   String get unitSystem => throw _privateConstructorUsedError;
+  String get requirements => throw _privateConstructorUsedError;
+  String get uid => throw _privateConstructorUsedError;
 
   /// Serializes this Personalization to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -633,11 +526,9 @@ abstract class $PersonalizationCopyWith<$Res> {
       _$PersonalizationCopyWithImpl<$Res, Personalization>;
   @useResult
   $Res call(
-      {List<String> dietaryRestrictions,
-      List<String> cuisinePreferences,
-      String skillLevel,
-      List<String> allergens,
-      String unitSystem});
+      {@JsonKey(name: 'unit_system') String unitSystem,
+      String requirements,
+      String uid});
 }
 
 /// @nodoc
@@ -655,32 +546,22 @@ class _$PersonalizationCopyWithImpl<$Res, $Val extends Personalization>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? dietaryRestrictions = null,
-    Object? cuisinePreferences = null,
-    Object? skillLevel = null,
-    Object? allergens = null,
     Object? unitSystem = null,
+    Object? requirements = null,
+    Object? uid = null,
   }) {
     return _then(_value.copyWith(
-      dietaryRestrictions: null == dietaryRestrictions
-          ? _value.dietaryRestrictions
-          : dietaryRestrictions // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      cuisinePreferences: null == cuisinePreferences
-          ? _value.cuisinePreferences
-          : cuisinePreferences // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      skillLevel: null == skillLevel
-          ? _value.skillLevel
-          : skillLevel // ignore: cast_nullable_to_non_nullable
-              as String,
-      allergens: null == allergens
-          ? _value.allergens
-          : allergens // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       unitSystem: null == unitSystem
           ? _value.unitSystem
           : unitSystem // ignore: cast_nullable_to_non_nullable
+              as String,
+      requirements: null == requirements
+          ? _value.requirements
+          : requirements // ignore: cast_nullable_to_non_nullable
+              as String,
+      uid: null == uid
+          ? _value.uid
+          : uid // ignore: cast_nullable_to_non_nullable
               as String,
     ) as $Val);
   }
@@ -695,11 +576,9 @@ abstract class _$$PersonalizationImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {List<String> dietaryRestrictions,
-      List<String> cuisinePreferences,
-      String skillLevel,
-      List<String> allergens,
-      String unitSystem});
+      {@JsonKey(name: 'unit_system') String unitSystem,
+      String requirements,
+      String uid});
 }
 
 /// @nodoc
@@ -715,32 +594,22 @@ class __$$PersonalizationImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? dietaryRestrictions = null,
-    Object? cuisinePreferences = null,
-    Object? skillLevel = null,
-    Object? allergens = null,
     Object? unitSystem = null,
+    Object? requirements = null,
+    Object? uid = null,
   }) {
     return _then(_$PersonalizationImpl(
-      dietaryRestrictions: null == dietaryRestrictions
-          ? _value._dietaryRestrictions
-          : dietaryRestrictions // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      cuisinePreferences: null == cuisinePreferences
-          ? _value._cuisinePreferences
-          : cuisinePreferences // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      skillLevel: null == skillLevel
-          ? _value.skillLevel
-          : skillLevel // ignore: cast_nullable_to_non_nullable
-              as String,
-      allergens: null == allergens
-          ? _value._allergens
-          : allergens // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       unitSystem: null == unitSystem
           ? _value.unitSystem
           : unitSystem // ignore: cast_nullable_to_non_nullable
+              as String,
+      requirements: null == requirements
+          ? _value.requirements
+          : requirements // ignore: cast_nullable_to_non_nullable
+              as String,
+      uid: null == uid
+          ? _value.uid
+          : uid // ignore: cast_nullable_to_non_nullable
               as String,
     ));
   }
@@ -750,57 +619,26 @@ class __$$PersonalizationImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$PersonalizationImpl implements _Personalization {
   const _$PersonalizationImpl(
-      {final List<String> dietaryRestrictions = const [],
-      final List<String> cuisinePreferences = const [],
-      this.skillLevel = 'intermediate',
-      final List<String> allergens = const [],
-      this.unitSystem = 'us_customary'})
-      : _dietaryRestrictions = dietaryRestrictions,
-        _cuisinePreferences = cuisinePreferences,
-        _allergens = allergens;
+      {@JsonKey(name: 'unit_system') this.unitSystem = 'us_customary',
+      this.requirements = '',
+      this.uid = ''});
 
   factory _$PersonalizationImpl.fromJson(Map<String, dynamic> json) =>
       _$$PersonalizationImplFromJson(json);
 
-  final List<String> _dietaryRestrictions;
   @override
-  @JsonKey()
-  List<String> get dietaryRestrictions {
-    if (_dietaryRestrictions is EqualUnmodifiableListView)
-      return _dietaryRestrictions;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_dietaryRestrictions);
-  }
-
-  final List<String> _cuisinePreferences;
-  @override
-  @JsonKey()
-  List<String> get cuisinePreferences {
-    if (_cuisinePreferences is EqualUnmodifiableListView)
-      return _cuisinePreferences;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_cuisinePreferences);
-  }
-
-  @override
-  @JsonKey()
-  final String skillLevel;
-  final List<String> _allergens;
-  @override
-  @JsonKey()
-  List<String> get allergens {
-    if (_allergens is EqualUnmodifiableListView) return _allergens;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_allergens);
-  }
-
-  @override
-  @JsonKey()
+  @JsonKey(name: 'unit_system')
   final String unitSystem;
+  @override
+  @JsonKey()
+  final String requirements;
+  @override
+  @JsonKey()
+  final String uid;
 
   @override
   String toString() {
-    return 'Personalization(dietaryRestrictions: $dietaryRestrictions, cuisinePreferences: $cuisinePreferences, skillLevel: $skillLevel, allergens: $allergens, unitSystem: $unitSystem)';
+    return 'Personalization(unitSystem: $unitSystem, requirements: $requirements, uid: $uid)';
   }
 
   @override
@@ -808,27 +646,16 @@ class _$PersonalizationImpl implements _Personalization {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$PersonalizationImpl &&
-            const DeepCollectionEquality()
-                .equals(other._dietaryRestrictions, _dietaryRestrictions) &&
-            const DeepCollectionEquality()
-                .equals(other._cuisinePreferences, _cuisinePreferences) &&
-            (identical(other.skillLevel, skillLevel) ||
-                other.skillLevel == skillLevel) &&
-            const DeepCollectionEquality()
-                .equals(other._allergens, _allergens) &&
             (identical(other.unitSystem, unitSystem) ||
-                other.unitSystem == unitSystem));
+                other.unitSystem == unitSystem) &&
+            (identical(other.requirements, requirements) ||
+                other.requirements == requirements) &&
+            (identical(other.uid, uid) || other.uid == uid));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      const DeepCollectionEquality().hash(_dietaryRestrictions),
-      const DeepCollectionEquality().hash(_cuisinePreferences),
-      skillLevel,
-      const DeepCollectionEquality().hash(_allergens),
-      unitSystem);
+  int get hashCode => Object.hash(runtimeType, unitSystem, requirements, uid);
 
   /// Create a copy of Personalization
   /// with the given fields replaced by the non-null parameter values.
@@ -849,25 +676,20 @@ class _$PersonalizationImpl implements _Personalization {
 
 abstract class _Personalization implements Personalization {
   const factory _Personalization(
-      {final List<String> dietaryRestrictions,
-      final List<String> cuisinePreferences,
-      final String skillLevel,
-      final List<String> allergens,
-      final String unitSystem}) = _$PersonalizationImpl;
+      {@JsonKey(name: 'unit_system') final String unitSystem,
+      final String requirements,
+      final String uid}) = _$PersonalizationImpl;
 
   factory _Personalization.fromJson(Map<String, dynamic> json) =
       _$PersonalizationImpl.fromJson;
 
   @override
-  List<String> get dietaryRestrictions;
-  @override
-  List<String> get cuisinePreferences;
-  @override
-  String get skillLevel;
-  @override
-  List<String> get allergens;
-  @override
+  @JsonKey(name: 'unit_system')
   String get unitSystem;
+  @override
+  String get requirements;
+  @override
+  String get uid;
 
   /// Create a copy of Personalization
   /// with the given fields replaced by the non-null parameter values.

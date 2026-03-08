@@ -62,22 +62,22 @@ Map<String, dynamic> _$$FamilyMemberImplToJson(_$FamilyMemberImpl instance) =>
 _$DietaryProfileImpl _$$DietaryProfileImplFromJson(Map<String, dynamic> json) =>
     _$DietaryProfileImpl(
       allergies: (json['allergies'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map((e) => Allergy.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
       intolerances: (json['intolerances'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      dietaryRestrictions: (json['dietaryRestrictions'] as List<dynamic>?)
+      restrictions: (json['restrictions'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      dislikedIngredients: (json['dislikedIngredients'] as List<dynamic>?)
+      preferences: (json['preferences'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      notes: json['notes'] as String?,
+      medicalNotes: json['medical_notes'] as String?,
     );
 
 Map<String, dynamic> _$$DietaryProfileImplToJson(
@@ -85,7 +85,26 @@ Map<String, dynamic> _$$DietaryProfileImplToJson(
     <String, dynamic>{
       'allergies': instance.allergies,
       'intolerances': instance.intolerances,
-      'dietaryRestrictions': instance.dietaryRestrictions,
-      'dislikedIngredients': instance.dislikedIngredients,
+      'restrictions': instance.restrictions,
+      'preferences': instance.preferences,
+      'medical_notes': instance.medicalNotes,
+    };
+
+_$AllergyImpl _$$AllergyImplFromJson(Map<String, dynamic> json) =>
+    _$AllergyImpl(
+      name: json['name'] as String,
+      severity: json['severity'] as String? ?? '',
+      subForms: (json['sub_forms'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      notes: json['notes'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$$AllergyImplToJson(_$AllergyImpl instance) =>
+    <String, dynamic>{
+      'name': instance.name,
+      'severity': instance.severity,
+      'sub_forms': instance.subForms,
       'notes': instance.notes,
     };

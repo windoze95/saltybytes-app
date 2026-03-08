@@ -21,7 +21,7 @@ class _FamilyMemberDetailScreenState
 
   late TextEditingController _nameController;
   late TextEditingController _roleController;
-  late List<String> _allergies;
+  late List<Allergy> _allergies;
   late List<String> _intolerances;
   late List<String> _restrictions;
   late List<String> _dislikes;
@@ -49,10 +49,10 @@ class _FamilyMemberDetailScreenState
       _isEditing = true;
       _nameController.text = member.name;
       _roleController.text = member.role;
-      _allergies = List.from(member.dietaryProfile.allergies);
-      _intolerances = List.from(member.dietaryProfile.intolerances);
-      _restrictions = List.from(member.dietaryProfile.dietaryRestrictions);
-      _dislikes = List.from(member.dietaryProfile.dislikedIngredients);
+      _allergies = List<Allergy>.from(member.dietaryProfile.allergies);
+      _intolerances = List<String>.from(member.dietaryProfile.intolerances);
+      _restrictions = List<String>.from(member.dietaryProfile.restrictions);
+      _dislikes = List<String>.from(member.dietaryProfile.preferences);
     });
   }
 
@@ -66,8 +66,8 @@ class _FamilyMemberDetailScreenState
       dietaryProfile: DietaryProfile(
         allergies: _allergies,
         intolerances: _intolerances,
-        dietaryRestrictions: _restrictions,
-        dislikedIngredients: _dislikes,
+        restrictions: _restrictions,
+        preferences: _dislikes,
       ),
     );
 
@@ -113,6 +113,36 @@ class _FamilyMemberDetailScreenState
     );
   }
 
+  void _addAllergyDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add allergy'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Enter allergy'),
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final val = controller.text.trim();
+              if (val.isNotEmpty) {
+                setState(() => _allergies.add(Allergy(name: val)));
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -129,8 +159,8 @@ class _FamilyMemberDetailScreenState
         ? DietaryProfile(
             allergies: _allergies,
             intolerances: _intolerances,
-            dietaryRestrictions: _restrictions,
-            dislikedIngredients: _dislikes,
+            restrictions: _restrictions,
+            preferences: _dislikes,
           )
         : member.dietaryProfile;
 
@@ -220,12 +250,12 @@ class _FamilyMemberDetailScreenState
           // Allergies
           _DietarySection(
             title: 'Allergies',
-            items: profile.allergies,
+            items: profile.allergies.map((a) => a.name).toList(),
             icon: Icons.warning_amber,
             severityColors: true,
             isEditing: _isEditing,
             onAdd: _isEditing
-                ? () => _addItemDialog('allergy', _allergies)
+                ? () => _addAllergyDialog()
                 : null,
             onRemove:
                 _isEditing ? (i) => setState(() => _allergies.removeAt(i)) : null,
@@ -248,7 +278,7 @@ class _FamilyMemberDetailScreenState
           // Restrictions
           _DietarySection(
             title: 'Dietary Restrictions',
-            items: profile.dietaryRestrictions,
+            items: profile.restrictions,
             icon: Icons.block,
             isEditing: _isEditing,
             useChips: true,
@@ -262,8 +292,8 @@ class _FamilyMemberDetailScreenState
 
           // Dislikes
           _DietarySection(
-            title: 'Disliked Ingredients',
-            items: profile.dislikedIngredients,
+            title: 'Preferences',
+            items: profile.preferences,
             icon: Icons.thumb_down_alt_outlined,
             isEditing: _isEditing,
             useChips: true,

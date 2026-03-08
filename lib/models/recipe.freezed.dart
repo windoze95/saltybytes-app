@@ -22,24 +22,18 @@ Recipe _$RecipeFromJson(Map<String, dynamic> json) {
 mixin _$Recipe {
   String get id => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
-  String? get description => throw _privateConstructorUsedError;
   String get ownerId => throw _privateConstructorUsedError;
   String? get imageUrl => throw _privateConstructorUsedError;
   List<Ingredient> get ingredients => throw _privateConstructorUsedError;
   List<String> get instructions => throw _privateConstructorUsedError;
   List<String> get tags => throw _privateConstructorUsedError;
-  String? get cuisine => throw _privateConstructorUsedError;
-  String? get difficulty => throw _privateConstructorUsedError;
-  int? get prepTimeMinutes => throw _privateConstructorUsedError;
   int? get cookTimeMinutes => throw _privateConstructorUsedError;
-  int get servings => throw _privateConstructorUsedError;
   String? get sourceUrl => throw _privateConstructorUsedError;
-  bool get isPublic => throw _privateConstructorUsedError;
-  List<String> get allergenTags => throw _privateConstructorUsedError;
   String get unitSystem => throw _privateConstructorUsedError;
-  String get currentBranch => throw _privateConstructorUsedError;
+  String get status => throw _privateConstructorUsedError;
+  int? get portions => throw _privateConstructorUsedError;
+  String? get portionSize => throw _privateConstructorUsedError;
   String? get parentRecipeId => throw _privateConstructorUsedError;
-  int? get version => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
@@ -60,24 +54,18 @@ abstract class $RecipeCopyWith<$Res> {
   $Res call(
       {String id,
       String title,
-      String? description,
       String ownerId,
       String? imageUrl,
       List<Ingredient> ingredients,
       List<String> instructions,
       List<String> tags,
-      String? cuisine,
-      String? difficulty,
-      int? prepTimeMinutes,
       int? cookTimeMinutes,
-      int servings,
       String? sourceUrl,
-      bool isPublic,
-      List<String> allergenTags,
       String unitSystem,
-      String currentBranch,
+      String status,
+      int? portions,
+      String? portionSize,
       String? parentRecipeId,
-      int? version,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -99,24 +87,18 @@ class _$RecipeCopyWithImpl<$Res, $Val extends Recipe>
   $Res call({
     Object? id = null,
     Object? title = null,
-    Object? description = freezed,
     Object? ownerId = null,
     Object? imageUrl = freezed,
     Object? ingredients = null,
     Object? instructions = null,
     Object? tags = null,
-    Object? cuisine = freezed,
-    Object? difficulty = freezed,
-    Object? prepTimeMinutes = freezed,
     Object? cookTimeMinutes = freezed,
-    Object? servings = null,
     Object? sourceUrl = freezed,
-    Object? isPublic = null,
-    Object? allergenTags = null,
     Object? unitSystem = null,
-    Object? currentBranch = null,
+    Object? status = null,
+    Object? portions = freezed,
+    Object? portionSize = freezed,
     Object? parentRecipeId = freezed,
-    Object? version = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -129,10 +111,6 @@ class _$RecipeCopyWithImpl<$Res, $Val extends Recipe>
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
-      description: freezed == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String?,
       ownerId: null == ownerId
           ? _value.ownerId
           : ownerId // ignore: cast_nullable_to_non_nullable
@@ -153,54 +131,34 @@ class _$RecipeCopyWithImpl<$Res, $Val extends Recipe>
           ? _value.tags
           : tags // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      cuisine: freezed == cuisine
-          ? _value.cuisine
-          : cuisine // ignore: cast_nullable_to_non_nullable
-              as String?,
-      difficulty: freezed == difficulty
-          ? _value.difficulty
-          : difficulty // ignore: cast_nullable_to_non_nullable
-              as String?,
-      prepTimeMinutes: freezed == prepTimeMinutes
-          ? _value.prepTimeMinutes
-          : prepTimeMinutes // ignore: cast_nullable_to_non_nullable
-              as int?,
       cookTimeMinutes: freezed == cookTimeMinutes
           ? _value.cookTimeMinutes
           : cookTimeMinutes // ignore: cast_nullable_to_non_nullable
               as int?,
-      servings: null == servings
-          ? _value.servings
-          : servings // ignore: cast_nullable_to_non_nullable
-              as int,
       sourceUrl: freezed == sourceUrl
           ? _value.sourceUrl
           : sourceUrl // ignore: cast_nullable_to_non_nullable
               as String?,
-      isPublic: null == isPublic
-          ? _value.isPublic
-          : isPublic // ignore: cast_nullable_to_non_nullable
-              as bool,
-      allergenTags: null == allergenTags
-          ? _value.allergenTags
-          : allergenTags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       unitSystem: null == unitSystem
           ? _value.unitSystem
           : unitSystem // ignore: cast_nullable_to_non_nullable
               as String,
-      currentBranch: null == currentBranch
-          ? _value.currentBranch
-          : currentBranch // ignore: cast_nullable_to_non_nullable
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
               as String,
+      portions: freezed == portions
+          ? _value.portions
+          : portions // ignore: cast_nullable_to_non_nullable
+              as int?,
+      portionSize: freezed == portionSize
+          ? _value.portionSize
+          : portionSize // ignore: cast_nullable_to_non_nullable
+              as String?,
       parentRecipeId: freezed == parentRecipeId
           ? _value.parentRecipeId
           : parentRecipeId // ignore: cast_nullable_to_non_nullable
               as String?,
-      version: freezed == version
-          ? _value.version
-          : version // ignore: cast_nullable_to_non_nullable
-              as int?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -223,24 +181,18 @@ abstract class _$$RecipeImplCopyWith<$Res> implements $RecipeCopyWith<$Res> {
   $Res call(
       {String id,
       String title,
-      String? description,
       String ownerId,
       String? imageUrl,
       List<Ingredient> ingredients,
       List<String> instructions,
       List<String> tags,
-      String? cuisine,
-      String? difficulty,
-      int? prepTimeMinutes,
       int? cookTimeMinutes,
-      int servings,
       String? sourceUrl,
-      bool isPublic,
-      List<String> allergenTags,
       String unitSystem,
-      String currentBranch,
+      String status,
+      int? portions,
+      String? portionSize,
       String? parentRecipeId,
-      int? version,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -260,24 +212,18 @@ class __$$RecipeImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? title = null,
-    Object? description = freezed,
     Object? ownerId = null,
     Object? imageUrl = freezed,
     Object? ingredients = null,
     Object? instructions = null,
     Object? tags = null,
-    Object? cuisine = freezed,
-    Object? difficulty = freezed,
-    Object? prepTimeMinutes = freezed,
     Object? cookTimeMinutes = freezed,
-    Object? servings = null,
     Object? sourceUrl = freezed,
-    Object? isPublic = null,
-    Object? allergenTags = null,
     Object? unitSystem = null,
-    Object? currentBranch = null,
+    Object? status = null,
+    Object? portions = freezed,
+    Object? portionSize = freezed,
     Object? parentRecipeId = freezed,
-    Object? version = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -290,10 +236,6 @@ class __$$RecipeImplCopyWithImpl<$Res>
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
-      description: freezed == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String?,
       ownerId: null == ownerId
           ? _value.ownerId
           : ownerId // ignore: cast_nullable_to_non_nullable
@@ -314,54 +256,34 @@ class __$$RecipeImplCopyWithImpl<$Res>
           ? _value._tags
           : tags // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      cuisine: freezed == cuisine
-          ? _value.cuisine
-          : cuisine // ignore: cast_nullable_to_non_nullable
-              as String?,
-      difficulty: freezed == difficulty
-          ? _value.difficulty
-          : difficulty // ignore: cast_nullable_to_non_nullable
-              as String?,
-      prepTimeMinutes: freezed == prepTimeMinutes
-          ? _value.prepTimeMinutes
-          : prepTimeMinutes // ignore: cast_nullable_to_non_nullable
-              as int?,
       cookTimeMinutes: freezed == cookTimeMinutes
           ? _value.cookTimeMinutes
           : cookTimeMinutes // ignore: cast_nullable_to_non_nullable
               as int?,
-      servings: null == servings
-          ? _value.servings
-          : servings // ignore: cast_nullable_to_non_nullable
-              as int,
       sourceUrl: freezed == sourceUrl
           ? _value.sourceUrl
           : sourceUrl // ignore: cast_nullable_to_non_nullable
               as String?,
-      isPublic: null == isPublic
-          ? _value.isPublic
-          : isPublic // ignore: cast_nullable_to_non_nullable
-              as bool,
-      allergenTags: null == allergenTags
-          ? _value._allergenTags
-          : allergenTags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       unitSystem: null == unitSystem
           ? _value.unitSystem
           : unitSystem // ignore: cast_nullable_to_non_nullable
               as String,
-      currentBranch: null == currentBranch
-          ? _value.currentBranch
-          : currentBranch // ignore: cast_nullable_to_non_nullable
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
               as String,
+      portions: freezed == portions
+          ? _value.portions
+          : portions // ignore: cast_nullable_to_non_nullable
+              as int?,
+      portionSize: freezed == portionSize
+          ? _value.portionSize
+          : portionSize // ignore: cast_nullable_to_non_nullable
+              as String?,
       parentRecipeId: freezed == parentRecipeId
           ? _value.parentRecipeId
           : parentRecipeId // ignore: cast_nullable_to_non_nullable
               as String?,
-      version: freezed == version
-          ? _value.version
-          : version // ignore: cast_nullable_to_non_nullable
-              as int?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -380,30 +302,23 @@ class _$RecipeImpl implements _Recipe {
   const _$RecipeImpl(
       {required this.id,
       required this.title,
-      this.description,
       required this.ownerId,
       this.imageUrl,
       final List<Ingredient> ingredients = const [],
       final List<String> instructions = const [],
       final List<String> tags = const [],
-      this.cuisine,
-      this.difficulty,
-      this.prepTimeMinutes,
       this.cookTimeMinutes,
-      this.servings = 4,
       this.sourceUrl,
-      this.isPublic = false,
-      final List<String> allergenTags = const [],
       this.unitSystem = 'us_customary',
-      this.currentBranch = 'main',
+      this.status = 'ready',
+      this.portions,
+      this.portionSize,
       this.parentRecipeId,
-      this.version,
       this.createdAt,
       this.updatedAt})
       : _ingredients = ingredients,
         _instructions = instructions,
-        _tags = tags,
-        _allergenTags = allergenTags;
+        _tags = tags;
 
   factory _$RecipeImpl.fromJson(Map<String, dynamic> json) =>
       _$$RecipeImplFromJson(json);
@@ -412,8 +327,6 @@ class _$RecipeImpl implements _Recipe {
   final String id;
   @override
   final String title;
-  @override
-  final String? description;
   @override
   final String ownerId;
   @override
@@ -446,40 +359,21 @@ class _$RecipeImpl implements _Recipe {
   }
 
   @override
-  final String? cuisine;
-  @override
-  final String? difficulty;
-  @override
-  final int? prepTimeMinutes;
-  @override
   final int? cookTimeMinutes;
   @override
-  @JsonKey()
-  final int servings;
-  @override
   final String? sourceUrl;
-  @override
-  @JsonKey()
-  final bool isPublic;
-  final List<String> _allergenTags;
-  @override
-  @JsonKey()
-  List<String> get allergenTags {
-    if (_allergenTags is EqualUnmodifiableListView) return _allergenTags;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_allergenTags);
-  }
-
   @override
   @JsonKey()
   final String unitSystem;
   @override
   @JsonKey()
-  final String currentBranch;
+  final String status;
+  @override
+  final int? portions;
+  @override
+  final String? portionSize;
   @override
   final String? parentRecipeId;
-  @override
-  final int? version;
   @override
   final DateTime? createdAt;
   @override
@@ -487,7 +381,7 @@ class _$RecipeImpl implements _Recipe {
 
   @override
   String toString() {
-    return 'Recipe(id: $id, title: $title, description: $description, ownerId: $ownerId, imageUrl: $imageUrl, ingredients: $ingredients, instructions: $instructions, tags: $tags, cuisine: $cuisine, difficulty: $difficulty, prepTimeMinutes: $prepTimeMinutes, cookTimeMinutes: $cookTimeMinutes, servings: $servings, sourceUrl: $sourceUrl, isPublic: $isPublic, allergenTags: $allergenTags, unitSystem: $unitSystem, currentBranch: $currentBranch, parentRecipeId: $parentRecipeId, version: $version, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Recipe(id: $id, title: $title, ownerId: $ownerId, imageUrl: $imageUrl, ingredients: $ingredients, instructions: $instructions, tags: $tags, cookTimeMinutes: $cookTimeMinutes, sourceUrl: $sourceUrl, unitSystem: $unitSystem, status: $status, portions: $portions, portionSize: $portionSize, parentRecipeId: $parentRecipeId, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -497,8 +391,6 @@ class _$RecipeImpl implements _Recipe {
             other is _$RecipeImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.title, title) || other.title == title) &&
-            (identical(other.description, description) ||
-                other.description == description) &&
             (identical(other.ownerId, ownerId) || other.ownerId == ownerId) &&
             (identical(other.imageUrl, imageUrl) ||
                 other.imageUrl == imageUrl) &&
@@ -507,28 +399,19 @@ class _$RecipeImpl implements _Recipe {
             const DeepCollectionEquality()
                 .equals(other._instructions, _instructions) &&
             const DeepCollectionEquality().equals(other._tags, _tags) &&
-            (identical(other.cuisine, cuisine) || other.cuisine == cuisine) &&
-            (identical(other.difficulty, difficulty) ||
-                other.difficulty == difficulty) &&
-            (identical(other.prepTimeMinutes, prepTimeMinutes) ||
-                other.prepTimeMinutes == prepTimeMinutes) &&
             (identical(other.cookTimeMinutes, cookTimeMinutes) ||
                 other.cookTimeMinutes == cookTimeMinutes) &&
-            (identical(other.servings, servings) ||
-                other.servings == servings) &&
             (identical(other.sourceUrl, sourceUrl) ||
                 other.sourceUrl == sourceUrl) &&
-            (identical(other.isPublic, isPublic) ||
-                other.isPublic == isPublic) &&
-            const DeepCollectionEquality()
-                .equals(other._allergenTags, _allergenTags) &&
             (identical(other.unitSystem, unitSystem) ||
                 other.unitSystem == unitSystem) &&
-            (identical(other.currentBranch, currentBranch) ||
-                other.currentBranch == currentBranch) &&
+            (identical(other.status, status) || other.status == status) &&
+            (identical(other.portions, portions) ||
+                other.portions == portions) &&
+            (identical(other.portionSize, portionSize) ||
+                other.portionSize == portionSize) &&
             (identical(other.parentRecipeId, parentRecipeId) ||
                 other.parentRecipeId == parentRecipeId) &&
-            (identical(other.version, version) || other.version == version) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -537,31 +420,24 @@ class _$RecipeImpl implements _Recipe {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hashAll([
-        runtimeType,
-        id,
-        title,
-        description,
-        ownerId,
-        imageUrl,
-        const DeepCollectionEquality().hash(_ingredients),
-        const DeepCollectionEquality().hash(_instructions),
-        const DeepCollectionEquality().hash(_tags),
-        cuisine,
-        difficulty,
-        prepTimeMinutes,
-        cookTimeMinutes,
-        servings,
-        sourceUrl,
-        isPublic,
-        const DeepCollectionEquality().hash(_allergenTags),
-        unitSystem,
-        currentBranch,
-        parentRecipeId,
-        version,
-        createdAt,
-        updatedAt
-      ]);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      title,
+      ownerId,
+      imageUrl,
+      const DeepCollectionEquality().hash(_ingredients),
+      const DeepCollectionEquality().hash(_instructions),
+      const DeepCollectionEquality().hash(_tags),
+      cookTimeMinutes,
+      sourceUrl,
+      unitSystem,
+      status,
+      portions,
+      portionSize,
+      parentRecipeId,
+      createdAt,
+      updatedAt);
 
   /// Create a copy of Recipe
   /// with the given fields replaced by the non-null parameter values.
@@ -583,24 +459,18 @@ abstract class _Recipe implements Recipe {
   const factory _Recipe(
       {required final String id,
       required final String title,
-      final String? description,
       required final String ownerId,
       final String? imageUrl,
       final List<Ingredient> ingredients,
       final List<String> instructions,
       final List<String> tags,
-      final String? cuisine,
-      final String? difficulty,
-      final int? prepTimeMinutes,
       final int? cookTimeMinutes,
-      final int servings,
       final String? sourceUrl,
-      final bool isPublic,
-      final List<String> allergenTags,
       final String unitSystem,
-      final String currentBranch,
+      final String status,
+      final int? portions,
+      final String? portionSize,
       final String? parentRecipeId,
-      final int? version,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$RecipeImpl;
 
@@ -610,8 +480,6 @@ abstract class _Recipe implements Recipe {
   String get id;
   @override
   String get title;
-  @override
-  String? get description;
   @override
   String get ownerId;
   @override
@@ -623,29 +491,19 @@ abstract class _Recipe implements Recipe {
   @override
   List<String> get tags;
   @override
-  String? get cuisine;
-  @override
-  String? get difficulty;
-  @override
-  int? get prepTimeMinutes;
-  @override
   int? get cookTimeMinutes;
-  @override
-  int get servings;
   @override
   String? get sourceUrl;
   @override
-  bool get isPublic;
-  @override
-  List<String> get allergenTags;
-  @override
   String get unitSystem;
   @override
-  String get currentBranch;
+  String get status;
+  @override
+  int? get portions;
+  @override
+  String? get portionSize;
   @override
   String? get parentRecipeId;
-  @override
-  int? get version;
   @override
   DateTime? get createdAt;
   @override
@@ -671,9 +529,6 @@ mixin _$Ingredient {
   String? get unit => throw _privateConstructorUsedError;
   @JsonKey(name: 'original_text')
   String? get originalText => throw _privateConstructorUsedError;
-  bool get optional => throw _privateConstructorUsedError;
-  String? get notes => throw _privateConstructorUsedError;
-  String? get category => throw _privateConstructorUsedError;
 
   /// Serializes this Ingredient to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -695,10 +550,7 @@ abstract class $IngredientCopyWith<$Res> {
       {String name,
       @JsonKey(name: 'amount') double? amount,
       String? unit,
-      @JsonKey(name: 'original_text') String? originalText,
-      bool optional,
-      String? notes,
-      String? category});
+      @JsonKey(name: 'original_text') String? originalText});
 }
 
 /// @nodoc
@@ -720,9 +572,6 @@ class _$IngredientCopyWithImpl<$Res, $Val extends Ingredient>
     Object? amount = freezed,
     Object? unit = freezed,
     Object? originalText = freezed,
-    Object? optional = null,
-    Object? notes = freezed,
-    Object? category = freezed,
   }) {
     return _then(_value.copyWith(
       name: null == name
@@ -741,18 +590,6 @@ class _$IngredientCopyWithImpl<$Res, $Val extends Ingredient>
           ? _value.originalText
           : originalText // ignore: cast_nullable_to_non_nullable
               as String?,
-      optional: null == optional
-          ? _value.optional
-          : optional // ignore: cast_nullable_to_non_nullable
-              as bool,
-      notes: freezed == notes
-          ? _value.notes
-          : notes // ignore: cast_nullable_to_non_nullable
-              as String?,
-      category: freezed == category
-          ? _value.category
-          : category // ignore: cast_nullable_to_non_nullable
-              as String?,
     ) as $Val);
   }
 }
@@ -769,10 +606,7 @@ abstract class _$$IngredientImplCopyWith<$Res>
       {String name,
       @JsonKey(name: 'amount') double? amount,
       String? unit,
-      @JsonKey(name: 'original_text') String? originalText,
-      bool optional,
-      String? notes,
-      String? category});
+      @JsonKey(name: 'original_text') String? originalText});
 }
 
 /// @nodoc
@@ -792,9 +626,6 @@ class __$$IngredientImplCopyWithImpl<$Res>
     Object? amount = freezed,
     Object? unit = freezed,
     Object? originalText = freezed,
-    Object? optional = null,
-    Object? notes = freezed,
-    Object? category = freezed,
   }) {
     return _then(_$IngredientImpl(
       name: null == name
@@ -813,18 +644,6 @@ class __$$IngredientImplCopyWithImpl<$Res>
           ? _value.originalText
           : originalText // ignore: cast_nullable_to_non_nullable
               as String?,
-      optional: null == optional
-          ? _value.optional
-          : optional // ignore: cast_nullable_to_non_nullable
-              as bool,
-      notes: freezed == notes
-          ? _value.notes
-          : notes // ignore: cast_nullable_to_non_nullable
-              as String?,
-      category: freezed == category
-          ? _value.category
-          : category // ignore: cast_nullable_to_non_nullable
-              as String?,
     ));
   }
 }
@@ -836,10 +655,7 @@ class _$IngredientImpl implements _Ingredient {
       {required this.name,
       @JsonKey(name: 'amount') this.amount,
       this.unit,
-      @JsonKey(name: 'original_text') this.originalText,
-      this.optional = false,
-      this.notes,
-      this.category});
+      @JsonKey(name: 'original_text') this.originalText});
 
   factory _$IngredientImpl.fromJson(Map<String, dynamic> json) =>
       _$$IngredientImplFromJson(json);
@@ -854,17 +670,10 @@ class _$IngredientImpl implements _Ingredient {
   @override
   @JsonKey(name: 'original_text')
   final String? originalText;
-  @override
-  @JsonKey()
-  final bool optional;
-  @override
-  final String? notes;
-  @override
-  final String? category;
 
   @override
   String toString() {
-    return 'Ingredient(name: $name, amount: $amount, unit: $unit, originalText: $originalText, optional: $optional, notes: $notes, category: $category)';
+    return 'Ingredient(name: $name, amount: $amount, unit: $unit, originalText: $originalText)';
   }
 
   @override
@@ -876,18 +685,13 @@ class _$IngredientImpl implements _Ingredient {
             (identical(other.amount, amount) || other.amount == amount) &&
             (identical(other.unit, unit) || other.unit == unit) &&
             (identical(other.originalText, originalText) ||
-                other.originalText == originalText) &&
-            (identical(other.optional, optional) ||
-                other.optional == optional) &&
-            (identical(other.notes, notes) || other.notes == notes) &&
-            (identical(other.category, category) ||
-                other.category == category));
+                other.originalText == originalText));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType, name, amount, unit, originalText, optional, notes, category);
+  int get hashCode =>
+      Object.hash(runtimeType, name, amount, unit, originalText);
 
   /// Create a copy of Ingredient
   /// with the given fields replaced by the non-null parameter values.
@@ -907,13 +711,11 @@ class _$IngredientImpl implements _Ingredient {
 
 abstract class _Ingredient implements Ingredient {
   const factory _Ingredient(
-      {required final String name,
-      @JsonKey(name: 'amount') final double? amount,
-      final String? unit,
-      @JsonKey(name: 'original_text') final String? originalText,
-      final bool optional,
-      final String? notes,
-      final String? category}) = _$IngredientImpl;
+          {required final String name,
+          @JsonKey(name: 'amount') final double? amount,
+          final String? unit,
+          @JsonKey(name: 'original_text') final String? originalText}) =
+      _$IngredientImpl;
 
   factory _Ingredient.fromJson(Map<String, dynamic> json) =
       _$IngredientImpl.fromJson;
@@ -928,12 +730,6 @@ abstract class _Ingredient implements Ingredient {
   @override
   @JsonKey(name: 'original_text')
   String? get originalText;
-  @override
-  bool get optional;
-  @override
-  String? get notes;
-  @override
-  String? get category;
 
   /// Create a copy of Ingredient
   /// with the given fields replaced by the non-null parameter values.
@@ -943,406 +739,28 @@ abstract class _Ingredient implements Ingredient {
       throw _privateConstructorUsedError;
 }
 
-RecipeDef _$RecipeDefFromJson(Map<String, dynamic> json) {
-  return _RecipeDef.fromJson(json);
-}
-
-/// @nodoc
-mixin _$RecipeDef {
-  String get id => throw _privateConstructorUsedError;
-  String get recipeId => throw _privateConstructorUsedError;
-  String get branch => throw _privateConstructorUsedError;
-  int get version => throw _privateConstructorUsedError;
-  String get title => throw _privateConstructorUsedError;
-  String? get description => throw _privateConstructorUsedError;
-  List<Ingredient> get ingredients => throw _privateConstructorUsedError;
-  List<String> get instructions => throw _privateConstructorUsedError;
-  String? get commitMessage => throw _privateConstructorUsedError;
-  String? get authorId => throw _privateConstructorUsedError;
-  DateTime? get createdAt => throw _privateConstructorUsedError;
-
-  /// Serializes this RecipeDef to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of RecipeDef
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $RecipeDefCopyWith<RecipeDef> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-abstract class $RecipeDefCopyWith<$Res> {
-  factory $RecipeDefCopyWith(RecipeDef value, $Res Function(RecipeDef) then) =
-      _$RecipeDefCopyWithImpl<$Res, RecipeDef>;
-  @useResult
-  $Res call(
-      {String id,
-      String recipeId,
-      String branch,
-      int version,
-      String title,
-      String? description,
-      List<Ingredient> ingredients,
-      List<String> instructions,
-      String? commitMessage,
-      String? authorId,
-      DateTime? createdAt});
-}
-
-/// @nodoc
-class _$RecipeDefCopyWithImpl<$Res, $Val extends RecipeDef>
-    implements $RecipeDefCopyWith<$Res> {
-  _$RecipeDefCopyWithImpl(this._value, this._then);
-
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
-
-  /// Create a copy of RecipeDef
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? id = null,
-    Object? recipeId = null,
-    Object? branch = null,
-    Object? version = null,
-    Object? title = null,
-    Object? description = freezed,
-    Object? ingredients = null,
-    Object? instructions = null,
-    Object? commitMessage = freezed,
-    Object? authorId = freezed,
-    Object? createdAt = freezed,
-  }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      recipeId: null == recipeId
-          ? _value.recipeId
-          : recipeId // ignore: cast_nullable_to_non_nullable
-              as String,
-      branch: null == branch
-          ? _value.branch
-          : branch // ignore: cast_nullable_to_non_nullable
-              as String,
-      version: null == version
-          ? _value.version
-          : version // ignore: cast_nullable_to_non_nullable
-              as int,
-      title: null == title
-          ? _value.title
-          : title // ignore: cast_nullable_to_non_nullable
-              as String,
-      description: freezed == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String?,
-      ingredients: null == ingredients
-          ? _value.ingredients
-          : ingredients // ignore: cast_nullable_to_non_nullable
-              as List<Ingredient>,
-      instructions: null == instructions
-          ? _value.instructions
-          : instructions // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      commitMessage: freezed == commitMessage
-          ? _value.commitMessage
-          : commitMessage // ignore: cast_nullable_to_non_nullable
-              as String?,
-      authorId: freezed == authorId
-          ? _value.authorId
-          : authorId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      createdAt: freezed == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
-    ) as $Val);
-  }
-}
-
-/// @nodoc
-abstract class _$$RecipeDefImplCopyWith<$Res>
-    implements $RecipeDefCopyWith<$Res> {
-  factory _$$RecipeDefImplCopyWith(
-          _$RecipeDefImpl value, $Res Function(_$RecipeDefImpl) then) =
-      __$$RecipeDefImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call(
-      {String id,
-      String recipeId,
-      String branch,
-      int version,
-      String title,
-      String? description,
-      List<Ingredient> ingredients,
-      List<String> instructions,
-      String? commitMessage,
-      String? authorId,
-      DateTime? createdAt});
-}
-
-/// @nodoc
-class __$$RecipeDefImplCopyWithImpl<$Res>
-    extends _$RecipeDefCopyWithImpl<$Res, _$RecipeDefImpl>
-    implements _$$RecipeDefImplCopyWith<$Res> {
-  __$$RecipeDefImplCopyWithImpl(
-      _$RecipeDefImpl _value, $Res Function(_$RecipeDefImpl) _then)
-      : super(_value, _then);
-
-  /// Create a copy of RecipeDef
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? id = null,
-    Object? recipeId = null,
-    Object? branch = null,
-    Object? version = null,
-    Object? title = null,
-    Object? description = freezed,
-    Object? ingredients = null,
-    Object? instructions = null,
-    Object? commitMessage = freezed,
-    Object? authorId = freezed,
-    Object? createdAt = freezed,
-  }) {
-    return _then(_$RecipeDefImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      recipeId: null == recipeId
-          ? _value.recipeId
-          : recipeId // ignore: cast_nullable_to_non_nullable
-              as String,
-      branch: null == branch
-          ? _value.branch
-          : branch // ignore: cast_nullable_to_non_nullable
-              as String,
-      version: null == version
-          ? _value.version
-          : version // ignore: cast_nullable_to_non_nullable
-              as int,
-      title: null == title
-          ? _value.title
-          : title // ignore: cast_nullable_to_non_nullable
-              as String,
-      description: freezed == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String?,
-      ingredients: null == ingredients
-          ? _value._ingredients
-          : ingredients // ignore: cast_nullable_to_non_nullable
-              as List<Ingredient>,
-      instructions: null == instructions
-          ? _value._instructions
-          : instructions // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      commitMessage: freezed == commitMessage
-          ? _value.commitMessage
-          : commitMessage // ignore: cast_nullable_to_non_nullable
-              as String?,
-      authorId: freezed == authorId
-          ? _value.authorId
-          : authorId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      createdAt: freezed == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
-    ));
-  }
-}
-
-/// @nodoc
-@JsonSerializable()
-class _$RecipeDefImpl implements _RecipeDef {
-  const _$RecipeDefImpl(
-      {required this.id,
-      required this.recipeId,
-      required this.branch,
-      required this.version,
-      required this.title,
-      this.description,
-      final List<Ingredient> ingredients = const [],
-      final List<String> instructions = const [],
-      this.commitMessage,
-      this.authorId,
-      this.createdAt})
-      : _ingredients = ingredients,
-        _instructions = instructions;
-
-  factory _$RecipeDefImpl.fromJson(Map<String, dynamic> json) =>
-      _$$RecipeDefImplFromJson(json);
-
-  @override
-  final String id;
-  @override
-  final String recipeId;
-  @override
-  final String branch;
-  @override
-  final int version;
-  @override
-  final String title;
-  @override
-  final String? description;
-  final List<Ingredient> _ingredients;
-  @override
-  @JsonKey()
-  List<Ingredient> get ingredients {
-    if (_ingredients is EqualUnmodifiableListView) return _ingredients;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_ingredients);
-  }
-
-  final List<String> _instructions;
-  @override
-  @JsonKey()
-  List<String> get instructions {
-    if (_instructions is EqualUnmodifiableListView) return _instructions;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_instructions);
-  }
-
-  @override
-  final String? commitMessage;
-  @override
-  final String? authorId;
-  @override
-  final DateTime? createdAt;
-
-  @override
-  String toString() {
-    return 'RecipeDef(id: $id, recipeId: $recipeId, branch: $branch, version: $version, title: $title, description: $description, ingredients: $ingredients, instructions: $instructions, commitMessage: $commitMessage, authorId: $authorId, createdAt: $createdAt)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$RecipeDefImpl &&
-            (identical(other.id, id) || other.id == id) &&
-            (identical(other.recipeId, recipeId) ||
-                other.recipeId == recipeId) &&
-            (identical(other.branch, branch) || other.branch == branch) &&
-            (identical(other.version, version) || other.version == version) &&
-            (identical(other.title, title) || other.title == title) &&
-            (identical(other.description, description) ||
-                other.description == description) &&
-            const DeepCollectionEquality()
-                .equals(other._ingredients, _ingredients) &&
-            const DeepCollectionEquality()
-                .equals(other._instructions, _instructions) &&
-            (identical(other.commitMessage, commitMessage) ||
-                other.commitMessage == commitMessage) &&
-            (identical(other.authorId, authorId) ||
-                other.authorId == authorId) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      recipeId,
-      branch,
-      version,
-      title,
-      description,
-      const DeepCollectionEquality().hash(_ingredients),
-      const DeepCollectionEquality().hash(_instructions),
-      commitMessage,
-      authorId,
-      createdAt);
-
-  /// Create a copy of RecipeDef
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$RecipeDefImplCopyWith<_$RecipeDefImpl> get copyWith =>
-      __$$RecipeDefImplCopyWithImpl<_$RecipeDefImpl>(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$RecipeDefImplToJson(
-      this,
-    );
-  }
-}
-
-abstract class _RecipeDef implements RecipeDef {
-  const factory _RecipeDef(
-      {required final String id,
-      required final String recipeId,
-      required final String branch,
-      required final int version,
-      required final String title,
-      final String? description,
-      final List<Ingredient> ingredients,
-      final List<String> instructions,
-      final String? commitMessage,
-      final String? authorId,
-      final DateTime? createdAt}) = _$RecipeDefImpl;
-
-  factory _RecipeDef.fromJson(Map<String, dynamic> json) =
-      _$RecipeDefImpl.fromJson;
-
-  @override
-  String get id;
-  @override
-  String get recipeId;
-  @override
-  String get branch;
-  @override
-  int get version;
-  @override
-  String get title;
-  @override
-  String? get description;
-  @override
-  List<Ingredient> get ingredients;
-  @override
-  List<String> get instructions;
-  @override
-  String? get commitMessage;
-  @override
-  String? get authorId;
-  @override
-  DateTime? get createdAt;
-
-  /// Create a copy of RecipeDef
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$RecipeDefImplCopyWith<_$RecipeDefImpl> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
 RecipeNode _$RecipeNodeFromJson(Map<String, dynamic> json) {
   return _RecipeNode.fromJson(json);
 }
 
 /// @nodoc
 mixin _$RecipeNode {
-  String get branch => throw _privateConstructorUsedError;
-  int get version => throw _privateConstructorUsedError;
-  String? get parentBranch => throw _privateConstructorUsedError;
-  int? get parentVersion => throw _privateConstructorUsedError;
-  List<RecipeNode> get children => throw _privateConstructorUsedError;
-  String? get commitMessage => throw _privateConstructorUsedError;
+  int get id => throw _privateConstructorUsedError;
+  @JsonKey(name: 'parent_id')
+  int? get parentId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'branch_name')
+  String get branchName => throw _privateConstructorUsedError;
+  String get summary => throw _privateConstructorUsedError;
+  String get type => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_active')
+  bool get isActive => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_ephemeral')
+  bool get isEphemeral => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_by_id')
+  int? get createdById => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
+  List<RecipeNode> get children => throw _privateConstructorUsedError;
 
   /// Serializes this RecipeNode to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -1361,13 +779,16 @@ abstract class $RecipeNodeCopyWith<$Res> {
       _$RecipeNodeCopyWithImpl<$Res, RecipeNode>;
   @useResult
   $Res call(
-      {String branch,
-      int version,
-      String? parentBranch,
-      int? parentVersion,
-      List<RecipeNode> children,
-      String? commitMessage,
-      DateTime? createdAt});
+      {int id,
+      @JsonKey(name: 'parent_id') int? parentId,
+      @JsonKey(name: 'branch_name') String branchName,
+      String summary,
+      String type,
+      @JsonKey(name: 'is_active') bool isActive,
+      @JsonKey(name: 'is_ephemeral') bool isEphemeral,
+      @JsonKey(name: 'created_by_id') int? createdById,
+      @JsonKey(name: 'created_at') DateTime? createdAt,
+      List<RecipeNode> children});
 }
 
 /// @nodoc
@@ -1385,43 +806,58 @@ class _$RecipeNodeCopyWithImpl<$Res, $Val extends RecipeNode>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? branch = null,
-    Object? version = null,
-    Object? parentBranch = freezed,
-    Object? parentVersion = freezed,
-    Object? children = null,
-    Object? commitMessage = freezed,
+    Object? id = null,
+    Object? parentId = freezed,
+    Object? branchName = null,
+    Object? summary = null,
+    Object? type = null,
+    Object? isActive = null,
+    Object? isEphemeral = null,
+    Object? createdById = freezed,
     Object? createdAt = freezed,
+    Object? children = null,
   }) {
     return _then(_value.copyWith(
-      branch: null == branch
-          ? _value.branch
-          : branch // ignore: cast_nullable_to_non_nullable
-              as String,
-      version: null == version
-          ? _value.version
-          : version // ignore: cast_nullable_to_non_nullable
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
               as int,
-      parentBranch: freezed == parentBranch
-          ? _value.parentBranch
-          : parentBranch // ignore: cast_nullable_to_non_nullable
-              as String?,
-      parentVersion: freezed == parentVersion
-          ? _value.parentVersion
-          : parentVersion // ignore: cast_nullable_to_non_nullable
+      parentId: freezed == parentId
+          ? _value.parentId
+          : parentId // ignore: cast_nullable_to_non_nullable
               as int?,
-      children: null == children
-          ? _value.children
-          : children // ignore: cast_nullable_to_non_nullable
-              as List<RecipeNode>,
-      commitMessage: freezed == commitMessage
-          ? _value.commitMessage
-          : commitMessage // ignore: cast_nullable_to_non_nullable
-              as String?,
+      branchName: null == branchName
+          ? _value.branchName
+          : branchName // ignore: cast_nullable_to_non_nullable
+              as String,
+      summary: null == summary
+          ? _value.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as String,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as String,
+      isActive: null == isActive
+          ? _value.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isEphemeral: null == isEphemeral
+          ? _value.isEphemeral
+          : isEphemeral // ignore: cast_nullable_to_non_nullable
+              as bool,
+      createdById: freezed == createdById
+          ? _value.createdById
+          : createdById // ignore: cast_nullable_to_non_nullable
+              as int?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      children: null == children
+          ? _value.children
+          : children // ignore: cast_nullable_to_non_nullable
+              as List<RecipeNode>,
     ) as $Val);
   }
 }
@@ -1435,13 +871,16 @@ abstract class _$$RecipeNodeImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {String branch,
-      int version,
-      String? parentBranch,
-      int? parentVersion,
-      List<RecipeNode> children,
-      String? commitMessage,
-      DateTime? createdAt});
+      {int id,
+      @JsonKey(name: 'parent_id') int? parentId,
+      @JsonKey(name: 'branch_name') String branchName,
+      String summary,
+      String type,
+      @JsonKey(name: 'is_active') bool isActive,
+      @JsonKey(name: 'is_ephemeral') bool isEphemeral,
+      @JsonKey(name: 'created_by_id') int? createdById,
+      @JsonKey(name: 'created_at') DateTime? createdAt,
+      List<RecipeNode> children});
 }
 
 /// @nodoc
@@ -1457,43 +896,58 @@ class __$$RecipeNodeImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? branch = null,
-    Object? version = null,
-    Object? parentBranch = freezed,
-    Object? parentVersion = freezed,
-    Object? children = null,
-    Object? commitMessage = freezed,
+    Object? id = null,
+    Object? parentId = freezed,
+    Object? branchName = null,
+    Object? summary = null,
+    Object? type = null,
+    Object? isActive = null,
+    Object? isEphemeral = null,
+    Object? createdById = freezed,
     Object? createdAt = freezed,
+    Object? children = null,
   }) {
     return _then(_$RecipeNodeImpl(
-      branch: null == branch
-          ? _value.branch
-          : branch // ignore: cast_nullable_to_non_nullable
-              as String,
-      version: null == version
-          ? _value.version
-          : version // ignore: cast_nullable_to_non_nullable
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
               as int,
-      parentBranch: freezed == parentBranch
-          ? _value.parentBranch
-          : parentBranch // ignore: cast_nullable_to_non_nullable
-              as String?,
-      parentVersion: freezed == parentVersion
-          ? _value.parentVersion
-          : parentVersion // ignore: cast_nullable_to_non_nullable
+      parentId: freezed == parentId
+          ? _value.parentId
+          : parentId // ignore: cast_nullable_to_non_nullable
               as int?,
-      children: null == children
-          ? _value._children
-          : children // ignore: cast_nullable_to_non_nullable
-              as List<RecipeNode>,
-      commitMessage: freezed == commitMessage
-          ? _value.commitMessage
-          : commitMessage // ignore: cast_nullable_to_non_nullable
-              as String?,
+      branchName: null == branchName
+          ? _value.branchName
+          : branchName // ignore: cast_nullable_to_non_nullable
+              as String,
+      summary: null == summary
+          ? _value.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as String,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as String,
+      isActive: null == isActive
+          ? _value.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isEphemeral: null == isEphemeral
+          ? _value.isEphemeral
+          : isEphemeral // ignore: cast_nullable_to_non_nullable
+              as bool,
+      createdById: freezed == createdById
+          ? _value.createdById
+          : createdById // ignore: cast_nullable_to_non_nullable
+              as int?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      children: null == children
+          ? _value._children
+          : children // ignore: cast_nullable_to_non_nullable
+              as List<RecipeNode>,
     ));
   }
 }
@@ -1502,26 +956,47 @@ class __$$RecipeNodeImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$RecipeNodeImpl implements _RecipeNode {
   const _$RecipeNodeImpl(
-      {required this.branch,
-      required this.version,
-      this.parentBranch,
-      this.parentVersion,
-      final List<RecipeNode> children = const [],
-      this.commitMessage,
-      this.createdAt})
+      {required this.id,
+      @JsonKey(name: 'parent_id') this.parentId,
+      @JsonKey(name: 'branch_name') this.branchName = 'original',
+      this.summary = '',
+      this.type = '',
+      @JsonKey(name: 'is_active') this.isActive = false,
+      @JsonKey(name: 'is_ephemeral') this.isEphemeral = false,
+      @JsonKey(name: 'created_by_id') this.createdById,
+      @JsonKey(name: 'created_at') this.createdAt,
+      final List<RecipeNode> children = const []})
       : _children = children;
 
   factory _$RecipeNodeImpl.fromJson(Map<String, dynamic> json) =>
       _$$RecipeNodeImplFromJson(json);
 
   @override
-  final String branch;
+  final int id;
   @override
-  final int version;
+  @JsonKey(name: 'parent_id')
+  final int? parentId;
   @override
-  final String? parentBranch;
+  @JsonKey(name: 'branch_name')
+  final String branchName;
   @override
-  final int? parentVersion;
+  @JsonKey()
+  final String summary;
+  @override
+  @JsonKey()
+  final String type;
+  @override
+  @JsonKey(name: 'is_active')
+  final bool isActive;
+  @override
+  @JsonKey(name: 'is_ephemeral')
+  final bool isEphemeral;
+  @override
+  @JsonKey(name: 'created_by_id')
+  final int? createdById;
+  @override
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
   final List<RecipeNode> _children;
   @override
   @JsonKey()
@@ -1532,13 +1007,8 @@ class _$RecipeNodeImpl implements _RecipeNode {
   }
 
   @override
-  final String? commitMessage;
-  @override
-  final DateTime? createdAt;
-
-  @override
   String toString() {
-    return 'RecipeNode(branch: $branch, version: $version, parentBranch: $parentBranch, parentVersion: $parentVersion, children: $children, commitMessage: $commitMessage, createdAt: $createdAt)';
+    return 'RecipeNode(id: $id, parentId: $parentId, branchName: $branchName, summary: $summary, type: $type, isActive: $isActive, isEphemeral: $isEphemeral, createdById: $createdById, createdAt: $createdAt, children: $children)';
   }
 
   @override
@@ -1546,30 +1016,38 @@ class _$RecipeNodeImpl implements _RecipeNode {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$RecipeNodeImpl &&
-            (identical(other.branch, branch) || other.branch == branch) &&
-            (identical(other.version, version) || other.version == version) &&
-            (identical(other.parentBranch, parentBranch) ||
-                other.parentBranch == parentBranch) &&
-            (identical(other.parentVersion, parentVersion) ||
-                other.parentVersion == parentVersion) &&
-            const DeepCollectionEquality().equals(other._children, _children) &&
-            (identical(other.commitMessage, commitMessage) ||
-                other.commitMessage == commitMessage) &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.parentId, parentId) ||
+                other.parentId == parentId) &&
+            (identical(other.branchName, branchName) ||
+                other.branchName == branchName) &&
+            (identical(other.summary, summary) || other.summary == summary) &&
+            (identical(other.type, type) || other.type == type) &&
+            (identical(other.isActive, isActive) ||
+                other.isActive == isActive) &&
+            (identical(other.isEphemeral, isEphemeral) ||
+                other.isEphemeral == isEphemeral) &&
+            (identical(other.createdById, createdById) ||
+                other.createdById == createdById) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            const DeepCollectionEquality().equals(other._children, _children));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
       runtimeType,
-      branch,
-      version,
-      parentBranch,
-      parentVersion,
-      const DeepCollectionEquality().hash(_children),
-      commitMessage,
-      createdAt);
+      id,
+      parentId,
+      branchName,
+      summary,
+      type,
+      isActive,
+      isEphemeral,
+      createdById,
+      createdAt,
+      const DeepCollectionEquality().hash(_children));
 
   /// Create a copy of RecipeNode
   /// with the given fields replaced by the non-null parameter values.
@@ -1589,31 +1067,46 @@ class _$RecipeNodeImpl implements _RecipeNode {
 
 abstract class _RecipeNode implements RecipeNode {
   const factory _RecipeNode(
-      {required final String branch,
-      required final int version,
-      final String? parentBranch,
-      final int? parentVersion,
-      final List<RecipeNode> children,
-      final String? commitMessage,
-      final DateTime? createdAt}) = _$RecipeNodeImpl;
+      {required final int id,
+      @JsonKey(name: 'parent_id') final int? parentId,
+      @JsonKey(name: 'branch_name') final String branchName,
+      final String summary,
+      final String type,
+      @JsonKey(name: 'is_active') final bool isActive,
+      @JsonKey(name: 'is_ephemeral') final bool isEphemeral,
+      @JsonKey(name: 'created_by_id') final int? createdById,
+      @JsonKey(name: 'created_at') final DateTime? createdAt,
+      final List<RecipeNode> children}) = _$RecipeNodeImpl;
 
   factory _RecipeNode.fromJson(Map<String, dynamic> json) =
       _$RecipeNodeImpl.fromJson;
 
   @override
-  String get branch;
+  int get id;
   @override
-  int get version;
+  @JsonKey(name: 'parent_id')
+  int? get parentId;
   @override
-  String? get parentBranch;
+  @JsonKey(name: 'branch_name')
+  String get branchName;
   @override
-  int? get parentVersion;
+  String get summary;
+  @override
+  String get type;
+  @override
+  @JsonKey(name: 'is_active')
+  bool get isActive;
+  @override
+  @JsonKey(name: 'is_ephemeral')
+  bool get isEphemeral;
+  @override
+  @JsonKey(name: 'created_by_id')
+  int? get createdById;
+  @override
+  @JsonKey(name: 'created_at')
+  DateTime? get createdAt;
   @override
   List<RecipeNode> get children;
-  @override
-  String? get commitMessage;
-  @override
-  DateTime? get createdAt;
 
   /// Create a copy of RecipeNode
   /// with the given fields replaced by the non-null parameter values.

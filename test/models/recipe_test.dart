@@ -14,23 +14,18 @@ void main() {
 
       expect(recipe.id, 'recipe-abc-123');
       expect(recipe.title, 'Classic Margherita Pizza');
-      expect(recipe.description, 'A simple Italian pizza with fresh tomatoes and mozzarella');
       expect(recipe.ownerId, 'user-xyz-456');
       expect(recipe.imageUrl, 'https://cdn.saltybytes.ai/images/pizza.jpg');
       expect(recipe.ingredients, hasLength(3));
       expect(recipe.instructions, hasLength(4));
       expect(recipe.tags, ['pizza', 'italian', 'vegetarian']);
-      expect(recipe.cuisine, 'Italian');
-      expect(recipe.difficulty, 'medium');
-      expect(recipe.prepTimeMinutes, 30);
       expect(recipe.cookTimeMinutes, 15);
-      expect(recipe.servings, 4);
       expect(recipe.sourceUrl, isNull);
-      expect(recipe.isPublic, false);
-      expect(recipe.allergenTags, ['gluten', 'dairy']);
-      expect(recipe.currentBranch, 'main');
+      expect(recipe.unitSystem, 'us_customary');
+      expect(recipe.status, 'ready');
+      expect(recipe.portions, 4);
+      expect(recipe.portionSize, '2 slices');
       expect(recipe.parentRecipeId, isNull);
-      expect(recipe.version, 1);
       expect(recipe.createdAt, isA<DateTime>());
       expect(recipe.updatedAt, isA<DateTime>());
     });
@@ -50,78 +45,37 @@ void main() {
       expect(recipe.ingredients, isEmpty);
       expect(recipe.instructions, isEmpty);
       expect(recipe.tags, isEmpty);
-      expect(recipe.servings, 4);
-      expect(recipe.isPublic, false);
-      expect(recipe.allergenTags, isEmpty);
-      expect(recipe.currentBranch, 'main');
+      expect(recipe.unitSystem, 'us_customary');
+      expect(recipe.status, 'ready');
       // Nullable fields
-      expect(recipe.description, isNull);
       expect(recipe.imageUrl, isNull);
-      expect(recipe.cuisine, isNull);
-      expect(recipe.difficulty, isNull);
-      expect(recipe.prepTimeMinutes, isNull);
       expect(recipe.cookTimeMinutes, isNull);
       expect(recipe.sourceUrl, isNull);
       expect(recipe.parentRecipeId, isNull);
-      expect(recipe.version, isNull);
+      expect(recipe.portions, isNull);
+      expect(recipe.portionSize, isNull);
       expect(recipe.createdAt, isNull);
       expect(recipe.updatedAt, isNull);
     });
 
-    test('fromJson with null optional fields does not crash', () {
-      final json = <String, dynamic>{
-        'id': 'r-1',
-        'title': 'Minimal',
-        'ownerId': 'u-1',
-        'description': null,
-        'imageUrl': null,
-        'ingredients': null,
-        'instructions': null,
-        'tags': null,
-        'cuisine': null,
-        'difficulty': null,
-        'prepTimeMinutes': null,
-        'cookTimeMinutes': null,
-        'sourceUrl': null,
-        'allergenTags': null,
-        'parentRecipeId': null,
-        'version': null,
-        'createdAt': null,
-        'updatedAt': null,
-      };
-
-      final recipe = Recipe.fromJson(json);
-
-      expect(recipe.id, 'r-1');
-      expect(recipe.ingredients, isEmpty);
-      expect(recipe.instructions, isEmpty);
-      expect(recipe.tags, isEmpty);
-      expect(recipe.allergenTags, isEmpty);
-    });
-
     test('toJson round-trip preserves data', () {
       final original = Recipe.fromJson(testRecipeJson());
-      // Encode through JSON string to get pure Maps (not freezed impl types)
       final jsonString = jsonEncode(original.toJson());
-      final roundTripped = Recipe.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
+      final roundTripped =
+          Recipe.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
       expect(roundTripped.id, original.id);
       expect(roundTripped.title, original.title);
-      expect(roundTripped.description, original.description);
       expect(roundTripped.ownerId, original.ownerId);
       expect(roundTripped.imageUrl, original.imageUrl);
       expect(roundTripped.ingredients.length, original.ingredients.length);
       expect(roundTripped.instructions, original.instructions);
       expect(roundTripped.tags, original.tags);
-      expect(roundTripped.cuisine, original.cuisine);
-      expect(roundTripped.difficulty, original.difficulty);
-      expect(roundTripped.prepTimeMinutes, original.prepTimeMinutes);
       expect(roundTripped.cookTimeMinutes, original.cookTimeMinutes);
-      expect(roundTripped.servings, original.servings);
-      expect(roundTripped.isPublic, original.isPublic);
-      expect(roundTripped.allergenTags, original.allergenTags);
-      expect(roundTripped.currentBranch, original.currentBranch);
-      expect(roundTripped.version, original.version);
+      expect(roundTripped.unitSystem, original.unitSystem);
+      expect(roundTripped.status, original.status);
+      expect(roundTripped.portions, original.portions);
+      expect(roundTripped.portionSize, original.portionSize);
     });
 
     test('toJson serialises DateTime fields as ISO-8601 strings', () {
@@ -140,123 +94,88 @@ void main() {
         name: 'butter',
         amount: 2.0,
         unit: 'tbsp',
-        notes: 'unsalted',
-        optional: true,
-        category: 'dairy',
+        originalText: '2 tbsp unsalted butter',
       );
       final ingredient = Ingredient.fromJson(json);
 
       expect(ingredient.name, 'butter');
       expect(ingredient.amount, 2.0);
       expect(ingredient.unit, 'tbsp');
-      expect(ingredient.notes, 'unsalted');
-      expect(ingredient.optional, true);
-      expect(ingredient.category, 'dairy');
+      expect(ingredient.originalText, '2 tbsp unsalted butter');
     });
 
-    test('fromJson with minimal fields uses defaults', () {
+    test('fromJson with minimal fields', () {
       final json = <String, dynamic>{'name': 'salt'};
       final ingredient = Ingredient.fromJson(json);
 
       expect(ingredient.name, 'salt');
       expect(ingredient.amount, isNull);
       expect(ingredient.unit, isNull);
-      expect(ingredient.notes, isNull);
-      expect(ingredient.optional, false);
-      expect(ingredient.category, isNull);
+      expect(ingredient.originalText, isNull);
     });
 
     test('toJson round-trip', () {
       final original = Ingredient.fromJson(testIngredientJson());
       final jsonString = jsonEncode(original.toJson());
-      final roundTripped = Ingredient.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
+      final roundTripped =
+          Ingredient.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
       expect(roundTripped.name, original.name);
       expect(roundTripped.amount, original.amount);
       expect(roundTripped.unit, original.unit);
-      expect(roundTripped.optional, original.optional);
-      expect(roundTripped.category, original.category);
     });
   });
 
   group('RecipeNode', () {
     test('fromJson with children', () {
       final json = testRecipeNodeJson(
-        branch: 'main',
-        version: 1,
+        id: 1,
+        branchName: 'original',
+        summary: 'Initial recipe',
+        type: 'chat',
+        isActive: true,
         children: [
           testRecipeNodeJson(
-            branch: 'spicy-fork',
-            version: 2,
-            parentBranch: 'main',
-            parentVersion: 1,
-            commitMessage: 'Added jalapeños',
+            id: 2,
+            parentId: 1,
+            branchName: 'original',
+            summary: 'Added jalapeños',
+            type: 'regen_chat',
+            isActive: false,
           ),
           testRecipeNodeJson(
-            branch: 'vegan-fork',
-            version: 2,
-            parentBranch: 'main',
-            parentVersion: 1,
-            commitMessage: 'Made vegan with cashew mozzarella',
+            id: 3,
+            parentId: 1,
+            branchName: 'vegan-fork',
+            summary: 'Made vegan',
+            type: 'fork',
+            isActive: false,
           ),
         ],
       );
       final node = RecipeNode.fromJson(json);
 
-      expect(node.branch, 'main');
-      expect(node.version, 1);
-      expect(node.parentBranch, isNull);
+      expect(node.id, 1);
+      expect(node.branchName, 'original');
+      expect(node.isActive, true);
       expect(node.children, hasLength(2));
-      expect(node.children[0].branch, 'spicy-fork');
-      expect(node.children[0].parentBranch, 'main');
-      expect(node.children[0].parentVersion, 1);
-      expect(node.children[1].branch, 'vegan-fork');
-      expect(node.children[1].commitMessage, 'Made vegan with cashew mozzarella');
+      expect(node.children[0].id, 2);
+      expect(node.children[0].parentId, 1);
+      expect(node.children[0].summary, 'Added jalapeños');
+      expect(node.children[1].branchName, 'vegan-fork');
+      expect(node.children[1].type, 'fork');
     });
 
     test('fromJson with no children defaults to empty list', () {
       final json = <String, dynamic>{
-        'branch': 'main',
-        'version': 1,
+        'id': 1,
+        'branch_name': 'original',
       };
       final node = RecipeNode.fromJson(json);
 
       expect(node.children, isEmpty);
-      expect(node.parentBranch, isNull);
-      expect(node.parentVersion, isNull);
-      expect(node.commitMessage, isNull);
-    });
-  });
-
-  group('RecipeDef', () {
-    test('fromJson with all fields', () {
-      final json = testRecipeDefJson();
-      final def = RecipeDef.fromJson(json);
-
-      expect(def.id, 'def-001');
-      expect(def.recipeId, 'recipe-abc-123');
-      expect(def.branch, 'main');
-      expect(def.version, 1);
-      expect(def.title, 'Classic Margherita Pizza');
-      expect(def.description, 'A simple Italian pizza');
-      expect(def.ingredients, hasLength(1));
-      expect(def.instructions, hasLength(2));
-      expect(def.commitMessage, 'Initial version');
-      expect(def.authorId, 'user-xyz-456');
-      expect(def.createdAt, isA<DateTime>());
-    });
-
-    test('fromJson round-trip', () {
-      final original = RecipeDef.fromJson(testRecipeDefJson());
-      final jsonString = jsonEncode(original.toJson());
-      final roundTripped = RecipeDef.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
-
-      expect(roundTripped.id, original.id);
-      expect(roundTripped.recipeId, original.recipeId);
-      expect(roundTripped.branch, original.branch);
-      expect(roundTripped.version, original.version);
-      expect(roundTripped.title, original.title);
-      expect(roundTripped.commitMessage, original.commitMessage);
+      expect(node.parentId, isNull);
+      expect(node.isActive, false);
     });
   });
 

@@ -6,17 +6,13 @@ import '../../../models/recipe.dart';
 
 class BranchTreePainter extends CustomPainter {
   BranchTreePainter({
-    required this.nodes,
-    required this.activeBranch,
-    required this.activeVersion,
+    required this.rootNode,
     required this.primaryColor,
     required this.onSurfaceColor,
     required this.surfaceColor,
   });
 
-  final List<RecipeNode> nodes;
-  final String activeBranch;
-  final int activeVersion;
+  final RecipeNode rootNode;
   final Color primaryColor;
   final Color onSurfaceColor;
   final Color surfaceColor;
@@ -29,8 +25,6 @@ class BranchTreePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (nodes.isEmpty) return;
-
     final linePaint = Paint()
       ..color = onSurfaceColor.withValues(alpha: 0.2)
       ..strokeWidth = 2.0
@@ -41,10 +35,9 @@ class BranchTreePainter extends CustomPainter {
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
 
-    // Layout and draw the tree
     _drawNode(
       canvas,
-      nodes.first,
+      rootNode,
       Offset(startX, startY),
       0,
       linePaint,
@@ -60,18 +53,16 @@ class BranchTreePainter extends CustomPainter {
     Paint linePaint,
     Paint activeLinePaint,
   ) {
-    final isActive =
-        node.branch == activeBranch && node.version == activeVersion;
-
     // Draw connections to children
     for (int i = 0; i < node.children.length; i++) {
       final childPos = Offset(
         position.dx + horizontalSpacing,
-        position.dy + (i * verticalSpacing) - ((node.children.length - 1) * verticalSpacing / 2),
+        position.dy +
+            (i * verticalSpacing) -
+            ((node.children.length - 1) * verticalSpacing / 2),
       );
 
-      final isChildActive =
-          node.children[i].branch == activeBranch;
+      final isChildActive = _containsActive(node.children[i]);
       final paint = isChildActive ? activeLinePaint : linePaint;
 
       final path = Path()
@@ -99,24 +90,26 @@ class BranchTreePainter extends CustomPainter {
 
     // Draw node circle
     final nodePaint = Paint()
-      ..color = isActive ? primaryColor : surfaceColor
+      ..color = node.isActive ? primaryColor : surfaceColor
       ..style = PaintingStyle.fill;
 
     final borderPaint = Paint()
-      ..color = isActive ? primaryColor : onSurfaceColor.withValues(alpha: 0.3)
+      ..color =
+          node.isActive ? primaryColor : onSurfaceColor.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isActive ? 3.0 : 1.5;
+      ..strokeWidth = node.isActive ? 3.0 : 1.5;
 
     canvas.drawCircle(position, nodeRadius, nodePaint);
     canvas.drawCircle(position, nodeRadius, borderPaint);
 
-    // Draw version number inside node
+    // Draw node type abbreviation inside
+    final label = _typeAbbrev(node.type);
     final textPainter = TextPainter(
       text: TextSpan(
-        text: 'v${node.version}',
+        text: label,
         style: TextStyle(
-          color: isActive ? Colors.white : onSurfaceColor,
-          fontSize: 11,
+          color: node.isActive ? Colors.white : onSurfaceColor,
+          fontSize: 10,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -134,13 +127,13 @@ class BranchTreePainter extends CustomPainter {
     // Draw branch label below
     final labelPainter = TextPainter(
       text: TextSpan(
-        text: node.branch,
+        text: node.branchName,
         style: TextStyle(
-          color: isActive
+          color: node.isActive
               ? primaryColor
               : onSurfaceColor.withValues(alpha: 0.6),
           fontSize: 10,
-          fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+          fontWeight: node.isActive ? FontWeight.w600 : FontWeight.w400,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -155,10 +148,35 @@ class BranchTreePainter extends CustomPainter {
     );
   }
 
+  bool _containsActive(RecipeNode node) {
+    if (node.isActive) return true;
+    return node.children.any(_containsActive);
+  }
+
+  String _typeAbbrev(String type) {
+    switch (type) {
+      case 'chat':
+        return 'C';
+      case 'regen_chat':
+        return 'R';
+      case 'fork':
+        return 'F';
+      case 'import_link':
+        return 'L';
+      case 'import_vision':
+        return 'V';
+      case 'import_text':
+        return 'T';
+      case 'user_input':
+        return 'M';
+      default:
+        return '?';
+    }
+  }
+
   Size calculateTreeSize() {
-    if (nodes.isEmpty) return Size.zero;
-    final depth = _maxDepth(nodes.first, 0);
-    final breadth = _maxBreadth(nodes.first);
+    final depth = _maxDepth(rootNode, 0);
+    final breadth = _maxBreadth(rootNode);
     return Size(
       startX * 2 + depth * horizontalSpacing + nodeRadius * 2,
       startY * 2 +
@@ -189,8 +207,6 @@ class BranchTreePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant BranchTreePainter oldDelegate) {
-    return oldDelegate.activeBranch != activeBranch ||
-        oldDelegate.activeVersion != activeVersion ||
-        oldDelegate.nodes != nodes;
+    return oldDelegate.rootNode != rootNode;
   }
 }

@@ -277,15 +277,6 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (_preview!.description != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          _preview!.description!,
-                          style: theme.textTheme.bodyMedium,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
                       const SizedBox(height: 12),
                       Text(
                         '${_preview!.ingredients.length} ingredients, '

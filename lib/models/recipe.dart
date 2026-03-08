@@ -8,24 +8,18 @@ class Recipe with _$Recipe {
   const factory Recipe({
     required String id,
     required String title,
-    String? description,
     required String ownerId,
     String? imageUrl,
     @Default([]) List<Ingredient> ingredients,
     @Default([]) List<String> instructions,
     @Default([]) List<String> tags,
-    String? cuisine,
-    String? difficulty,
-    int? prepTimeMinutes,
     int? cookTimeMinutes,
-    @Default(4) int servings,
     String? sourceUrl,
-    @Default(false) bool isPublic,
-    @Default([]) List<String> allergenTags,
     @Default('us_customary') String unitSystem,
-    @Default('main') String currentBranch,
+    @Default('ready') String status,
+    int? portions,
+    String? portionSize,
     String? parentRecipeId,
-    int? version,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) = _Recipe;
@@ -41,9 +35,6 @@ class Ingredient with _$Ingredient {
     @JsonKey(name: 'amount') double? amount,
     String? unit,
     @JsonKey(name: 'original_text') String? originalText,
-    @Default(false) bool optional,
-    String? notes,
-    String? category,
   }) = _Ingredient;
 
   factory Ingredient.fromJson(Map<String, dynamic> json) =>
@@ -51,35 +42,18 @@ class Ingredient with _$Ingredient {
 }
 
 @freezed
-class RecipeDef with _$RecipeDef {
-  const factory RecipeDef({
-    required String id,
-    required String recipeId,
-    required String branch,
-    required int version,
-    required String title,
-    String? description,
-    @Default([]) List<Ingredient> ingredients,
-    @Default([]) List<String> instructions,
-    String? commitMessage,
-    String? authorId,
-    DateTime? createdAt,
-  }) = _RecipeDef;
-
-  factory RecipeDef.fromJson(Map<String, dynamic> json) =>
-      _$RecipeDefFromJson(json);
-}
-
-@freezed
 class RecipeNode with _$RecipeNode {
   const factory RecipeNode({
-    required String branch,
-    required int version,
-    String? parentBranch,
-    int? parentVersion,
+    required int id,
+    @JsonKey(name: 'parent_id') int? parentId,
+    @JsonKey(name: 'branch_name') @Default('original') String branchName,
+    @Default('') String summary,
+    @Default('') String type,
+    @JsonKey(name: 'is_active') @Default(false) bool isActive,
+    @JsonKey(name: 'is_ephemeral') @Default(false) bool isEphemeral,
+    @JsonKey(name: 'created_by_id') int? createdById,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
     @Default([]) List<RecipeNode> children,
-    String? commitMessage,
-    DateTime? createdAt,
   }) = _RecipeNode;
 
   factory RecipeNode.fromJson(Map<String, dynamic> json) =>

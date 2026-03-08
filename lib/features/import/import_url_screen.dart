@@ -211,17 +211,6 @@ class _RecipePreviewCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (recipe.description != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                recipe.description!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
             const SizedBox(height: 12),
             Row(
               children: [

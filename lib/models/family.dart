@@ -37,13 +37,26 @@ class FamilyMember with _$FamilyMember {
 @freezed
 class DietaryProfile with _$DietaryProfile {
   const factory DietaryProfile({
-    @Default([]) List<String> allergies,
+    @Default([]) List<Allergy> allergies,
     @Default([]) List<String> intolerances,
-    @Default([]) List<String> dietaryRestrictions,
-    @Default([]) List<String> dislikedIngredients,
-    String? notes,
+    @Default([]) List<String> restrictions,
+    @Default([]) List<String> preferences,
+    @JsonKey(name: 'medical_notes') String? medicalNotes,
   }) = _DietaryProfile;
 
   factory DietaryProfile.fromJson(Map<String, dynamic> json) =>
       _$DietaryProfileFromJson(json);
+}
+
+@freezed
+class Allergy with _$Allergy {
+  const factory Allergy({
+    required String name,
+    @Default('') String severity,
+    @JsonKey(name: 'sub_forms') @Default([]) List<String> subForms,
+    @Default('') String notes,
+  }) = _Allergy;
+
+  factory Allergy.fromJson(Map<String, dynamic> json) =>
+      _$AllergyFromJson(json);
 }
