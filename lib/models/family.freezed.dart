@@ -574,11 +574,12 @@ DietaryProfile _$DietaryProfileFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$DietaryProfile {
-  List<String> get allergies => throw _privateConstructorUsedError;
+  List<Allergy> get allergies => throw _privateConstructorUsedError;
   List<String> get intolerances => throw _privateConstructorUsedError;
-  List<String> get dietaryRestrictions => throw _privateConstructorUsedError;
-  List<String> get dislikedIngredients => throw _privateConstructorUsedError;
-  String? get notes => throw _privateConstructorUsedError;
+  List<String> get restrictions => throw _privateConstructorUsedError;
+  List<String> get preferences => throw _privateConstructorUsedError;
+  @JsonKey(name: 'medical_notes')
+  String? get medicalNotes => throw _privateConstructorUsedError;
 
   /// Serializes this DietaryProfile to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -597,11 +598,11 @@ abstract class $DietaryProfileCopyWith<$Res> {
       _$DietaryProfileCopyWithImpl<$Res, DietaryProfile>;
   @useResult
   $Res call(
-      {List<String> allergies,
+      {List<Allergy> allergies,
       List<String> intolerances,
-      List<String> dietaryRestrictions,
-      List<String> dislikedIngredients,
-      String? notes});
+      List<String> restrictions,
+      List<String> preferences,
+      @JsonKey(name: 'medical_notes') String? medicalNotes});
 }
 
 /// @nodoc
@@ -621,30 +622,30 @@ class _$DietaryProfileCopyWithImpl<$Res, $Val extends DietaryProfile>
   $Res call({
     Object? allergies = null,
     Object? intolerances = null,
-    Object? dietaryRestrictions = null,
-    Object? dislikedIngredients = null,
-    Object? notes = freezed,
+    Object? restrictions = null,
+    Object? preferences = null,
+    Object? medicalNotes = freezed,
   }) {
     return _then(_value.copyWith(
       allergies: null == allergies
           ? _value.allergies
           : allergies // ignore: cast_nullable_to_non_nullable
-              as List<String>,
+              as List<Allergy>,
       intolerances: null == intolerances
           ? _value.intolerances
           : intolerances // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      dietaryRestrictions: null == dietaryRestrictions
-          ? _value.dietaryRestrictions
-          : dietaryRestrictions // ignore: cast_nullable_to_non_nullable
+      restrictions: null == restrictions
+          ? _value.restrictions
+          : restrictions // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      dislikedIngredients: null == dislikedIngredients
-          ? _value.dislikedIngredients
-          : dislikedIngredients // ignore: cast_nullable_to_non_nullable
+      preferences: null == preferences
+          ? _value.preferences
+          : preferences // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      notes: freezed == notes
-          ? _value.notes
-          : notes // ignore: cast_nullable_to_non_nullable
+      medicalNotes: freezed == medicalNotes
+          ? _value.medicalNotes
+          : medicalNotes // ignore: cast_nullable_to_non_nullable
               as String?,
     ) as $Val);
   }
@@ -659,11 +660,11 @@ abstract class _$$DietaryProfileImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {List<String> allergies,
+      {List<Allergy> allergies,
       List<String> intolerances,
-      List<String> dietaryRestrictions,
-      List<String> dislikedIngredients,
-      String? notes});
+      List<String> restrictions,
+      List<String> preferences,
+      @JsonKey(name: 'medical_notes') String? medicalNotes});
 }
 
 /// @nodoc
@@ -681,30 +682,30 @@ class __$$DietaryProfileImplCopyWithImpl<$Res>
   $Res call({
     Object? allergies = null,
     Object? intolerances = null,
-    Object? dietaryRestrictions = null,
-    Object? dislikedIngredients = null,
-    Object? notes = freezed,
+    Object? restrictions = null,
+    Object? preferences = null,
+    Object? medicalNotes = freezed,
   }) {
     return _then(_$DietaryProfileImpl(
       allergies: null == allergies
           ? _value._allergies
           : allergies // ignore: cast_nullable_to_non_nullable
-              as List<String>,
+              as List<Allergy>,
       intolerances: null == intolerances
           ? _value._intolerances
           : intolerances // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      dietaryRestrictions: null == dietaryRestrictions
-          ? _value._dietaryRestrictions
-          : dietaryRestrictions // ignore: cast_nullable_to_non_nullable
+      restrictions: null == restrictions
+          ? _value._restrictions
+          : restrictions // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      dislikedIngredients: null == dislikedIngredients
-          ? _value._dislikedIngredients
-          : dislikedIngredients // ignore: cast_nullable_to_non_nullable
+      preferences: null == preferences
+          ? _value._preferences
+          : preferences // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      notes: freezed == notes
-          ? _value.notes
-          : notes // ignore: cast_nullable_to_non_nullable
+      medicalNotes: freezed == medicalNotes
+          ? _value.medicalNotes
+          : medicalNotes // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -714,23 +715,23 @@ class __$$DietaryProfileImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$DietaryProfileImpl implements _DietaryProfile {
   const _$DietaryProfileImpl(
-      {final List<String> allergies = const [],
+      {final List<Allergy> allergies = const [],
       final List<String> intolerances = const [],
-      final List<String> dietaryRestrictions = const [],
-      final List<String> dislikedIngredients = const [],
-      this.notes})
+      final List<String> restrictions = const [],
+      final List<String> preferences = const [],
+      @JsonKey(name: 'medical_notes') this.medicalNotes})
       : _allergies = allergies,
         _intolerances = intolerances,
-        _dietaryRestrictions = dietaryRestrictions,
-        _dislikedIngredients = dislikedIngredients;
+        _restrictions = restrictions,
+        _preferences = preferences;
 
   factory _$DietaryProfileImpl.fromJson(Map<String, dynamic> json) =>
       _$$DietaryProfileImplFromJson(json);
 
-  final List<String> _allergies;
+  final List<Allergy> _allergies;
   @override
   @JsonKey()
-  List<String> get allergies {
+  List<Allergy> get allergies {
     if (_allergies is EqualUnmodifiableListView) return _allergies;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_allergies);
@@ -745,32 +746,31 @@ class _$DietaryProfileImpl implements _DietaryProfile {
     return EqualUnmodifiableListView(_intolerances);
   }
 
-  final List<String> _dietaryRestrictions;
+  final List<String> _restrictions;
   @override
   @JsonKey()
-  List<String> get dietaryRestrictions {
-    if (_dietaryRestrictions is EqualUnmodifiableListView)
-      return _dietaryRestrictions;
+  List<String> get restrictions {
+    if (_restrictions is EqualUnmodifiableListView) return _restrictions;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_dietaryRestrictions);
+    return EqualUnmodifiableListView(_restrictions);
   }
 
-  final List<String> _dislikedIngredients;
+  final List<String> _preferences;
   @override
   @JsonKey()
-  List<String> get dislikedIngredients {
-    if (_dislikedIngredients is EqualUnmodifiableListView)
-      return _dislikedIngredients;
+  List<String> get preferences {
+    if (_preferences is EqualUnmodifiableListView) return _preferences;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_dislikedIngredients);
+    return EqualUnmodifiableListView(_preferences);
   }
 
   @override
-  final String? notes;
+  @JsonKey(name: 'medical_notes')
+  final String? medicalNotes;
 
   @override
   String toString() {
-    return 'DietaryProfile(allergies: $allergies, intolerances: $intolerances, dietaryRestrictions: $dietaryRestrictions, dislikedIngredients: $dislikedIngredients, notes: $notes)';
+    return 'DietaryProfile(allergies: $allergies, intolerances: $intolerances, restrictions: $restrictions, preferences: $preferences, medicalNotes: $medicalNotes)';
   }
 
   @override
@@ -783,10 +783,11 @@ class _$DietaryProfileImpl implements _DietaryProfile {
             const DeepCollectionEquality()
                 .equals(other._intolerances, _intolerances) &&
             const DeepCollectionEquality()
-                .equals(other._dietaryRestrictions, _dietaryRestrictions) &&
+                .equals(other._restrictions, _restrictions) &&
             const DeepCollectionEquality()
-                .equals(other._dislikedIngredients, _dislikedIngredients) &&
-            (identical(other.notes, notes) || other.notes == notes));
+                .equals(other._preferences, _preferences) &&
+            (identical(other.medicalNotes, medicalNotes) ||
+                other.medicalNotes == medicalNotes));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -795,9 +796,9 @@ class _$DietaryProfileImpl implements _DietaryProfile {
       runtimeType,
       const DeepCollectionEquality().hash(_allergies),
       const DeepCollectionEquality().hash(_intolerances),
-      const DeepCollectionEquality().hash(_dietaryRestrictions),
-      const DeepCollectionEquality().hash(_dislikedIngredients),
-      notes);
+      const DeepCollectionEquality().hash(_restrictions),
+      const DeepCollectionEquality().hash(_preferences),
+      medicalNotes);
 
   /// Create a copy of DietaryProfile
   /// with the given fields replaced by the non-null parameter values.
@@ -818,30 +819,255 @@ class _$DietaryProfileImpl implements _DietaryProfile {
 
 abstract class _DietaryProfile implements DietaryProfile {
   const factory _DietaryProfile(
-      {final List<String> allergies,
-      final List<String> intolerances,
-      final List<String> dietaryRestrictions,
-      final List<String> dislikedIngredients,
-      final String? notes}) = _$DietaryProfileImpl;
+          {final List<Allergy> allergies,
+          final List<String> intolerances,
+          final List<String> restrictions,
+          final List<String> preferences,
+          @JsonKey(name: 'medical_notes') final String? medicalNotes}) =
+      _$DietaryProfileImpl;
 
   factory _DietaryProfile.fromJson(Map<String, dynamic> json) =
       _$DietaryProfileImpl.fromJson;
 
   @override
-  List<String> get allergies;
+  List<Allergy> get allergies;
   @override
   List<String> get intolerances;
   @override
-  List<String> get dietaryRestrictions;
+  List<String> get restrictions;
   @override
-  List<String> get dislikedIngredients;
+  List<String> get preferences;
   @override
-  String? get notes;
+  @JsonKey(name: 'medical_notes')
+  String? get medicalNotes;
 
   /// Create a copy of DietaryProfile
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$DietaryProfileImplCopyWith<_$DietaryProfileImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+Allergy _$AllergyFromJson(Map<String, dynamic> json) {
+  return _Allergy.fromJson(json);
+}
+
+/// @nodoc
+mixin _$Allergy {
+  String get name => throw _privateConstructorUsedError;
+  String get severity => throw _privateConstructorUsedError;
+  @JsonKey(name: 'sub_forms')
+  List<String> get subForms => throw _privateConstructorUsedError;
+  String get notes => throw _privateConstructorUsedError;
+
+  /// Serializes this Allergy to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of Allergy
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $AllergyCopyWith<Allergy> get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $AllergyCopyWith<$Res> {
+  factory $AllergyCopyWith(Allergy value, $Res Function(Allergy) then) =
+      _$AllergyCopyWithImpl<$Res, Allergy>;
+  @useResult
+  $Res call(
+      {String name,
+      String severity,
+      @JsonKey(name: 'sub_forms') List<String> subForms,
+      String notes});
+}
+
+/// @nodoc
+class _$AllergyCopyWithImpl<$Res, $Val extends Allergy>
+    implements $AllergyCopyWith<$Res> {
+  _$AllergyCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of Allergy
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? name = null,
+    Object? severity = null,
+    Object? subForms = null,
+    Object? notes = null,
+  }) {
+    return _then(_value.copyWith(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      severity: null == severity
+          ? _value.severity
+          : severity // ignore: cast_nullable_to_non_nullable
+              as String,
+      subForms: null == subForms
+          ? _value.subForms
+          : subForms // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      notes: null == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
+              as String,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$AllergyImplCopyWith<$Res> implements $AllergyCopyWith<$Res> {
+  factory _$$AllergyImplCopyWith(
+          _$AllergyImpl value, $Res Function(_$AllergyImpl) then) =
+      __$$AllergyImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call(
+      {String name,
+      String severity,
+      @JsonKey(name: 'sub_forms') List<String> subForms,
+      String notes});
+}
+
+/// @nodoc
+class __$$AllergyImplCopyWithImpl<$Res>
+    extends _$AllergyCopyWithImpl<$Res, _$AllergyImpl>
+    implements _$$AllergyImplCopyWith<$Res> {
+  __$$AllergyImplCopyWithImpl(
+      _$AllergyImpl _value, $Res Function(_$AllergyImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of Allergy
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? name = null,
+    Object? severity = null,
+    Object? subForms = null,
+    Object? notes = null,
+  }) {
+    return _then(_$AllergyImpl(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      severity: null == severity
+          ? _value.severity
+          : severity // ignore: cast_nullable_to_non_nullable
+              as String,
+      subForms: null == subForms
+          ? _value._subForms
+          : subForms // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      notes: null == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$AllergyImpl implements _Allergy {
+  const _$AllergyImpl(
+      {required this.name,
+      this.severity = '',
+      @JsonKey(name: 'sub_forms') final List<String> subForms = const [],
+      this.notes = ''})
+      : _subForms = subForms;
+
+  factory _$AllergyImpl.fromJson(Map<String, dynamic> json) =>
+      _$$AllergyImplFromJson(json);
+
+  @override
+  final String name;
+  @override
+  @JsonKey()
+  final String severity;
+  final List<String> _subForms;
+  @override
+  @JsonKey(name: 'sub_forms')
+  List<String> get subForms {
+    if (_subForms is EqualUnmodifiableListView) return _subForms;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_subForms);
+  }
+
+  @override
+  @JsonKey()
+  final String notes;
+
+  @override
+  String toString() {
+    return 'Allergy(name: $name, severity: $severity, subForms: $subForms, notes: $notes)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$AllergyImpl &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.severity, severity) ||
+                other.severity == severity) &&
+            const DeepCollectionEquality().equals(other._subForms, _subForms) &&
+            (identical(other.notes, notes) || other.notes == notes));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, name, severity,
+      const DeepCollectionEquality().hash(_subForms), notes);
+
+  /// Create a copy of Allergy
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$AllergyImplCopyWith<_$AllergyImpl> get copyWith =>
+      __$$AllergyImplCopyWithImpl<_$AllergyImpl>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$AllergyImplToJson(
+      this,
+    );
+  }
+}
+
+abstract class _Allergy implements Allergy {
+  const factory _Allergy(
+      {required final String name,
+      final String severity,
+      @JsonKey(name: 'sub_forms') final List<String> subForms,
+      final String notes}) = _$AllergyImpl;
+
+  factory _Allergy.fromJson(Map<String, dynamic> json) = _$AllergyImpl.fromJson;
+
+  @override
+  String get name;
+  @override
+  String get severity;
+  @override
+  @JsonKey(name: 'sub_forms')
+  List<String> get subForms;
+  @override
+  String get notes;
+
+  /// Create a copy of Allergy
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$AllergyImplCopyWith<_$AllergyImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

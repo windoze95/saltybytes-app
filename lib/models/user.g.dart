@@ -10,8 +10,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       id: json['id'] as String,
       username: json['username'] as String,
       email: json['email'] as String,
-      displayName: json['displayName'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
+      firstName: json['first_name'] as String?,
       settings: json['settings'] == null
           ? const UserSettings()
           : UserSettings.fromJson(json['settings'] as Map<String, dynamic>),
@@ -30,8 +29,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'id': instance.id,
       'username': instance.username,
       'email': instance.email,
-      'displayName': instance.displayName,
-      'avatarUrl': instance.avatarUrl,
+      'first_name': instance.firstName,
       'settings': instance.settings,
       'personalization': instance.personalization,
       'createdAt': instance.createdAt.toIso8601String(),
@@ -40,47 +38,26 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
 
 _$UserSettingsImpl _$$UserSettingsImplFromJson(Map<String, dynamic> json) =>
     _$UserSettingsImpl(
-      themeMode: json['themeMode'] as String? ?? 'system',
-      measurementSystem: json['measurementSystem'] as String? ?? 'us_customary',
-      defaultServings: (json['defaultServings'] as num?)?.toInt() ?? 4,
-      notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
-      cookingModeWakelock: json['cookingModeWakelock'] as bool? ?? true,
+      keepScreenAwake: json['keep_screen_awake'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$$UserSettingsImplToJson(_$UserSettingsImpl instance) =>
     <String, dynamic>{
-      'themeMode': instance.themeMode,
-      'measurementSystem': instance.measurementSystem,
-      'defaultServings': instance.defaultServings,
-      'notificationsEnabled': instance.notificationsEnabled,
-      'cookingModeWakelock': instance.cookingModeWakelock,
+      'keep_screen_awake': instance.keepScreenAwake,
     };
 
 _$PersonalizationImpl _$$PersonalizationImplFromJson(
         Map<String, dynamic> json) =>
     _$PersonalizationImpl(
-      dietaryRestrictions: (json['dietaryRestrictions'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      cuisinePreferences: (json['cuisinePreferences'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      skillLevel: json['skillLevel'] as String? ?? 'intermediate',
-      allergens: (json['allergens'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      unitSystem: json['unitSystem'] as String? ?? 'us_customary',
+      unitSystem: json['unit_system'] as String? ?? 'us_customary',
+      requirements: json['requirements'] as String? ?? '',
+      uid: json['uid'] as String? ?? '',
     );
 
 Map<String, dynamic> _$$PersonalizationImplToJson(
         _$PersonalizationImpl instance) =>
     <String, dynamic>{
-      'dietaryRestrictions': instance.dietaryRestrictions,
-      'cuisinePreferences': instance.cuisinePreferences,
-      'skillLevel': instance.skillLevel,
-      'allergens': instance.allergens,
-      'unitSystem': instance.unitSystem,
+      'unit_system': instance.unitSystem,
+      'requirements': instance.requirements,
+      'uid': instance.uid,
     };

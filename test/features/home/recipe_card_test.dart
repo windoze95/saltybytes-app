@@ -16,17 +16,15 @@ void main() {
   Recipe buildRecipe({
     String title = 'Classic Margherita Pizza',
     int? cookTimeMinutes = 15,
-    int servings = 4,
+    int? portions = 4,
     String? imageUrl = 'https://cdn.saltybytes.ai/images/pizza.jpg',
-    List<String> allergenTags = const ['gluten', 'dairy'],
     String? createdAt,
   }) {
     return Recipe.fromJson(testRecipeJson(
       title: title,
       cookTimeMinutes: cookTimeMinutes,
-      servings: servings,
+      portions: portions,
       imageUrl: imageUrl,
-      allergenTags: allergenTags,
       createdAt: createdAt,
     ));
   }
@@ -60,10 +58,10 @@ void main() {
       expect(find.text('25m'), findsOneWidget);
     });
 
-    testWidgets('displays servings count with restaurant icon', (tester) async {
+    testWidgets('displays portions count with restaurant icon', (tester) async {
       await pumpCard(
         tester,
-        RecipeCard(recipe: buildRecipe(servings: 6)),
+        RecipeCard(recipe: buildRecipe(portions: 6)),
       );
 
       expect(find.byIcon(Icons.restaurant_outlined), findsOneWidget);

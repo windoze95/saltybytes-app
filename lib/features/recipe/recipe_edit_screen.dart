@@ -114,18 +114,6 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          if (recipe.description != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              recipe.description!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colors.onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),

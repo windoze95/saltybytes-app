@@ -154,7 +154,7 @@ class _MemberCard extends StatelessWidget {
     final theme = Theme.of(context);
     final profile = member.dietaryProfile;
     final allergyCount = profile.allergies.length;
-    final restrictionCount = profile.dietaryRestrictions.length;
+    final restrictionCount = profile.restrictions.length;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -194,7 +194,7 @@ class _MemberCard extends StatelessWidget {
                       style: theme.textTheme.bodySmall,
                     ),
                     if (profile.allergies.isNotEmpty ||
-                        profile.dietaryRestrictions.isNotEmpty) ...[
+                        profile.restrictions.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 6,
@@ -205,7 +205,7 @@ class _MemberCard extends StatelessWidget {
                               label: '$allergyCount allergi${allergyCount == 1 ? 'y' : 'es'}',
                               color: theme.colorScheme.error,
                             ),
-                          ...profile.dietaryRestrictions.take(3).map(
+                          ...profile.restrictions.take(3).map(
                                 (r) => _Badge(
                                   label: r,
                                   color: theme.colorScheme.tertiary,

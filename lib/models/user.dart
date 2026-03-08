@@ -9,8 +9,7 @@ class User with _$User {
     required String id,
     required String username,
     required String email,
-    String? displayName,
-    String? avatarUrl,
+    @JsonKey(name: 'first_name') String? firstName,
     @Default(UserSettings()) UserSettings settings,
     @Default(Personalization()) Personalization personalization,
     required DateTime createdAt,
@@ -23,11 +22,7 @@ class User with _$User {
 @freezed
 class UserSettings with _$UserSettings {
   const factory UserSettings({
-    @Default('system') String themeMode,
-    @Default('us_customary') String measurementSystem,
-    @Default(4) int defaultServings,
-    @Default(true) bool notificationsEnabled,
-    @Default(true) bool cookingModeWakelock,
+    @JsonKey(name: 'keep_screen_awake') @Default(true) bool keepScreenAwake,
   }) = _UserSettings;
 
   factory UserSettings.fromJson(Map<String, dynamic> json) =>
@@ -37,11 +32,9 @@ class UserSettings with _$UserSettings {
 @freezed
 class Personalization with _$Personalization {
   const factory Personalization({
-    @Default([]) List<String> dietaryRestrictions,
-    @Default([]) List<String> cuisinePreferences,
-    @Default('intermediate') String skillLevel,
-    @Default([]) List<String> allergens,
-    @Default('us_customary') String unitSystem,
+    @JsonKey(name: 'unit_system') @Default('us_customary') String unitSystem,
+    @Default('') String requirements,
+    @Default('') String uid,
   }) = _Personalization;
 
   factory Personalization.fromJson(Map<String, dynamic> json) =>

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../models/recipe.dart';
-import '../../recipe/widgets/allergen_badge.dart';
 
 class RecipeCard extends StatelessWidget {
   const RecipeCard({
@@ -119,39 +118,21 @@ class RecipeCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                         ],
-                        Icon(
-                          Icons.restaurant_outlined,
-                          size: 14,
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.55),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${recipe.servings}',
-                          style: theme.textTheme.labelSmall,
-                        ),
+                        if (recipe.portions != null) ...[
+                          Icon(
+                            Icons.restaurant_outlined,
+                            size: 14,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.55),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${recipe.portions}',
+                            style: theme.textTheme.labelSmall,
+                          ),
+                        ],
                       ],
                     ),
-
-                    // Allergen safety dots
-                    if (recipe.allergenTags.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: recipe.allergenTags
-                            .take(5)
-                            .map(
-                              (tag) => Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: AllergenBadge(
-                                  label: tag,
-                                  severity: AllergenSeverity.unsafe,
-                                  compact: true,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ],
                   ],
                 ),
               ),

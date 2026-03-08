@@ -5,22 +5,15 @@ import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
 
 final recipeBranchesProvider =
-    FutureProvider.family<List<RecipeNode>, String>((ref, recipeId) async {
+    FutureProvider.family<RecipeNode?, String>((ref, recipeId) async {
   final apiClient = ref.watch(apiClientProvider);
   final response = await apiClient.get(ApiEndpoints.recipeTree(recipeId));
 
   final data = response.data;
-  if (data is Map<String, dynamic> && data['nodes'] is List) {
-    return (data['nodes'] as List)
-        .map((n) => RecipeNode.fromJson(n as Map<String, dynamic>))
-        .toList();
+  if (data is Map<String, dynamic> && data['root_node'] is Map<String, dynamic>) {
+    return RecipeNode.fromJson(data['root_node'] as Map<String, dynamic>);
   }
-  if (data is List) {
-    return data
-        .map((n) => RecipeNode.fromJson(n as Map<String, dynamic>))
-        .toList();
-  }
-  return [];
+  return null;
 });
 
 final branchOperationsProvider = Provider<BranchOperations>((ref) {
@@ -33,27 +26,23 @@ class BranchOperations {
 
   final ApiClient _apiClient;
 
-  Future<Recipe> createBranch(
+  Future<void> createBranch(
     String recipeId, {
     required String branchName,
-    String? fromBranch,
-    int? fromVersion,
+    required int parentNodeId,
   }) async {
-    final response = await _apiClient.post(
+    await _apiClient.post(
       ApiEndpoints.recipeBranch(recipeId),
       data: {
-        'branch': branchName,
-        if (fromBranch != null) 'from_branch': fromBranch,
-        if (fromVersion != null) 'from_version': fromVersion,
+        'branch_name': branchName,
+        'parent_node_id': parentNodeId,
       },
     );
-    return Recipe.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<void> setActiveBranch(String recipeId, String branch) async {
+  Future<void> setActiveNode(String recipeId, int nodeId) async {
     await _apiClient.put(
-      ApiEndpoints.recipeBranch(recipeId),
-      data: {'branch': branch},
+      '${ApiEndpoints.recipeTree(recipeId)}/active/$nodeId',
     );
   }
 }

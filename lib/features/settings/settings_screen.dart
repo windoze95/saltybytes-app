@@ -41,18 +41,16 @@ class _SettingsBody extends ConsumerStatefulWidget {
 
 class _SettingsBodyState extends ConsumerState<_SettingsBody> {
   late bool _wakelockEnabled;
-  late String _themeMode;
   late String _unitSystem;
   late TextEditingController _requirementsController;
 
   @override
   void initState() {
     super.initState();
-    _wakelockEnabled = widget.user.settings.cookingModeWakelock;
-    _themeMode = widget.user.settings.themeMode;
+    _wakelockEnabled = widget.user.settings.keepScreenAwake;
     _unitSystem = widget.user.personalization.unitSystem;
     _requirementsController = TextEditingController(
-      text: widget.user.personalization.dietaryRestrictions.join(', '),
+      text: widget.user.personalization.requirements,
     );
   }
 
@@ -60,13 +58,6 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
   void dispose() {
     _requirementsController.dispose();
     super.dispose();
-  }
-
-  Future<void> _changeThemeMode(String mode) async {
-    setState(() => _themeMode = mode);
-    await ref.read(currentUserProvider.notifier).updateSettings(
-          widget.user.settings.copyWith(themeMode: mode),
-        );
   }
 
   Future<void> _changeUnitSystem(String system) async {
@@ -79,7 +70,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
   Future<void> _toggleWakelock(bool enabled) async {
     setState(() => _wakelockEnabled = enabled);
     await ref.read(currentUserProvider.notifier).updateSettings(
-          widget.user.settings.copyWith(cookingModeWakelock: enabled),
+          widget.user.settings.copyWith(keepScreenAwake: enabled),
         );
   }
 
@@ -127,11 +118,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                   radius: 28,
                   backgroundColor:
                       theme.colorScheme.primary.withValues(alpha: 0.12),
-                  backgroundImage: widget.user.avatarUrl != null
-                      ? NetworkImage(widget.user.avatarUrl!)
-                      : null,
-                  child: widget.user.avatarUrl == null
-                      ? Text(
+                  child: Text(
                           widget.user.username.isNotEmpty
                               ? widget.user.username[0].toUpperCase()
                               : '?',
@@ -139,8 +126,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
-                        )
-                      : null,
+                        ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -148,7 +134,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.user.displayName ?? widget.user.username,
+                        widget.user.firstName ?? widget.user.username,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -208,16 +194,11 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                   ),
                   maxLines: 2,
                   onChanged: (value) {
-                    final restrictions = value
-                        .split(',')
-                        .map((s) => s.trim())
-                        .where((s) => s.isNotEmpty)
-                        .toList();
                     ref
                         .read(currentUserProvider.notifier)
                         .updatePersonalization(
                           widget.user.personalization.copyWith(
-                            dietaryRestrictions: restrictions,
+                            requirements: value.trim(),
                           ),
                         );
                   },
@@ -251,40 +232,6 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
         Card(
           child: Column(
             children: [
-              ListTile(
-                leading: const Icon(Icons.brightness_6),
-                title: const Text('Theme'),
-                subtitle: Text(
-                  _themeMode == 'light'
-                      ? 'Light'
-                      : _themeMode == 'dark'
-                          ? 'Dark'
-                          : 'System',
-                ),
-                trailing: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'system',
-                      icon: Icon(Icons.settings_brightness, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: 'light',
-                      icon: Icon(Icons.light_mode, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: 'dark',
-                      icon: Icon(Icons.dark_mode, size: 18),
-                    ),
-                  ],
-                  selected: {_themeMode},
-                  onSelectionChanged: (v) => _changeThemeMode(v.first),
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
-              ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               SwitchListTile(
                 title: const Text('Keep Screen Awake'),
                 subtitle:

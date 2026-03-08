@@ -15,17 +15,10 @@ void main() {
       expect(user.id, 'user-xyz-456');
       expect(user.username, 'chefmike');
       expect(user.email, 'mike@example.com');
-      expect(user.displayName, 'Chef Mike');
-      expect(user.avatarUrl, 'https://cdn.saltybytes.ai/avatars/mike.jpg');
-      expect(user.settings.themeMode, 'dark');
-      expect(user.settings.measurementSystem, 'us_customary');
-      expect(user.settings.defaultServings, 4);
-      expect(user.settings.notificationsEnabled, true);
-      expect(user.settings.cookingModeWakelock, true);
-      expect(user.personalization.dietaryRestrictions, ['vegetarian']);
-      expect(user.personalization.cuisinePreferences, ['Italian', 'Japanese']);
-      expect(user.personalization.skillLevel, 'intermediate');
-      expect(user.personalization.allergens, ['peanuts']);
+      expect(user.firstName, 'Chef Mike');
+      expect(user.settings.keepScreenAwake, true);
+      expect(user.personalization.unitSystem, 'us_customary');
+      expect(user.personalization.requirements, '');
       expect(user.createdAt, isA<DateTime>());
       expect(user.updatedAt, isA<DateTime>());
     });
@@ -40,36 +33,28 @@ void main() {
       final user = User.fromJson(json);
 
       expect(user.id, 'u-1');
-      expect(user.displayName, isNull);
-      expect(user.avatarUrl, isNull);
+      expect(user.firstName, isNull);
       // Settings defaults
-      expect(user.settings.themeMode, 'system');
-      expect(user.settings.measurementSystem, 'us_customary');
-      expect(user.settings.defaultServings, 4);
-      expect(user.settings.notificationsEnabled, true);
-      expect(user.settings.cookingModeWakelock, true);
+      expect(user.settings.keepScreenAwake, true);
       // Personalization defaults
-      expect(user.personalization.dietaryRestrictions, isEmpty);
-      expect(user.personalization.cuisinePreferences, isEmpty);
-      expect(user.personalization.skillLevel, 'intermediate');
-      expect(user.personalization.allergens, isEmpty);
+      expect(user.personalization.unitSystem, 'us_customary');
+      expect(user.personalization.requirements, '');
     });
 
     test('round-trip toJson/fromJson preserves data', () {
       final original = User.fromJson(testUserJson());
-      // Encode through JSON string to get pure Map<String, dynamic> (not freezed impl types)
       final jsonString = jsonEncode(original.toJson());
-      final roundTripped = User.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
+      final roundTripped =
+          User.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
       expect(roundTripped.id, original.id);
       expect(roundTripped.username, original.username);
       expect(roundTripped.email, original.email);
-      expect(roundTripped.displayName, original.displayName);
-      expect(roundTripped.avatarUrl, original.avatarUrl);
-      expect(roundTripped.settings.themeMode, original.settings.themeMode);
-      expect(roundTripped.settings.measurementSystem, original.settings.measurementSystem);
-      expect(roundTripped.personalization.skillLevel, original.personalization.skillLevel);
-      expect(roundTripped.personalization.allergens, original.personalization.allergens);
+      expect(roundTripped.firstName, original.firstName);
+      expect(roundTripped.settings.keepScreenAwake,
+          original.settings.keepScreenAwake);
+      expect(roundTripped.personalization.unitSystem,
+          original.personalization.unitSystem);
     });
   });
 
@@ -77,22 +62,16 @@ void main() {
     test('default values when constructed with const', () {
       const settings = UserSettings();
 
-      expect(settings.themeMode, 'system');
-      expect(settings.measurementSystem, 'us_customary');
-      expect(settings.defaultServings, 4);
-      expect(settings.notificationsEnabled, true);
-      expect(settings.cookingModeWakelock, true);
+      expect(settings.keepScreenAwake, true);
     });
 
-    test('fromJson with partial data fills defaults', () {
+    test('fromJson with data', () {
       final json = <String, dynamic>{
-        'themeMode': 'light',
+        'keep_screen_awake': false,
       };
       final settings = UserSettings.fromJson(json);
 
-      expect(settings.themeMode, 'light');
-      expect(settings.measurementSystem, 'us_customary');
-      expect(settings.defaultServings, 4);
+      expect(settings.keepScreenAwake, false);
     });
   });
 
@@ -100,25 +79,22 @@ void main() {
     test('default values when constructed with const', () {
       const p = Personalization();
 
-      expect(p.dietaryRestrictions, isEmpty);
-      expect(p.cuisinePreferences, isEmpty);
-      expect(p.skillLevel, 'intermediate');
-      expect(p.allergens, isEmpty);
+      expect(p.unitSystem, 'us_customary');
+      expect(p.requirements, '');
+      expect(p.uid, '');
     });
 
     test('fromJson with all fields', () {
       final json = testPersonalizationJson(
-        dietaryRestrictions: ['vegan', 'gluten-free'],
-        cuisinePreferences: ['Thai', 'Mexican'],
-        skillLevel: 'beginner',
-        allergens: ['dairy', 'eggs'],
+        unitSystem: 'metric',
+        requirements: 'No peanuts',
+        uid: '22222222-2222-2222-2222-222222222222',
       );
       final p = Personalization.fromJson(json);
 
-      expect(p.dietaryRestrictions, ['vegan', 'gluten-free']);
-      expect(p.cuisinePreferences, ['Thai', 'Mexican']);
-      expect(p.skillLevel, 'beginner');
-      expect(p.allergens, ['dairy', 'eggs']);
+      expect(p.unitSystem, 'metric');
+      expect(p.requirements, 'No peanuts');
+      expect(p.uid, '22222222-2222-2222-2222-222222222222');
     });
   });
 }

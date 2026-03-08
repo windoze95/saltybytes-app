@@ -16,9 +16,8 @@ class ImportManualScreen extends ConsumerStatefulWidget {
 class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
   final _cookTimeController = TextEditingController();
-  final _servingsController = TextEditingController(text: '4');
+  final _portionsController = TextEditingController(text: '4');
 
   final List<_IngredientRow> _ingredients = [_IngredientRow()];
   final List<TextEditingController> _instructions = [TextEditingController()];
@@ -48,9 +47,8 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
     _cookTimeController.dispose();
-    _servingsController.dispose();
+    _portionsController.dispose();
     for (final i in _ingredients) {
       i.dispose();
     }
@@ -95,9 +93,6 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
       final recipe = Recipe(
         id: '',
         title: _titleController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
         ownerId: '',
         ingredients: _ingredients
             .where((i) => i.nameController.text.trim().isNotEmpty)
@@ -114,7 +109,7 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
             .where((t) => t.isNotEmpty)
             .toList(),
         cookTimeMinutes: int.tryParse(_cookTimeController.text),
-        servings: int.tryParse(_servingsController.text) ?? 4,
+        portions: int.tryParse(_portionsController.text) ?? 4,
       );
 
       await ref.read(recipeCrudProvider).create(recipe);
@@ -177,19 +172,7 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Description
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                hintText: 'A short description of this recipe',
-              ),
-              maxLines: 2,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
-
-            // Cook time & servings row
+            // Cook time & portions row
             Row(
               children: [
                 Expanded(
@@ -206,9 +189,9 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: TextFormField(
-                    controller: _servingsController,
+                    controller: _portionsController,
                     decoration: const InputDecoration(
-                      labelText: 'Servings',
+                      labelText: 'Portions',
                       prefixIcon: Icon(Icons.people_outline),
                     ),
                     keyboardType: TextInputType.number,

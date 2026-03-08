@@ -10,14 +10,10 @@ class IngredientList extends ConsumerWidget {
   const IngredientList({
     super.key,
     required this.ingredients,
-    this.servings,
-    this.showCategory = true,
     this.recipeUnitSystem = 'us_customary',
   });
 
   final List<Ingredient> ingredients;
-  final int? servings;
-  final bool showCategory;
   final String recipeUnitSystem;
 
   @override
@@ -31,40 +27,11 @@ class IngredientList extends ConsumerWidget {
       return convertIngredient(ing, recipeUnitSystem, userUnitSystem);
     }).toList();
 
-    if (!showCategory) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: displayIngredients
-            .map((ing) => _IngredientRow(ingredient: ing))
-            .toList(),
-      );
-    }
-
-    // Group by category
-    final grouped = <String, List<Ingredient>>{};
-    for (final ing in displayIngredients) {
-      final cat = ing.category ?? 'Main';
-      (grouped[cat] ??= []).add(ing);
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final entry in grouped.entries) ...[
-          if (grouped.length > 1) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 12, bottom: 4),
-              child: Text(
-                entry.key,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ),
-          ],
-          ...entry.value.map((ing) => _IngredientRow(ingredient: ing)),
-        ],
-      ],
+      children: displayIngredients
+          .map((ing) => _IngredientRow(ingredient: ing))
+          .toList(),
     );
   }
 }
@@ -113,34 +80,9 @@ class _IngredientRow extends StatelessWidget {
             const SizedBox(width: 6),
           ],
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: ingredient.name,
-                    style: theme.textTheme.ingredientItem,
-                  ),
-                  if (ingredient.optional) ...[
-                    TextSpan(
-                      text: ' (optional)',
-                      style: theme.textTheme.ingredientItem.copyWith(
-                        fontStyle: FontStyle.italic,
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.55),
-                      ),
-                    ),
-                  ],
-                  if (ingredient.notes != null) ...[
-                    TextSpan(
-                      text: ', ${ingredient.notes}',
-                      style: theme.textTheme.ingredientItem.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+            child: Text(
+              ingredient.name,
+              style: theme.textTheme.ingredientItem,
             ),
           ),
         ],

@@ -116,15 +116,6 @@ class _RecipeForkScreenState extends ConsumerState<RecipeForkScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (recipe.currentBranch != 'main') ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Branch: ${recipe.currentBranch}${recipe.version != null ? ' v${recipe.version}' : ''}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),

@@ -9,7 +9,6 @@ part of 'recipe.dart';
 _$RecipeImpl _$$RecipeImplFromJson(Map<String, dynamic> json) => _$RecipeImpl(
       id: json['id'] as String,
       title: json['title'] as String,
-      description: json['description'] as String?,
       ownerId: json['ownerId'] as String,
       imageUrl: json['imageUrl'] as String?,
       ingredients: (json['ingredients'] as List<dynamic>?)
@@ -23,21 +22,13 @@ _$RecipeImpl _$$RecipeImplFromJson(Map<String, dynamic> json) => _$RecipeImpl(
       tags:
           (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
-      cuisine: json['cuisine'] as String?,
-      difficulty: json['difficulty'] as String?,
-      prepTimeMinutes: (json['prepTimeMinutes'] as num?)?.toInt(),
       cookTimeMinutes: (json['cookTimeMinutes'] as num?)?.toInt(),
-      servings: (json['servings'] as num?)?.toInt() ?? 4,
       sourceUrl: json['sourceUrl'] as String?,
-      isPublic: json['isPublic'] as bool? ?? false,
-      allergenTags: (json['allergenTags'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
       unitSystem: json['unitSystem'] as String? ?? 'us_customary',
-      currentBranch: json['currentBranch'] as String? ?? 'main',
+      status: json['status'] as String? ?? 'ready',
+      portions: (json['portions'] as num?)?.toInt(),
+      portionSize: json['portionSize'] as String?,
       parentRecipeId: json['parentRecipeId'] as String?,
-      version: (json['version'] as num?)?.toInt(),
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.parse(json['createdAt'] as String),
@@ -50,24 +41,18 @@ Map<String, dynamic> _$$RecipeImplToJson(_$RecipeImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
       'title': instance.title,
-      'description': instance.description,
       'ownerId': instance.ownerId,
       'imageUrl': instance.imageUrl,
       'ingredients': instance.ingredients,
       'instructions': instance.instructions,
       'tags': instance.tags,
-      'cuisine': instance.cuisine,
-      'difficulty': instance.difficulty,
-      'prepTimeMinutes': instance.prepTimeMinutes,
       'cookTimeMinutes': instance.cookTimeMinutes,
-      'servings': instance.servings,
       'sourceUrl': instance.sourceUrl,
-      'isPublic': instance.isPublic,
-      'allergenTags': instance.allergenTags,
       'unitSystem': instance.unitSystem,
-      'currentBranch': instance.currentBranch,
+      'status': instance.status,
+      'portions': instance.portions,
+      'portionSize': instance.portionSize,
       'parentRecipeId': instance.parentRecipeId,
-      'version': instance.version,
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };
@@ -77,10 +62,9 @@ _$IngredientImpl _$$IngredientImplFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       amount: (json['amount'] as num?)?.toDouble(),
       unit: json['unit'] as String?,
+      metricUnit: json['metric_unit'] as String?,
+      metricAmount: (json['metric_amount'] as num?)?.toDouble(),
       originalText: json['original_text'] as String?,
-      optional: json['optional'] as bool? ?? false,
-      notes: json['notes'] as String?,
-      category: json['category'] as String?,
     );
 
 Map<String, dynamic> _$$IngredientImplToJson(_$IngredientImpl instance) =>
@@ -88,75 +72,42 @@ Map<String, dynamic> _$$IngredientImplToJson(_$IngredientImpl instance) =>
       'name': instance.name,
       'amount': instance.amount,
       'unit': instance.unit,
+      'metric_unit': instance.metricUnit,
+      'metric_amount': instance.metricAmount,
       'original_text': instance.originalText,
-      'optional': instance.optional,
-      'notes': instance.notes,
-      'category': instance.category,
-    };
-
-_$RecipeDefImpl _$$RecipeDefImplFromJson(Map<String, dynamic> json) =>
-    _$RecipeDefImpl(
-      id: json['id'] as String,
-      recipeId: json['recipeId'] as String,
-      branch: json['branch'] as String,
-      version: (json['version'] as num).toInt(),
-      title: json['title'] as String,
-      description: json['description'] as String?,
-      ingredients: (json['ingredients'] as List<dynamic>?)
-              ?.map((e) => Ingredient.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
-      instructions: (json['instructions'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      commitMessage: json['commitMessage'] as String?,
-      authorId: json['authorId'] as String?,
-      createdAt: json['createdAt'] == null
-          ? null
-          : DateTime.parse(json['createdAt'] as String),
-    );
-
-Map<String, dynamic> _$$RecipeDefImplToJson(_$RecipeDefImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'recipeId': instance.recipeId,
-      'branch': instance.branch,
-      'version': instance.version,
-      'title': instance.title,
-      'description': instance.description,
-      'ingredients': instance.ingredients,
-      'instructions': instance.instructions,
-      'commitMessage': instance.commitMessage,
-      'authorId': instance.authorId,
-      'createdAt': instance.createdAt?.toIso8601String(),
     };
 
 _$RecipeNodeImpl _$$RecipeNodeImplFromJson(Map<String, dynamic> json) =>
     _$RecipeNodeImpl(
-      branch: json['branch'] as String,
-      version: (json['version'] as num).toInt(),
-      parentBranch: json['parentBranch'] as String?,
-      parentVersion: (json['parentVersion'] as num?)?.toInt(),
+      id: (json['id'] as num).toInt(),
+      parentId: (json['parent_id'] as num?)?.toInt(),
+      branchName: json['branch_name'] as String? ?? 'original',
+      summary: json['summary'] as String? ?? '',
+      type: json['type'] as String? ?? '',
+      isActive: json['is_active'] as bool? ?? false,
+      isEphemeral: json['is_ephemeral'] as bool? ?? false,
+      createdById: (json['created_by_id'] as num?)?.toInt(),
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
       children: (json['children'] as List<dynamic>?)
               ?.map((e) => RecipeNode.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      commitMessage: json['commitMessage'] as String?,
-      createdAt: json['createdAt'] == null
-          ? null
-          : DateTime.parse(json['createdAt'] as String),
     );
 
 Map<String, dynamic> _$$RecipeNodeImplToJson(_$RecipeNodeImpl instance) =>
     <String, dynamic>{
-      'branch': instance.branch,
-      'version': instance.version,
-      'parentBranch': instance.parentBranch,
-      'parentVersion': instance.parentVersion,
+      'id': instance.id,
+      'parent_id': instance.parentId,
+      'branch_name': instance.branchName,
+      'summary': instance.summary,
+      'type': instance.type,
+      'is_active': instance.isActive,
+      'is_ephemeral': instance.isEphemeral,
+      'created_by_id': instance.createdById,
+      'created_at': instance.createdAt?.toIso8601String(),
       'children': instance.children,
-      'commitMessage': instance.commitMessage,
-      'createdAt': instance.createdAt?.toIso8601String(),
     };
 
 _$RecipeSearchResultImpl _$$RecipeSearchResultImplFromJson(
