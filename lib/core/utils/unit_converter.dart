@@ -233,3 +233,37 @@ String formatAmountForUnit(double? amount, String? unit) {
   if (amount == null || amount == 0) return '';
   return formatAmount(amount, unit ?? '');
 }
+
+/// Parse a fractional string like "1/2", "1 1/2", or a plain number.
+///
+/// Returns null if the input cannot be parsed.
+double? parseFractionalAmount(String input) {
+  final s = input.trim();
+  if (s.isEmpty) return null;
+
+  // Try plain number first
+  final plain = double.tryParse(s);
+  if (plain != null) return plain;
+
+  // Try "a/b" (simple fraction)
+  final fractionMatch = RegExp(r'^(\d+)\s*/\s*(\d+)$').firstMatch(s);
+  if (fractionMatch != null) {
+    final num = int.parse(fractionMatch.group(1)!);
+    final den = int.parse(fractionMatch.group(2)!);
+    if (den == 0) return null;
+    return num / den;
+  }
+
+  // Try "whole a/b" (mixed fraction)
+  final mixedMatch =
+      RegExp(r'^(\d+)\s+(\d+)\s*/\s*(\d+)$').firstMatch(s);
+  if (mixedMatch != null) {
+    final whole = int.parse(mixedMatch.group(1)!);
+    final num = int.parse(mixedMatch.group(2)!);
+    final den = int.parse(mixedMatch.group(3)!);
+    if (den == 0) return null;
+    return whole + num / den;
+  }
+
+  return null;
+}

@@ -229,6 +229,7 @@ class _RecipeDetailBody extends ConsumerWidget {
                 IngredientList(
                   ingredients: recipe.ingredients,
                   servings: recipe.servings,
+                  recipeUnitSystem: recipe.unitSystem,
                 ),
 
                 const Divider(height: 32),

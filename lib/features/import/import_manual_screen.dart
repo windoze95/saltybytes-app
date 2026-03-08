@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers/recipe_provider.dart';
+import '../../core/utils/unit_converter.dart';
 import '../../models/recipe.dart';
 
 class ImportManualScreen extends ConsumerStatefulWidget {
@@ -103,7 +104,7 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
             .map(
               (i) => Ingredient(
                 name: i.nameController.text.trim(),
-                amount: double.tryParse(i.amountController.text.trim()),
+                amount: parseFractionalAmount(i.amountController.text.trim()),
                 unit: i.selectedUnit.isEmpty ? null : i.selectedUnit,
               ),
             )

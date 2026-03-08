@@ -262,4 +262,49 @@ void main() {
       expect(formatAmountForUnit(1.5, null), '1 1/2');
     });
   });
+
+  group('parseFractionalAmount', () {
+    test('parses plain integers', () {
+      expect(parseFractionalAmount('2'), 2.0);
+      expect(parseFractionalAmount('10'), 10.0);
+    });
+
+    test('parses plain decimals', () {
+      expect(parseFractionalAmount('1.5'), 1.5);
+      expect(parseFractionalAmount('0.25'), 0.25);
+    });
+
+    test('parses simple fractions', () {
+      expect(parseFractionalAmount('1/2'), 0.5);
+      expect(parseFractionalAmount('1/4'), 0.25);
+      expect(parseFractionalAmount('3/4'), 0.75);
+      expect(parseFractionalAmount('2/3'), closeTo(0.667, 0.001));
+    });
+
+    test('parses mixed fractions', () {
+      expect(parseFractionalAmount('1 1/2'), 1.5);
+      expect(parseFractionalAmount('2 1/4'), 2.25);
+      expect(parseFractionalAmount('3 3/4'), 3.75);
+    });
+
+    test('handles whitespace', () {
+      expect(parseFractionalAmount('  1/2  '), 0.5);
+      expect(parseFractionalAmount('  2  '), 2.0);
+      expect(parseFractionalAmount('1  1/2'), 1.5);
+    });
+
+    test('returns null for empty string', () {
+      expect(parseFractionalAmount(''), isNull);
+      expect(parseFractionalAmount('  '), isNull);
+    });
+
+    test('returns null for non-numeric input', () {
+      expect(parseFractionalAmount('abc'), isNull);
+      expect(parseFractionalAmount('one half'), isNull);
+    });
+
+    test('returns null for division by zero', () {
+      expect(parseFractionalAmount('1/0'), isNull);
+    });
+  });
 }

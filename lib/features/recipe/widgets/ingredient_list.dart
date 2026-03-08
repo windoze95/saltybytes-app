@@ -1,29 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/user_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/unit_converter.dart';
 import '../../../models/recipe.dart';
 
-class IngredientList extends StatelessWidget {
+class IngredientList extends ConsumerWidget {
   const IngredientList({
     super.key,
     required this.ingredients,
     this.servings,
     this.showCategory = true,
+    this.recipeUnitSystem = 'us_customary',
   });
 
   final List<Ingredient> ingredients;
   final int? servings;
   final bool showCategory;
+  final String recipeUnitSystem;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final userAsync = ref.watch(currentUserProvider);
+    final userUnitSystem =
+        userAsync.valueOrNull?.personalization.unitSystem ?? 'us_customary';
+
+    final displayIngredients = ingredients.map((ing) {
+      return convertIngredient(ing, recipeUnitSystem, userUnitSystem);
+    }).toList();
 
     if (!showCategory) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: ingredients
+        children: displayIngredients
             .map((ing) => _IngredientRow(ingredient: ing))
             .toList(),
       );
@@ -31,7 +42,7 @@ class IngredientList extends StatelessWidget {
 
     // Group by category
     final grouped = <String, List<Ingredient>>{};
-    for (final ing in ingredients) {
+    for (final ing in displayIngredients) {
       final cat = ing.category ?? 'Main';
       (grouped[cat] ??= []).add(ing);
     }
