@@ -138,7 +138,7 @@ void main() {
     test('fromJson with all fields', () {
       final json = testIngredientJson(
         name: 'butter',
-        quantity: '2',
+        amount: 2.0,
         unit: 'tbsp',
         notes: 'unsalted',
         optional: true,
@@ -147,7 +147,7 @@ void main() {
       final ingredient = Ingredient.fromJson(json);
 
       expect(ingredient.name, 'butter');
-      expect(ingredient.quantity, '2');
+      expect(ingredient.amount, 2.0);
       expect(ingredient.unit, 'tbsp');
       expect(ingredient.notes, 'unsalted');
       expect(ingredient.optional, true);
@@ -159,7 +159,7 @@ void main() {
       final ingredient = Ingredient.fromJson(json);
 
       expect(ingredient.name, 'salt');
-      expect(ingredient.quantity, isNull);
+      expect(ingredient.amount, isNull);
       expect(ingredient.unit, isNull);
       expect(ingredient.notes, isNull);
       expect(ingredient.optional, false);
@@ -172,7 +172,7 @@ void main() {
       final roundTripped = Ingredient.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
       expect(roundTripped.name, original.name);
-      expect(roundTripped.quantity, original.quantity);
+      expect(roundTripped.amount, original.amount);
       expect(roundTripped.unit, original.unit);
       expect(roundTripped.optional, original.optional);
       expect(roundTripped.category, original.category);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/unit_converter.dart';
 import '../../../models/recipe.dart';
 
 class IngredientList extends StatelessWidget {
@@ -64,10 +65,10 @@ class _IngredientRow extends StatelessWidget {
 
   String _formatQuantity() {
     final parts = <String>[];
-    if (ingredient.quantity != null) {
-      parts.add(ingredient.quantity!);
+    if (ingredient.amount != null && ingredient.amount! > 0) {
+      parts.add(formatAmountForUnit(ingredient.amount, ingredient.unit));
     }
-    if (ingredient.unit != null) {
+    if (ingredient.unit != null && ingredient.unit!.isNotEmpty) {
       parts.add(ingredient.unit!);
     }
     return parts.join(' ');

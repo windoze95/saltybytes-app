@@ -103,9 +103,7 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
             .map(
               (i) => Ingredient(
                 name: i.nameController.text.trim(),
-                quantity: i.amountController.text.trim().isEmpty
-                    ? null
-                    : i.amountController.text.trim(),
+                amount: double.tryParse(i.amountController.text.trim()),
                 unit: i.selectedUnit.isEmpty ? null : i.selectedUnit,
               ),
             )

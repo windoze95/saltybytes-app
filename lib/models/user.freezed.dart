@@ -614,6 +614,7 @@ mixin _$Personalization {
   List<String> get cuisinePreferences => throw _privateConstructorUsedError;
   String get skillLevel => throw _privateConstructorUsedError;
   List<String> get allergens => throw _privateConstructorUsedError;
+  String get unitSystem => throw _privateConstructorUsedError;
 
   /// Serializes this Personalization to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -635,7 +636,8 @@ abstract class $PersonalizationCopyWith<$Res> {
       {List<String> dietaryRestrictions,
       List<String> cuisinePreferences,
       String skillLevel,
-      List<String> allergens});
+      List<String> allergens,
+      String unitSystem});
 }
 
 /// @nodoc
@@ -657,6 +659,7 @@ class _$PersonalizationCopyWithImpl<$Res, $Val extends Personalization>
     Object? cuisinePreferences = null,
     Object? skillLevel = null,
     Object? allergens = null,
+    Object? unitSystem = null,
   }) {
     return _then(_value.copyWith(
       dietaryRestrictions: null == dietaryRestrictions
@@ -675,6 +678,10 @@ class _$PersonalizationCopyWithImpl<$Res, $Val extends Personalization>
           ? _value.allergens
           : allergens // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      unitSystem: null == unitSystem
+          ? _value.unitSystem
+          : unitSystem // ignore: cast_nullable_to_non_nullable
+              as String,
     ) as $Val);
   }
 }
@@ -691,7 +698,8 @@ abstract class _$$PersonalizationImplCopyWith<$Res>
       {List<String> dietaryRestrictions,
       List<String> cuisinePreferences,
       String skillLevel,
-      List<String> allergens});
+      List<String> allergens,
+      String unitSystem});
 }
 
 /// @nodoc
@@ -711,6 +719,7 @@ class __$$PersonalizationImplCopyWithImpl<$Res>
     Object? cuisinePreferences = null,
     Object? skillLevel = null,
     Object? allergens = null,
+    Object? unitSystem = null,
   }) {
     return _then(_$PersonalizationImpl(
       dietaryRestrictions: null == dietaryRestrictions
@@ -729,6 +738,10 @@ class __$$PersonalizationImplCopyWithImpl<$Res>
           ? _value._allergens
           : allergens // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      unitSystem: null == unitSystem
+          ? _value.unitSystem
+          : unitSystem // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
@@ -740,7 +753,8 @@ class _$PersonalizationImpl implements _Personalization {
       {final List<String> dietaryRestrictions = const [],
       final List<String> cuisinePreferences = const [],
       this.skillLevel = 'intermediate',
-      final List<String> allergens = const []})
+      final List<String> allergens = const [],
+      this.unitSystem = 'us_customary'})
       : _dietaryRestrictions = dietaryRestrictions,
         _cuisinePreferences = cuisinePreferences,
         _allergens = allergens;
@@ -781,8 +795,12 @@ class _$PersonalizationImpl implements _Personalization {
   }
 
   @override
+  @JsonKey()
+  final String unitSystem;
+
+  @override
   String toString() {
-    return 'Personalization(dietaryRestrictions: $dietaryRestrictions, cuisinePreferences: $cuisinePreferences, skillLevel: $skillLevel, allergens: $allergens)';
+    return 'Personalization(dietaryRestrictions: $dietaryRestrictions, cuisinePreferences: $cuisinePreferences, skillLevel: $skillLevel, allergens: $allergens, unitSystem: $unitSystem)';
   }
 
   @override
@@ -797,7 +815,9 @@ class _$PersonalizationImpl implements _Personalization {
             (identical(other.skillLevel, skillLevel) ||
                 other.skillLevel == skillLevel) &&
             const DeepCollectionEquality()
-                .equals(other._allergens, _allergens));
+                .equals(other._allergens, _allergens) &&
+            (identical(other.unitSystem, unitSystem) ||
+                other.unitSystem == unitSystem));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -807,7 +827,8 @@ class _$PersonalizationImpl implements _Personalization {
       const DeepCollectionEquality().hash(_dietaryRestrictions),
       const DeepCollectionEquality().hash(_cuisinePreferences),
       skillLevel,
-      const DeepCollectionEquality().hash(_allergens));
+      const DeepCollectionEquality().hash(_allergens),
+      unitSystem);
 
   /// Create a copy of Personalization
   /// with the given fields replaced by the non-null parameter values.
@@ -831,7 +852,8 @@ abstract class _Personalization implements Personalization {
       {final List<String> dietaryRestrictions,
       final List<String> cuisinePreferences,
       final String skillLevel,
-      final List<String> allergens}) = _$PersonalizationImpl;
+      final List<String> allergens,
+      final String unitSystem}) = _$PersonalizationImpl;
 
   factory _Personalization.fromJson(Map<String, dynamic> json) =
       _$PersonalizationImpl.fromJson;
@@ -844,6 +866,8 @@ abstract class _Personalization implements Personalization {
   String get skillLevel;
   @override
   List<String> get allergens;
+  @override
+  String get unitSystem;
 
   /// Create a copy of Personalization
   /// with the given fields replaced by the non-null parameter values.

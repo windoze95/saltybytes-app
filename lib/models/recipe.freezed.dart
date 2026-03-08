@@ -36,6 +36,7 @@ mixin _$Recipe {
   String? get sourceUrl => throw _privateConstructorUsedError;
   bool get isPublic => throw _privateConstructorUsedError;
   List<String> get allergenTags => throw _privateConstructorUsedError;
+  String get unitSystem => throw _privateConstructorUsedError;
   String get currentBranch => throw _privateConstructorUsedError;
   String? get parentRecipeId => throw _privateConstructorUsedError;
   int? get version => throw _privateConstructorUsedError;
@@ -73,6 +74,7 @@ abstract class $RecipeCopyWith<$Res> {
       String? sourceUrl,
       bool isPublic,
       List<String> allergenTags,
+      String unitSystem,
       String currentBranch,
       String? parentRecipeId,
       int? version,
@@ -111,6 +113,7 @@ class _$RecipeCopyWithImpl<$Res, $Val extends Recipe>
     Object? sourceUrl = freezed,
     Object? isPublic = null,
     Object? allergenTags = null,
+    Object? unitSystem = null,
     Object? currentBranch = null,
     Object? parentRecipeId = freezed,
     Object? version = freezed,
@@ -182,6 +185,10 @@ class _$RecipeCopyWithImpl<$Res, $Val extends Recipe>
           ? _value.allergenTags
           : allergenTags // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      unitSystem: null == unitSystem
+          ? _value.unitSystem
+          : unitSystem // ignore: cast_nullable_to_non_nullable
+              as String,
       currentBranch: null == currentBranch
           ? _value.currentBranch
           : currentBranch // ignore: cast_nullable_to_non_nullable
@@ -230,6 +237,7 @@ abstract class _$$RecipeImplCopyWith<$Res> implements $RecipeCopyWith<$Res> {
       String? sourceUrl,
       bool isPublic,
       List<String> allergenTags,
+      String unitSystem,
       String currentBranch,
       String? parentRecipeId,
       int? version,
@@ -266,6 +274,7 @@ class __$$RecipeImplCopyWithImpl<$Res>
     Object? sourceUrl = freezed,
     Object? isPublic = null,
     Object? allergenTags = null,
+    Object? unitSystem = null,
     Object? currentBranch = null,
     Object? parentRecipeId = freezed,
     Object? version = freezed,
@@ -337,6 +346,10 @@ class __$$RecipeImplCopyWithImpl<$Res>
           ? _value._allergenTags
           : allergenTags // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      unitSystem: null == unitSystem
+          ? _value.unitSystem
+          : unitSystem // ignore: cast_nullable_to_non_nullable
+              as String,
       currentBranch: null == currentBranch
           ? _value.currentBranch
           : currentBranch // ignore: cast_nullable_to_non_nullable
@@ -381,6 +394,7 @@ class _$RecipeImpl implements _Recipe {
       this.sourceUrl,
       this.isPublic = false,
       final List<String> allergenTags = const [],
+      this.unitSystem = 'us_customary',
       this.currentBranch = 'main',
       this.parentRecipeId,
       this.version,
@@ -458,6 +472,9 @@ class _$RecipeImpl implements _Recipe {
 
   @override
   @JsonKey()
+  final String unitSystem;
+  @override
+  @JsonKey()
   final String currentBranch;
   @override
   final String? parentRecipeId;
@@ -470,7 +487,7 @@ class _$RecipeImpl implements _Recipe {
 
   @override
   String toString() {
-    return 'Recipe(id: $id, title: $title, description: $description, ownerId: $ownerId, imageUrl: $imageUrl, ingredients: $ingredients, instructions: $instructions, tags: $tags, cuisine: $cuisine, difficulty: $difficulty, prepTimeMinutes: $prepTimeMinutes, cookTimeMinutes: $cookTimeMinutes, servings: $servings, sourceUrl: $sourceUrl, isPublic: $isPublic, allergenTags: $allergenTags, currentBranch: $currentBranch, parentRecipeId: $parentRecipeId, version: $version, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Recipe(id: $id, title: $title, description: $description, ownerId: $ownerId, imageUrl: $imageUrl, ingredients: $ingredients, instructions: $instructions, tags: $tags, cuisine: $cuisine, difficulty: $difficulty, prepTimeMinutes: $prepTimeMinutes, cookTimeMinutes: $cookTimeMinutes, servings: $servings, sourceUrl: $sourceUrl, isPublic: $isPublic, allergenTags: $allergenTags, unitSystem: $unitSystem, currentBranch: $currentBranch, parentRecipeId: $parentRecipeId, version: $version, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -505,6 +522,8 @@ class _$RecipeImpl implements _Recipe {
                 other.isPublic == isPublic) &&
             const DeepCollectionEquality()
                 .equals(other._allergenTags, _allergenTags) &&
+            (identical(other.unitSystem, unitSystem) ||
+                other.unitSystem == unitSystem) &&
             (identical(other.currentBranch, currentBranch) ||
                 other.currentBranch == currentBranch) &&
             (identical(other.parentRecipeId, parentRecipeId) ||
@@ -536,6 +555,7 @@ class _$RecipeImpl implements _Recipe {
         sourceUrl,
         isPublic,
         const DeepCollectionEquality().hash(_allergenTags),
+        unitSystem,
         currentBranch,
         parentRecipeId,
         version,
@@ -577,6 +597,7 @@ abstract class _Recipe implements Recipe {
       final String? sourceUrl,
       final bool isPublic,
       final List<String> allergenTags,
+      final String unitSystem,
       final String currentBranch,
       final String? parentRecipeId,
       final int? version,
@@ -618,6 +639,8 @@ abstract class _Recipe implements Recipe {
   @override
   List<String> get allergenTags;
   @override
+  String get unitSystem;
+  @override
   String get currentBranch;
   @override
   String? get parentRecipeId;
@@ -643,10 +666,13 @@ Ingredient _$IngredientFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$Ingredient {
   String get name => throw _privateConstructorUsedError;
-  String? get quantity => throw _privateConstructorUsedError;
+  @JsonKey(name: 'amount')
+  double? get amount => throw _privateConstructorUsedError;
   String? get unit => throw _privateConstructorUsedError;
-  String? get notes => throw _privateConstructorUsedError;
+  @JsonKey(name: 'original_text')
+  String? get originalText => throw _privateConstructorUsedError;
   bool get optional => throw _privateConstructorUsedError;
+  String? get notes => throw _privateConstructorUsedError;
   String? get category => throw _privateConstructorUsedError;
 
   /// Serializes this Ingredient to a JSON map.
@@ -667,10 +693,11 @@ abstract class $IngredientCopyWith<$Res> {
   @useResult
   $Res call(
       {String name,
-      String? quantity,
+      @JsonKey(name: 'amount') double? amount,
       String? unit,
-      String? notes,
+      @JsonKey(name: 'original_text') String? originalText,
       bool optional,
+      String? notes,
       String? category});
 }
 
@@ -690,10 +717,11 @@ class _$IngredientCopyWithImpl<$Res, $Val extends Ingredient>
   @override
   $Res call({
     Object? name = null,
-    Object? quantity = freezed,
+    Object? amount = freezed,
     Object? unit = freezed,
-    Object? notes = freezed,
+    Object? originalText = freezed,
     Object? optional = null,
+    Object? notes = freezed,
     Object? category = freezed,
   }) {
     return _then(_value.copyWith(
@@ -701,22 +729,26 @@ class _$IngredientCopyWithImpl<$Res, $Val extends Ingredient>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      quantity: freezed == quantity
-          ? _value.quantity
-          : quantity // ignore: cast_nullable_to_non_nullable
-              as String?,
+      amount: freezed == amount
+          ? _value.amount
+          : amount // ignore: cast_nullable_to_non_nullable
+              as double?,
       unit: freezed == unit
           ? _value.unit
           : unit // ignore: cast_nullable_to_non_nullable
               as String?,
-      notes: freezed == notes
-          ? _value.notes
-          : notes // ignore: cast_nullable_to_non_nullable
+      originalText: freezed == originalText
+          ? _value.originalText
+          : originalText // ignore: cast_nullable_to_non_nullable
               as String?,
       optional: null == optional
           ? _value.optional
           : optional // ignore: cast_nullable_to_non_nullable
               as bool,
+      notes: freezed == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
+              as String?,
       category: freezed == category
           ? _value.category
           : category // ignore: cast_nullable_to_non_nullable
@@ -735,10 +767,11 @@ abstract class _$$IngredientImplCopyWith<$Res>
   @useResult
   $Res call(
       {String name,
-      String? quantity,
+      @JsonKey(name: 'amount') double? amount,
       String? unit,
-      String? notes,
+      @JsonKey(name: 'original_text') String? originalText,
       bool optional,
+      String? notes,
       String? category});
 }
 
@@ -756,10 +789,11 @@ class __$$IngredientImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? name = null,
-    Object? quantity = freezed,
+    Object? amount = freezed,
     Object? unit = freezed,
-    Object? notes = freezed,
+    Object? originalText = freezed,
     Object? optional = null,
+    Object? notes = freezed,
     Object? category = freezed,
   }) {
     return _then(_$IngredientImpl(
@@ -767,22 +801,26 @@ class __$$IngredientImplCopyWithImpl<$Res>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      quantity: freezed == quantity
-          ? _value.quantity
-          : quantity // ignore: cast_nullable_to_non_nullable
-              as String?,
+      amount: freezed == amount
+          ? _value.amount
+          : amount // ignore: cast_nullable_to_non_nullable
+              as double?,
       unit: freezed == unit
           ? _value.unit
           : unit // ignore: cast_nullable_to_non_nullable
               as String?,
-      notes: freezed == notes
-          ? _value.notes
-          : notes // ignore: cast_nullable_to_non_nullable
+      originalText: freezed == originalText
+          ? _value.originalText
+          : originalText // ignore: cast_nullable_to_non_nullable
               as String?,
       optional: null == optional
           ? _value.optional
           : optional // ignore: cast_nullable_to_non_nullable
               as bool,
+      notes: freezed == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
+              as String?,
       category: freezed == category
           ? _value.category
           : category // ignore: cast_nullable_to_non_nullable
@@ -796,10 +834,11 @@ class __$$IngredientImplCopyWithImpl<$Res>
 class _$IngredientImpl implements _Ingredient {
   const _$IngredientImpl(
       {required this.name,
-      this.quantity,
+      @JsonKey(name: 'amount') this.amount,
       this.unit,
-      this.notes,
+      @JsonKey(name: 'original_text') this.originalText,
       this.optional = false,
+      this.notes,
       this.category});
 
   factory _$IngredientImpl.fromJson(Map<String, dynamic> json) =>
@@ -808,20 +847,24 @@ class _$IngredientImpl implements _Ingredient {
   @override
   final String name;
   @override
-  final String? quantity;
+  @JsonKey(name: 'amount')
+  final double? amount;
   @override
   final String? unit;
   @override
-  final String? notes;
+  @JsonKey(name: 'original_text')
+  final String? originalText;
   @override
   @JsonKey()
   final bool optional;
+  @override
+  final String? notes;
   @override
   final String? category;
 
   @override
   String toString() {
-    return 'Ingredient(name: $name, quantity: $quantity, unit: $unit, notes: $notes, optional: $optional, category: $category)';
+    return 'Ingredient(name: $name, amount: $amount, unit: $unit, originalText: $originalText, optional: $optional, notes: $notes, category: $category)';
   }
 
   @override
@@ -830,20 +873,21 @@ class _$IngredientImpl implements _Ingredient {
         (other.runtimeType == runtimeType &&
             other is _$IngredientImpl &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.quantity, quantity) ||
-                other.quantity == quantity) &&
+            (identical(other.amount, amount) || other.amount == amount) &&
             (identical(other.unit, unit) || other.unit == unit) &&
-            (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.originalText, originalText) ||
+                other.originalText == originalText) &&
             (identical(other.optional, optional) ||
                 other.optional == optional) &&
+            (identical(other.notes, notes) || other.notes == notes) &&
             (identical(other.category, category) ||
                 other.category == category));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, name, quantity, unit, notes, optional, category);
+  int get hashCode => Object.hash(
+      runtimeType, name, amount, unit, originalText, optional, notes, category);
 
   /// Create a copy of Ingredient
   /// with the given fields replaced by the non-null parameter values.
@@ -864,10 +908,11 @@ class _$IngredientImpl implements _Ingredient {
 abstract class _Ingredient implements Ingredient {
   const factory _Ingredient(
       {required final String name,
-      final String? quantity,
+      @JsonKey(name: 'amount') final double? amount,
       final String? unit,
-      final String? notes,
+      @JsonKey(name: 'original_text') final String? originalText,
       final bool optional,
+      final String? notes,
       final String? category}) = _$IngredientImpl;
 
   factory _Ingredient.fromJson(Map<String, dynamic> json) =
@@ -876,13 +921,17 @@ abstract class _Ingredient implements Ingredient {
   @override
   String get name;
   @override
-  String? get quantity;
+  @JsonKey(name: 'amount')
+  double? get amount;
   @override
   String? get unit;
   @override
-  String? get notes;
+  @JsonKey(name: 'original_text')
+  String? get originalText;
   @override
   bool get optional;
+  @override
+  String? get notes;
   @override
   String? get category;
 

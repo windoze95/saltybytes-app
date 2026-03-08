@@ -34,6 +34,7 @@ _$RecipeImpl _$$RecipeImplFromJson(Map<String, dynamic> json) => _$RecipeImpl(
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      unitSystem: json['unitSystem'] as String? ?? 'us_customary',
       currentBranch: json['currentBranch'] as String? ?? 'main',
       parentRecipeId: json['parentRecipeId'] as String?,
       version: (json['version'] as num?)?.toInt(),
@@ -63,6 +64,7 @@ Map<String, dynamic> _$$RecipeImplToJson(_$RecipeImpl instance) =>
       'sourceUrl': instance.sourceUrl,
       'isPublic': instance.isPublic,
       'allergenTags': instance.allergenTags,
+      'unitSystem': instance.unitSystem,
       'currentBranch': instance.currentBranch,
       'parentRecipeId': instance.parentRecipeId,
       'version': instance.version,
@@ -73,20 +75,22 @@ Map<String, dynamic> _$$RecipeImplToJson(_$RecipeImpl instance) =>
 _$IngredientImpl _$$IngredientImplFromJson(Map<String, dynamic> json) =>
     _$IngredientImpl(
       name: json['name'] as String,
-      quantity: json['quantity'] as String?,
+      amount: (json['amount'] as num?)?.toDouble(),
       unit: json['unit'] as String?,
-      notes: json['notes'] as String?,
+      originalText: json['original_text'] as String?,
       optional: json['optional'] as bool? ?? false,
+      notes: json['notes'] as String?,
       category: json['category'] as String?,
     );
 
 Map<String, dynamic> _$$IngredientImplToJson(_$IngredientImpl instance) =>
     <String, dynamic>{
       'name': instance.name,
-      'quantity': instance.quantity,
+      'amount': instance.amount,
       'unit': instance.unit,
-      'notes': instance.notes,
+      'original_text': instance.originalText,
       'optional': instance.optional,
+      'notes': instance.notes,
       'category': instance.category,
     };
 

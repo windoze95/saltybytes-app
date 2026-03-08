@@ -57,6 +57,7 @@ class RecipePreview {
     this.hashtags = const [],
     this.imagePrompt,
     this.linkedSuggestions = const [],
+    this.unitSystem,
   });
 
   final String title;
@@ -69,6 +70,7 @@ class RecipePreview {
   final List<String> hashtags;
   final String? imagePrompt;
   final List<String> linkedSuggestions;
+  final String? unitSystem;
 
   String? get sourceDomain {
     if (sourceUrl == null) return null;
@@ -105,6 +107,7 @@ class RecipePreview {
               ?.map((e) => e as String)
               .toList() ??
           [],
+      unitSystem: json['unit_system'] as String?,
     );
   }
 

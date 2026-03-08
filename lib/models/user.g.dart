@@ -72,6 +72,7 @@ _$PersonalizationImpl _$$PersonalizationImplFromJson(
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      unitSystem: json['unitSystem'] as String? ?? 'us_customary',
     );
 
 Map<String, dynamic> _$$PersonalizationImplToJson(
@@ -81,4 +82,5 @@ Map<String, dynamic> _$$PersonalizationImplToJson(
       'cuisinePreferences': instance.cuisinePreferences,
       'skillLevel': instance.skillLevel,
       'allergens': instance.allergens,
+      'unitSystem': instance.unitSystem,
     };
