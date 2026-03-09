@@ -4,7 +4,7 @@ iOS client for [SaltyBytes](https://saltybytes.ai) — a recipe app that gets ou
 
 Built with Flutter, Riverpod, and a deep hatred for recipe blogs.
 
-> **See also:** [saltybytes-api](https://github.com/windoze95/saltybytes-api) — the Go backend that powers everything.
+> **See also:** [saltybytes-api](https://github.com/windoze95/saltybytes-api) — the Go backend that powers everything | [saltybytes-dashboard](https://github.com/windoze95/saltybytes-dashboard) — the operational metrics dashboard.
 
 ## Features
 
