@@ -424,6 +424,10 @@ class SearchNotifier extends StateNotifier<SearchState> {
         hasMore = data['has_more'] as bool? ?? false;
       }
 
+      // Advance offset by the raw page size before dedup so we don't
+      // re-request the same range when duplicates are removed.
+      final fetchedCount = newResults.length;
+
       // Deduplicate by sourceUrl
       final existingUrls =
           state.results.map((r) => r.sourceUrl).whereType<String>().toSet();
@@ -433,7 +437,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       state = state.copyWith(
         results: [...state.results, ...newResults],
         isLoadingMore: false,
-        nextOffset: state.nextOffset + newResults.length,
+        nextOffset: state.nextOffset + fetchedCount,
         hasMore: hasMore,
       );
     } catch (e) {
