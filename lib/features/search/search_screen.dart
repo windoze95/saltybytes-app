@@ -17,10 +17,15 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchController = TextEditingController();
+  final _swiperController = SwiperController();
+  int _currentIndex = 0;
+  bool _isPopping = false;
+  ({int start, int end})? _expandedRange;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _swiperController.dispose();
     super.dispose();
   }
 
@@ -35,10 +40,57 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     context.push('/search/preview', extra: result);
   }
 
+  void _onExpansionPhaseChange(SearchState? prev, SearchState next) {
+    if (prev?.expansionPhase == null &&
+        next.expansionPhase == ExpansionPhase.inserted) {
+      // Record the range of newly inserted cards (right after the original).
+      final origIdx = next.results
+          .indexWhere((r) => r.sourceUrl == next.pendingPopUrl);
+      if (origIdx >= 0) {
+        final count = next.expandedCardUrls.length;
+        _expandedRange = (start: origIdx + 1, end: origIdx + count);
+      }
+      // Brief pause, then trigger the pop animation.
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        ref.read(searchProvider.notifier).beginPop();
+        setState(() => _isPopping = true);
+      });
+    }
+  }
+
+  void _onPopComplete() {
+    if (!mounted) return;
+    ref.read(searchProvider.notifier).completePop();
+    setState(() => _isPopping = false);
+    // After removal, adjust the expanded range (shifted down by 1).
+    if (_expandedRange != null) {
+      _expandedRange = (
+        start: _expandedRange!.start - 1,
+        end: _expandedRange!.end - 1,
+      );
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _swiperController.move(_currentIndex, animation: false);
+      }
+    });
+  }
+
+  void _onIndexChanged(int index) {
+    _currentIndex = index;
+    if (_expandedRange != null && index > _expandedRange!.end) {
+      ref.read(searchProvider.notifier).clearGlow();
+      _expandedRange = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final searchState = ref.watch(searchProvider);
+
+    ref.listen<SearchState>(searchProvider, _onExpansionPhaseChange);
 
     return Scaffold(
       appBar: AppBar(
@@ -131,12 +183,57 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     // Card stack
     return Swiper(
+      controller: _swiperController,
+      index: _currentIndex,
+      onIndexChanged: _onIndexChanged,
       itemCount: searchState.results.length,
       itemBuilder: (context, index) {
-        return _SearchResultCard(
-          result: searchState.results[index],
-          onTap: () => _previewResult(searchState.results[index]),
+        final result = searchState.results[index];
+        final isPopping =
+            _isPopping && result.sourceUrl == searchState.pendingPopUrl;
+        final isGlowing =
+            searchState.expandedCardUrls.contains(result.sourceUrl);
+
+        Widget card = _SearchResultCard(
+          key: ValueKey(result.sourceUrl ?? index),
+          result: result,
+          onTap: () => _previewResult(result),
         );
+
+        if (isPopping) {
+          card = card
+              .animate(onComplete: (_) => _onPopComplete())
+              .scale(
+                begin: const Offset(1, 1),
+                end: const Offset(0.85, 0.85),
+                duration: 250.ms,
+                curve: Curves.easeIn,
+              )
+              .fadeOut(duration: 250.ms, curve: Curves.easeIn);
+        } else if (isGlowing) {
+          card = card
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .custom(
+                duration: 1200.ms,
+                curve: Curves.easeInOut,
+                builder: (context, value, child) => Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.tertiary
+                            .withValues(alpha: 0.4 * value),
+                        blurRadius: 16 * value,
+                        spreadRadius: 2 * value,
+                      ),
+                    ],
+                  ),
+                  child: child,
+                ),
+              );
+        }
+
+        return card;
       },
       layout: SwiperLayout.STACK,
       itemWidth: MediaQuery.of(context).size.width * 0.85,
@@ -147,6 +244,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
 class _SearchResultCard extends StatelessWidget {
   const _SearchResultCard({
+    super.key,
     required this.result,
     required this.onTap,
   });
