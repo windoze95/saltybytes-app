@@ -21,8 +21,27 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
   @override
   void initState() {
     super.initState();
-    _previewFuture =
-        ref.read(searchProvider.notifier).previewResult(widget.searchResult);
+    _previewFuture = _loadPreview();
+  }
+
+  /// Load preview. If the backend detects a multi-recipe page, it throws
+  /// MultiRecipeException. We catch it, expand the cards in the results
+  /// list, and pop back so the user sees the individual recipes.
+  Future<RecipePreview> _loadPreview() async {
+    try {
+      return await ref
+          .read(searchProvider.notifier)
+          .previewResult(widget.searchResult);
+    } on MultiRecipeException catch (e) {
+      if (mounted) {
+        ref
+            .read(searchProvider.notifier)
+            .expandMultiRecipe(e.sourceResult, e.resolution);
+        context.pop();
+      }
+      // This future will be abandoned since we popped
+      return Future.error('multi-recipe redirect');
+    }
   }
 
   Future<void> _importRecipe(RecipePreview preview) async {

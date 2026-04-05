@@ -16,6 +16,22 @@ class PreviewException implements Exception {
   String toString() => message;
 }
 
+/// Thrown when a preview request discovers a multi-recipe page.
+/// The caller should expand the individual cards into the results list.
+class MultiRecipeException implements Exception {
+  const MultiRecipeException({
+    required this.sourceResult,
+    required this.resolution,
+  });
+
+  final WebSearchResult sourceResult;
+  final MultiRecipeResolution resolution;
+
+  @override
+  String toString() =>
+      'Multi-recipe page detected: ${resolution.recipes.length} recipes';
+}
+
 class WebSearchResult {
   const WebSearchResult({
     required this.title,
@@ -50,6 +66,77 @@ class WebSearchResult {
               ?.map(
                 (e) => FamilySafetyCheck.fromJson(e as Map<String, dynamic>),
               )
+              .toList() ??
+          [],
+    );
+  }
+}
+
+/// A single recipe card from a resolved multi-recipe page.
+class MultiRecipeCard {
+  const MultiRecipeCard({
+    required this.title,
+    this.imageUrl,
+    this.description,
+    this.sourceUrl,
+    required this.extractionStatus,
+  });
+
+  final String title;
+  final String? imageUrl;
+  final String? description;
+  final String? sourceUrl;
+  final String extractionStatus; // "pending", "extracting", "done", "failed"
+
+  factory MultiRecipeCard.fromJson(Map<String, dynamic> json) {
+    return MultiRecipeCard(
+      title: json['title'] as String? ?? 'Untitled',
+      imageUrl: json['image_url'] as String?,
+      description: json['description'] as String?,
+      sourceUrl: json['source_url'] as String?,
+      extractionStatus: json['extraction_status'] as String? ?? 'pending',
+    );
+  }
+
+  /// Convert to a WebSearchResult for display in the card stack.
+  WebSearchResult toSearchResult() {
+    String? domain;
+    if (sourceUrl != null) {
+      try {
+        domain = Uri.parse(sourceUrl!).host.replaceFirst('www.', '');
+      } catch (_) {}
+    }
+    return WebSearchResult(
+      title: title,
+      sourceUrl: sourceUrl,
+      sourceDomain: domain,
+      imageUrl: imageUrl,
+      description: description,
+    );
+  }
+}
+
+/// Resolution state for a multi-recipe page.
+class MultiRecipeResolution {
+  const MultiRecipeResolution({
+    required this.multiId,
+    required this.sourceUrl,
+    required this.status,
+    this.recipes = const [],
+  });
+
+  final String multiId;
+  final String sourceUrl;
+  final String status; // "resolving", "resolved", "failed"
+  final List<MultiRecipeCard> recipes;
+
+  factory MultiRecipeResolution.fromJson(Map<String, dynamic> json) {
+    return MultiRecipeResolution(
+      multiId: json['multi_id'] as String? ?? '',
+      sourceUrl: json['source_url'] as String? ?? '',
+      status: json['status'] as String? ?? 'resolving',
+      recipes: (json['recipes'] as List?)
+              ?.map((e) => MultiRecipeCard.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
     );
@@ -260,6 +347,9 @@ class SearchNotifier extends StateNotifier<SearchState> {
     }
   }
 
+  /// Preview a search result. If the backend detects multiple recipes on the
+  /// page, throws a [MultiRecipeException] with the individual cards so the
+  /// caller can expand them into the results list.
   Future<RecipePreview> previewResult(WebSearchResult result) async {
     try {
       final response = await _apiClient.post(
@@ -268,8 +358,20 @@ class SearchNotifier extends StateNotifier<SearchState> {
         options: Options(receiveTimeout: const Duration(seconds: 45)),
       );
       final data = response.data as Map<String, dynamic>;
+
+      // Check for multi-recipe response
+      if (data['is_multi'] == true) {
+        final resolution = MultiRecipeResolution.fromJson(data);
+        throw MultiRecipeException(
+          sourceResult: result,
+          resolution: resolution,
+        );
+      }
+
       final recipe = data['recipe'] as Map<String, dynamic>;
       return RecipePreview.fromJson(recipe);
+    } on MultiRecipeException {
+      rethrow;
     } on DioException catch (e) {
       final apiError = e.error;
       if (apiError is ApiError) {
@@ -320,6 +422,26 @@ class SearchNotifier extends StateNotifier<SearchState> {
     final data = response.data as Map<String, dynamic>;
     final recipe = data['recipe'] as Map<String, dynamic>;
     return Recipe.fromJson(recipe);
+  }
+
+  /// Expand a multi-recipe result: replace the original card with
+  /// individual recipe cards from the resolution. Called when the
+  /// preview endpoint detects multiple recipes on a page.
+  void expandMultiRecipe(
+      WebSearchResult original, MultiRecipeResolution resolution) {
+    if (resolution.recipes.isEmpty) return;
+
+    final updatedResults = <WebSearchResult>[];
+    for (final r in state.results) {
+      if (r.sourceUrl == original.sourceUrl) {
+        for (final card in resolution.recipes) {
+          updatedResults.add(card.toSearchResult());
+        }
+      } else {
+        updatedResults.add(r);
+      }
+    }
+    state = state.copyWith(results: updatedResults);
   }
 
   void clear() {
