@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:card_swiper/card_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers/search_provider.dart';
 import '../../models/allergen.dart';
+
+enum _ViewMode { fullScreen, grid }
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -17,82 +18,81 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchController = TextEditingController();
-  final _swiperController = SwiperController();
-  int _currentIndex = 0;
-  bool _isPopping = false;
-  ({int start, int end})? _expandedRange;
+  PageController _pageController = PageController();
+  final _gridScrollController = ScrollController();
+  _ViewMode _viewMode = _ViewMode.fullScreen;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _gridScrollController.addListener(_onGridScroll);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _swiperController.dispose();
+    _pageController.dispose();
+    _gridScrollController.dispose();
     super.dispose();
   }
 
   void _performSearch() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
-      setState(() => _currentIndex = 0);
+      _currentPage = 0;
+      _pageController.dispose();
+      _pageController = PageController();
       ref.read(searchProvider.notifier).search(query);
     }
   }
 
-  void _previewResult(WebSearchResult result) {
-    context.push('/search/preview', extra: result);
+  void _onPageChanged(int index) {
+    _currentPage = index;
+    final searchState = ref.read(searchProvider);
+    final threshold = searchState.results.length - 3;
+    if (index >= threshold && searchState.hasMore && !searchState.isLoadingMore) {
+      ref.read(searchProvider.notifier).loadMore();
+    }
   }
 
-  void _onExpansionPhaseChange(SearchState? prev, SearchState next) {
-    if (prev?.expansionPhase == null &&
-        next.expansionPhase == ExpansionPhase.inserted) {
-      // Record the range of newly inserted cards (right after the original).
-      final origIdx = next.results
-          .indexWhere((r) => r.sourceUrl == next.pendingPopUrl);
-      if (origIdx >= 0) {
-        final count = next.expandedCardCount;
-        _expandedRange = (start: origIdx + 1, end: origIdx + count);
+  void _onGridScroll() {
+    final pos = _gridScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      final searchState = ref.read(searchProvider);
+      if (searchState.hasMore && !searchState.isLoadingMore) {
+        ref.read(searchProvider.notifier).loadMore();
       }
-      // Brief pause, then trigger the pop animation.
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (!mounted) return;
-        ref.read(searchProvider.notifier).beginPop();
-        setState(() => _isPopping = true);
+    }
+  }
+
+  void _switchToFullScreen(int index) {
+    _pageController.dispose();
+    _pageController = PageController(initialPage: index);
+    _currentPage = index;
+    setState(() => _viewMode = _ViewMode.fullScreen);
+  }
+
+  Future<void> _previewResult(WebSearchResult result) async {
+    final popResult = await context.push<int>('/search/preview', extra: result);
+    if (popResult != null && mounted && _viewMode == _ViewMode.fullScreen) {
+      // Multi-recipe expansion returned a target index
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(popResult);
+        }
       });
     }
   }
 
-  void _onPopComplete() {
-    if (!mounted) return;
-    ref.read(searchProvider.notifier).completePop();
-    setState(() => _isPopping = false);
-    // After removal, adjust the expanded range (shifted down by 1).
-    if (_expandedRange != null) {
-      _expandedRange = (
-        start: _expandedRange!.start - 1,
-        end: _expandedRange!.end - 1,
-      );
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _swiperController.move(_currentIndex, animation: false);
+  void _toggleViewMode() {
+    setState(() {
+      if (_viewMode == _ViewMode.fullScreen) {
+        _viewMode = _ViewMode.grid;
+      } else {
+        _switchToFullScreen(_currentPage);
       }
     });
-  }
-
-  void _onIndexChanged(int index) {
-    _currentIndex = index;
-    if (_expandedRange != null && index > _expandedRange!.end) {
-      ref.read(searchProvider.notifier).clearGlow();
-      _expandedRange = null;
-    }
-
-    // Prefetch more results when approaching the end of the deck.
-    final searchState = ref.read(searchProvider);
-    final threshold = searchState.results.length - 3;
-    if (index >= threshold &&
-        searchState.hasMore &&
-        !searchState.isLoadingMore) {
-      ref.read(searchProvider.notifier).loadMore();
-    }
   }
 
   @override
@@ -100,11 +100,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final theme = Theme.of(context);
     final searchState = ref.watch(searchProvider);
 
-    ref.listen<SearchState>(searchProvider, _onExpansionPhaseChange);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Search Recipes'),
+        actions: [
+          if (searchState.results.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                _viewMode == _ViewMode.fullScreen
+                    ? Icons.grid_view_rounded
+                    : Icons.view_agenda_rounded,
+              ),
+              tooltip: _viewMode == _ViewMode.fullScreen
+                  ? 'Grid view'
+                  : 'Full screen view',
+              onPressed: _toggleViewMode,
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -147,7 +159,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 48,
+              Icon(Icons.error_outline,
+                  size: 48,
                   color: theme.colorScheme.error.withValues(alpha: 0.5)),
               const SizedBox(height: 16),
               Text('Search failed', style: theme.textTheme.titleMedium),
@@ -165,7 +178,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
 
     if (!searchState.hasSearched) {
-      return _EmptySearchState();
+      return const _EmptySearchState();
     }
 
     if (searchState.results.isEmpty) {
@@ -175,7 +188,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.search_off, size: 64,
+              Icon(Icons.search_off,
+                  size: 64,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
               const SizedBox(height: 16),
               Text('No results found', style: theme.textTheme.titleMedium),
@@ -191,102 +205,75 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
     }
 
-    // Card stack
+    if (_viewMode == _ViewMode.fullScreen) {
+      return _buildFullScreenView(searchState);
+    } else {
+      return _buildGridView(theme, searchState);
+    }
+  }
+
+  Widget _buildFullScreenView(SearchState searchState) {
     final itemCount =
         searchState.results.length + (searchState.hasMore ? 1 : 0);
 
-    return Swiper(
-      controller: _swiperController,
-      index: _currentIndex,
-      onIndexChanged: _onIndexChanged,
+    return PageView.builder(
+      controller: _pageController,
+      scrollDirection: Axis.vertical,
       itemCount: itemCount,
-      loop: false,
+      onPageChanged: _onPageChanged,
       itemBuilder: (context, index) {
-        // Loading placeholder at the end of the deck
         if (index >= searchState.results.length) {
-          return _LoadingPlaceholderCard();
+          return const _FullScreenLoadingPage();
         }
-
         final result = searchState.results[index];
-        final isPopping =
-            _isPopping && result.sourceUrl == searchState.pendingPopUrl;
-        final isGlowing =
-            searchState.expandedCardUrls.contains(result.sourceUrl);
-
-        Widget card = _SearchResultCard(
-          key: ValueKey(result.sourceUrl ?? index),
+        return _FullScreenResultPage(
           result: result,
           onTap: () => _previewResult(result),
         );
-
-        if (isPopping) {
-          card = card
-              .animate(onComplete: (_) => _onPopComplete())
-              .scale(
-                begin: const Offset(1, 1),
-                end: const Offset(0.85, 0.85),
-                duration: 250.ms,
-                curve: Curves.easeIn,
-              )
-              .fadeOut(duration: 250.ms, curve: Curves.easeIn);
-        } else if (isGlowing) {
-          card = card
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .custom(
-                duration: 1200.ms,
-                curve: Curves.easeInOut,
-                builder: (context, value, child) => Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.tertiary
-                            .withValues(alpha: 0.4 * value),
-                        blurRadius: 16 * value,
-                        spreadRadius: 2 * value,
-                      ),
-                    ],
-                  ),
-                  child: child,
-                ),
-              );
-        }
-
-        return card;
       },
-      layout: SwiperLayout.STACK,
-      itemWidth: MediaQuery.of(context).size.width * 0.85,
-      itemHeight: MediaQuery.of(context).size.height * 0.55,
+    );
+  }
+
+  Widget _buildGridView(ThemeData theme, SearchState searchState) {
+    final itemCount =
+        searchState.results.length + (searchState.isLoadingMore ? 1 : 0);
+
+    return GridView.builder(
+      controller: _gridScrollController,
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.72,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        if (index >= searchState.results.length) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
+        final result = searchState.results[index];
+        return _GridResultCard(
+          result: result,
+          onTap: () => _switchToFullScreen(index),
+          index: index,
+        );
+      },
     );
   }
 }
 
-class _LoadingPlaceholderCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 4,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(strokeWidth: 2),
-            const SizedBox(height: 16),
-            Text('Finding more recipes...',
-                style: theme.textTheme.bodyMedium),
-          ],
-        ),
-      ),
-    )
-        .animate(onPlay: (c) => c.repeat(reverse: true))
-        .fade(begin: 0.5, end: 1.0, duration: 800.ms);
-  }
-}
+// ---------------------------------------------------------------------------
+// Full-screen page for a single search result
+// ---------------------------------------------------------------------------
 
-class _SearchResultCard extends StatelessWidget {
-  const _SearchResultCard({
-    super.key,
+class _FullScreenResultPage extends StatelessWidget {
+  const _FullScreenResultPage({
     required this.result,
     required this.onTap,
   });
@@ -300,108 +287,152 @@ class _SearchResultCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-      elevation: 4,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          // Image
-          Expanded(
-            flex: 3,
-            child: Container(
-              width: double.infinity,
+          // Hero image
+          if (result.imageUrl != null)
+            CachedNetworkImage(
+              imageUrl: result.imageUrl!,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => _FullScreenPlaceholder(theme: theme),
+              errorWidget: (_, __, ___) =>
+                  _FullScreenPlaceholder(theme: theme),
+            )
+          else
+            _FullScreenPlaceholder(theme: theme),
+
+          // Bottom gradient overlay
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: MediaQuery.of(context).size.height * 0.45,
+            child: const DecoratedBox(
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Color(0xCC000000),
+                  ],
+                ),
               ),
-              child: result.imageUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: result.imageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Center(
-                        child: Icon(Icons.restaurant, size: 40,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-                      ),
-                      errorWidget: (_, __, ___) => Center(
-                        child: Icon(Icons.broken_image_outlined, size: 40,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-                      ),
-                    )
-                  : Center(
-                      child: Icon(Icons.restaurant, size: 48,
-                          color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-                    ),
             ),
           ),
 
-          // Info
-          Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+          // Metadata overlay
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 24,
+            child: SafeArea(
+              top: false,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    result.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (result.sourceDomain != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      result.sourceDomain!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ],
-
                   // Rating
                   if (result.rating != null) ...[
-                    const SizedBox(height: 8),
                     Row(
                       children: [
                         ...List.generate(5, (i) {
                           final filled = i < result.rating!.round();
                           return Icon(
-                            filled ? Icons.star : Icons.star_border,
+                            filled ? Icons.star_rounded : Icons.star_border_rounded,
                             size: 18,
                             color: filled
                                 ? const Color(0xFFF9A825)
-                                : theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.4),
+                                : Colors.white38,
                           );
                         }),
                         const SizedBox(width: 6),
                         Text(
                           result.rating!.toStringAsFixed(1),
-                          style: theme.textTheme.bodySmall,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white70,
+                          ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
                   ],
 
+                  // Title
+                  Text(
+                    result.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Source domain + cook time
+                  Row(
+                    children: [
+                      if (result.sourceDomain != null)
+                        Flexible(
+                          child: Text(
+                            result.sourceDomain!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ),
+                      if (result.sourceDomain != null &&
+                          result.cookTimeMinutes != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Container(
+                            width: 4,
+                            height: 4,
+                            decoration: const BoxDecoration(
+                              color: Colors.white38,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      if (result.cookTimeMinutes != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.timer_outlined,
+                                size: 16, color: Colors.white70),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${result.cookTimeMinutes} min',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+
+                  // Description
                   if (result.description != null) ...[
                     const SizedBox(height: 8),
-                    Expanded(
-                      child: Text(
-                        result.description!,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.7),
-                        ),
+                    Text(
+                      result.description!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white60,
                       ),
                     ),
                   ],
 
-                  // Family safety checks
+                  // Family safety badges
                   if (result.familySafetyChecks.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
@@ -411,15 +442,18 @@ class _SearchResultCard extends StatelessWidget {
                     ),
                   ],
 
-                  const Spacer(),
-
                   // Preview button
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
+                    child: FilledButton.icon(
                       onPressed: onTap,
-                      icon: const Icon(Icons.visibility, size: 18),
+                      icon: const Icon(Icons.visibility_outlined, size: 18),
                       label: const Text('Preview Recipe'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -428,10 +462,223 @@ class _SearchResultCard extends StatelessWidget {
           ),
         ],
       ),
-    ),
     );
   }
 }
+
+class _FullScreenPlaceholder extends StatelessWidget {
+  const _FullScreenPlaceholder({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.primary.withValues(alpha: 0.15),
+            theme.colorScheme.secondary.withValues(alpha: 0.1),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.restaurant,
+          size: 64,
+          color: theme.colorScheme.primary.withValues(alpha: 0.25),
+        ),
+      ),
+    );
+  }
+}
+
+class _FullScreenLoadingPage extends StatelessWidget {
+  const _FullScreenLoadingPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(strokeWidth: 2),
+          const SizedBox(height: 16),
+          Text('Finding more recipes...',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              )),
+        ],
+      ),
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fade(begin: 0.5, end: 1.0, duration: 800.ms);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Grid card for a single search result
+// ---------------------------------------------------------------------------
+
+class _GridResultCard extends StatelessWidget {
+  const _GridResultCard({
+    required this.result,
+    required this.onTap,
+    required this.index,
+  });
+
+  final WebSearchResult result;
+  final VoidCallback onTap;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image — top ~65%
+            Expanded(
+              flex: 13,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                    child: result.imageUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: result.imageUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Center(
+                              child: Icon(Icons.restaurant,
+                                  size: 32,
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: 0.3)),
+                            ),
+                            errorWidget: (_, __, ___) => Center(
+                              child: Icon(Icons.broken_image_outlined,
+                                  size: 32,
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: 0.3)),
+                            ),
+                          )
+                        : Center(
+                            child: Icon(Icons.restaurant,
+                                size: 36,
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.3)),
+                          ),
+                  ),
+                  // Safety indicator dots (top-right)
+                  if (result.familySafetyChecks.isNotEmpty)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: result.familySafetyChecks.map((check) {
+                          final color = check.isSafe
+                              ? theme.colorScheme.tertiary
+                              : theme.colorScheme.error;
+                          return Container(
+                            margin: const EdgeInsets.only(left: 3),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.white, width: 1.5),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // Info — bottom ~35%
+            Expanded(
+              flex: 7,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      result.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Source domain
+                    if (result.sourceDomain != null)
+                      Text(
+                        result.sourceDomain!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    // Rating
+                    if (result.rating != null) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          ...List.generate(5, (i) {
+                            final filled = i < result.rating!.round();
+                            return Icon(
+                              filled
+                                  ? Icons.star_rounded
+                                  : Icons.star_border_rounded,
+                              size: 12,
+                              color: filled
+                                  ? const Color(0xFFF9A825)
+                                  : theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.3),
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    )
+        .animate()
+        .fadeIn(duration: 300.ms, delay: (30 * index).ms)
+        .slideY(
+          begin: 0.08,
+          end: 0,
+          duration: 300.ms,
+          delay: (30 * index).ms,
+        );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared widgets
+// ---------------------------------------------------------------------------
 
 class _SafetyBadge extends StatelessWidget {
   const _SafetyBadge({required this.check});
@@ -440,13 +687,13 @@ class _SafetyBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = check.isSafe ? theme.colorScheme.tertiary : theme.colorScheme.error;
+    final color =
+        check.isSafe ? const Color(0xFF5CFFD4) : const Color(0xFFFF6B6B);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -460,8 +707,9 @@ class _SafetyBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             check.memberName,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: TextStyle(
               color: color,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -472,6 +720,8 @@ class _SafetyBadge extends StatelessWidget {
 }
 
 class _EmptySearchState extends StatelessWidget {
+  const _EmptySearchState();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

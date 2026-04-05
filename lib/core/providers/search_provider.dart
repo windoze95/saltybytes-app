@@ -6,8 +6,6 @@ import '../../models/recipe.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
 
-enum ExpansionPhase { inserted, popping }
-
 class PreviewException implements Exception {
   const PreviewException({required this.message, this.code});
 
@@ -273,10 +271,6 @@ class SearchState {
     this.isLoading = false,
     this.error,
     this.hasSearched = false,
-    this.expandedCardUrls = const {},
-    this.expandedCardCount = 0,
-    this.pendingPopUrl,
-    this.expansionPhase,
     this.nextOffset = 0,
     this.hasMore = true,
     this.isLoadingMore = false,
@@ -287,10 +281,6 @@ class SearchState {
   final bool isLoading;
   final String? error;
   final bool hasSearched;
-  final Set<String> expandedCardUrls;
-  final int expandedCardCount;
-  final String? pendingPopUrl;
-  final ExpansionPhase? expansionPhase;
   final int nextOffset;
   final bool hasMore;
   final bool isLoadingMore;
@@ -301,12 +291,6 @@ class SearchState {
     bool? isLoading,
     String? error,
     bool? hasSearched,
-    Set<String>? expandedCardUrls,
-    int? expandedCardCount,
-    String? pendingPopUrl,
-    bool clearPendingPopUrl = false,
-    ExpansionPhase? expansionPhase,
-    bool clearExpansionPhase = false,
     int? nextOffset,
     bool? hasMore,
     bool? isLoadingMore,
@@ -317,12 +301,6 @@ class SearchState {
       isLoading: isLoading ?? this.isLoading,
       error: error,
       hasSearched: hasSearched ?? this.hasSearched,
-      expandedCardUrls: expandedCardUrls ?? this.expandedCardUrls,
-      expandedCardCount: expandedCardCount ?? this.expandedCardCount,
-      pendingPopUrl:
-          clearPendingPopUrl ? null : (pendingPopUrl ?? this.pendingPopUrl),
-      expansionPhase:
-          clearExpansionPhase ? null : (expansionPhase ?? this.expansionPhase),
       nextOffset: nextOffset ?? this.nextOffset,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
@@ -351,9 +329,6 @@ class SearchNotifier extends StateNotifier<SearchState> {
       isLoading: true,
       error: null,
       hasSearched: true,
-      expandedCardUrls: const {},
-      clearPendingPopUrl: true,
-      clearExpansionPhase: true,
       nextOffset: 0,
       hasMore: true,
       isLoadingMore: false,
@@ -398,7 +373,6 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
   Future<void> loadMore() async {
     if (state.isLoadingMore || !state.hasMore || state.query.isEmpty) return;
-    if (state.expansionPhase != null) return;
 
     state = state.copyWith(isLoadingMore: true);
 
@@ -522,61 +496,28 @@ class SearchNotifier extends StateNotifier<SearchState> {
     return Recipe.fromJson(recipe);
   }
 
-  /// Phase 1: Insert individual recipe cards right after the original
-  /// multi-recipe card. The original stays so the Swiper can animate
-  /// its removal (the "pop").
-  void insertExpandedCards(
+  /// Replace a multi-recipe card with its individual recipe cards.
+  /// Returns the index of the first expanded card in the updated list.
+  int replaceWithExpanded(
       WebSearchResult original, MultiRecipeResolution resolution) {
-    if (resolution.recipes.isEmpty) return;
+    if (resolution.recipes.isEmpty) return 0;
 
     final newCards =
         resolution.recipes.map((c) => c.toSearchResult()).toList();
-    final newUrls =
-        newCards.map((c) => c.sourceUrl).whereType<String>().toSet();
 
     final updatedResults = <WebSearchResult>[];
+    int insertedAt = 0;
     for (final r in state.results) {
-      updatedResults.add(r);
       if (r.sourceUrl == original.sourceUrl) {
+        insertedAt = updatedResults.length;
         updatedResults.addAll(newCards);
+      } else {
+        updatedResults.add(r);
       }
     }
 
-    state = state.copyWith(
-      results: updatedResults,
-      expandedCardUrls: newUrls,
-      expandedCardCount: newCards.length,
-      pendingPopUrl: original.sourceUrl,
-      expansionPhase: ExpansionPhase.inserted,
-    );
-  }
-
-  /// Phase 2: Signal that the original card should start its pop animation.
-  void beginPop() {
-    state = state.copyWith(expansionPhase: ExpansionPhase.popping);
-  }
-
-  /// Phase 3: Remove the original card after the pop animation finishes.
-  /// Uses removeAt on the first match so that expanded cards sharing
-  /// the same sourceUrl are not accidentally removed.
-  void completePop() {
-    final url = state.pendingPopUrl;
-    if (url == null) return;
-
-    final updatedResults = List<WebSearchResult>.from(state.results);
-    final idx = updatedResults.indexWhere((r) => r.sourceUrl == url);
-    if (idx >= 0) {
-      updatedResults.removeAt(idx);
-    }
-    state = state.copyWith(
-      results: updatedResults,
-      clearPendingPopUrl: true,
-      clearExpansionPhase: true,
-    );
-  }
-
-  void clearGlow() {
-    state = state.copyWith(expandedCardUrls: const {});
+    state = state.copyWith(results: updatedResults);
+    return insertedAt;
   }
 
   void clear() {
