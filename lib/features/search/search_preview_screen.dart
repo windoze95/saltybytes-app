@@ -21,38 +21,27 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
   @override
   void initState() {
     super.initState();
-    _previewFuture = _loadPreviewWithMultiCheck();
+    _previewFuture = _loadPreview();
   }
 
-  /// Load preview, but first check if this is a multi-recipe page.
-  /// If it is, pop back and replace the search result with individual cards.
-  Future<RecipePreview> _loadPreviewWithMultiCheck() async {
-    // Skip multi-check if already known to be single-recipe
-    if (!widget.searchResult.isMulti) {
-      final url = widget.searchResult.sourceUrl;
-      if (url != null) {
-        final resolution = await ref
+  /// Load preview. If the backend detects a multi-recipe page, it throws
+  /// MultiRecipeException. We catch it, expand the cards in the results
+  /// list, and pop back so the user sees the individual recipes.
+  Future<RecipePreview> _loadPreview() async {
+    try {
+      return await ref
+          .read(searchProvider.notifier)
+          .previewResult(widget.searchResult);
+    } on MultiRecipeException catch (e) {
+      if (mounted) {
+        ref
             .read(searchProvider.notifier)
-            .checkMultiRecipe(url);
-        if (resolution != null && resolution.recipes.length > 1) {
-          // Multi-recipe detected late! Replace card and go back.
-          if (mounted) {
-            ref.read(searchProvider.notifier).replaceWithResolved(
-                  widget.searchResult,
-                  resolution.recipes,
-                );
-            context.pop();
-          }
-          // Return a dummy future that won't be used (we already popped)
-          return Future.error('multi-recipe redirect');
-        }
+            .expandMultiRecipe(e.sourceResult, e.resolution);
+        context.pop();
       }
+      // This future will be abandoned since we popped
+      return Future.error('multi-recipe redirect');
     }
-
-    // Single recipe — proceed with normal preview
-    return ref
-        .read(searchProvider.notifier)
-        .previewResult(widget.searchResult);
   }
 
   Future<void> _importRecipe(RecipePreview preview) async {
