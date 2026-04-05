@@ -36,7 +36,7 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
       if (mounted) {
         ref
             .read(searchProvider.notifier)
-            .expandMultiRecipe(e.sourceResult, e.resolution);
+            .insertExpandedCards(e.sourceResult, e.resolution);
         context.pop();
       }
       // This future will be abandoned since we popped
