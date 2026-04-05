@@ -274,6 +274,7 @@ class SearchState {
     this.error,
     this.hasSearched = false,
     this.expandedCardUrls = const {},
+    this.expandedCardCount = 0,
     this.pendingPopUrl,
     this.expansionPhase,
   });
@@ -284,6 +285,7 @@ class SearchState {
   final String? error;
   final bool hasSearched;
   final Set<String> expandedCardUrls;
+  final int expandedCardCount;
   final String? pendingPopUrl;
   final ExpansionPhase? expansionPhase;
 
@@ -294,6 +296,7 @@ class SearchState {
     String? error,
     bool? hasSearched,
     Set<String>? expandedCardUrls,
+    int? expandedCardCount,
     String? pendingPopUrl,
     bool clearPendingPopUrl = false,
     ExpansionPhase? expansionPhase,
@@ -306,6 +309,7 @@ class SearchState {
       error: error,
       hasSearched: hasSearched ?? this.hasSearched,
       expandedCardUrls: expandedCardUrls ?? this.expandedCardUrls,
+      expandedCardCount: expandedCardCount ?? this.expandedCardCount,
       pendingPopUrl:
           clearPendingPopUrl ? null : (pendingPopUrl ?? this.pendingPopUrl),
       expansionPhase:
@@ -468,6 +472,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
     state = state.copyWith(
       results: updatedResults,
       expandedCardUrls: newUrls,
+      expandedCardCount: newCards.length,
       pendingPopUrl: original.sourceUrl,
       expansionPhase: ExpansionPhase.inserted,
     );
@@ -479,12 +484,17 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 
   /// Phase 3: Remove the original card after the pop animation finishes.
+  /// Uses removeAt on the first match so that expanded cards sharing
+  /// the same sourceUrl are not accidentally removed.
   void completePop() {
     final url = state.pendingPopUrl;
     if (url == null) return;
 
-    final updatedResults =
-        state.results.where((r) => r.sourceUrl != url).toList();
+    final updatedResults = List<WebSearchResult>.from(state.results);
+    final idx = updatedResults.indexWhere((r) => r.sourceUrl == url);
+    if (idx >= 0) {
+      updatedResults.removeAt(idx);
+    }
     state = state.copyWith(
       results: updatedResults,
       clearPendingPopUrl: true,

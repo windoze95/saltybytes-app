@@ -47,7 +47,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final origIdx = next.results
           .indexWhere((r) => r.sourceUrl == next.pendingPopUrl);
       if (origIdx >= 0) {
-        final count = next.expandedCardUrls.length;
+        final count = next.expandedCardCount;
         _expandedRange = (start: origIdx + 1, end: origIdx + count);
       }
       // Brief pause, then trigger the pop animation.
