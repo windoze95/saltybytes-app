@@ -32,6 +32,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _performSearch() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
+      setState(() => _currentIndex = 0);
       ref.read(searchProvider.notifier).search(query);
     }
   }
@@ -82,6 +83,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     if (_expandedRange != null && index > _expandedRange!.end) {
       ref.read(searchProvider.notifier).clearGlow();
       _expandedRange = null;
+    }
+
+    // Prefetch more results when approaching the end of the deck.
+    final searchState = ref.read(searchProvider);
+    final threshold = searchState.results.length - 3;
+    if (index >= threshold &&
+        searchState.hasMore &&
+        !searchState.isLoadingMore) {
+      ref.read(searchProvider.notifier).loadMore();
     }
   }
 
@@ -182,12 +192,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
 
     // Card stack
+    final itemCount =
+        searchState.results.length + (searchState.hasMore ? 1 : 0);
+
     return Swiper(
       controller: _swiperController,
       index: _currentIndex,
       onIndexChanged: _onIndexChanged,
-      itemCount: searchState.results.length,
+      itemCount: itemCount,
+      loop: false,
       itemBuilder: (context, index) {
+        // Loading placeholder at the end of the deck
+        if (index >= searchState.results.length) {
+          return _LoadingPlaceholderCard();
+        }
+
         final result = searchState.results[index];
         final isPopping =
             _isPopping && result.sourceUrl == searchState.pendingPopUrl;
@@ -239,6 +258,29 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       itemWidth: MediaQuery.of(context).size.width * 0.85,
       itemHeight: MediaQuery.of(context).size.height * 0.55,
     );
+  }
+}
+
+class _LoadingPlaceholderCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 4,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(strokeWidth: 2),
+            const SizedBox(height: 16),
+            Text('Finding more recipes...',
+                style: theme.textTheme.bodyMedium),
+          ],
+        ),
+      ),
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fade(begin: 0.5, end: 1.0, duration: 800.ms);
   }
 }
 

@@ -277,6 +277,9 @@ class SearchState {
     this.expandedCardCount = 0,
     this.pendingPopUrl,
     this.expansionPhase,
+    this.nextOffset = 0,
+    this.hasMore = true,
+    this.isLoadingMore = false,
   });
 
   final String query;
@@ -288,6 +291,9 @@ class SearchState {
   final int expandedCardCount;
   final String? pendingPopUrl;
   final ExpansionPhase? expansionPhase;
+  final int nextOffset;
+  final bool hasMore;
+  final bool isLoadingMore;
 
   SearchState copyWith({
     String? query,
@@ -301,6 +307,9 @@ class SearchState {
     bool clearPendingPopUrl = false,
     ExpansionPhase? expansionPhase,
     bool clearExpansionPhase = false,
+    int? nextOffset,
+    bool? hasMore,
+    bool? isLoadingMore,
   }) {
     return SearchState(
       query: query ?? this.query,
@@ -314,6 +323,9 @@ class SearchState {
           clearPendingPopUrl ? null : (pendingPopUrl ?? this.pendingPopUrl),
       expansionPhase:
           clearExpansionPhase ? null : (expansionPhase ?? this.expansionPhase),
+      nextOffset: nextOffset ?? this.nextOffset,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 }
@@ -342,6 +354,9 @@ class SearchNotifier extends StateNotifier<SearchState> {
       expandedCardUrls: const {},
       clearPendingPopUrl: true,
       clearExpansionPhase: true,
+      nextOffset: 0,
+      hasMore: true,
+      isLoadingMore: false,
     );
 
     try {
@@ -352,23 +367,77 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
       final data = response.data;
       List<WebSearchResult> results = [];
+      bool hasMore = false;
 
-      if (data is Map<String, dynamic> && data['results'] is List) {
-        results = (data['results'] as List)
-            .map((r) => WebSearchResult.fromJson(r as Map<String, dynamic>))
-            .toList();
+      if (data is Map<String, dynamic>) {
+        if (data['results'] is List) {
+          results = (data['results'] as List)
+              .map((r) => WebSearchResult.fromJson(r as Map<String, dynamic>))
+              .toList();
+        }
+        hasMore = data['has_more'] as bool? ?? false;
       } else if (data is List) {
         results = data
             .map((r) => WebSearchResult.fromJson(r as Map<String, dynamic>))
             .toList();
       }
 
-      state = state.copyWith(results: results, isLoading: false);
+      state = state.copyWith(
+        results: results,
+        isLoading: false,
+        nextOffset: results.length,
+        hasMore: hasMore,
+      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
       );
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (state.isLoadingMore || !state.hasMore || state.query.isEmpty) return;
+    if (state.expansionPhase != null) return;
+
+    state = state.copyWith(isLoadingMore: true);
+
+    try {
+      final response = await _apiClient.get(
+        ApiEndpoints.search,
+        queryParameters: {
+          'q': state.query,
+          'offset': state.nextOffset.toString(),
+        },
+      );
+
+      final data = response.data;
+      List<WebSearchResult> newResults = [];
+      bool hasMore = false;
+
+      if (data is Map<String, dynamic>) {
+        if (data['results'] is List) {
+          newResults = (data['results'] as List)
+              .map((r) => WebSearchResult.fromJson(r as Map<String, dynamic>))
+              .toList();
+        }
+        hasMore = data['has_more'] as bool? ?? false;
+      }
+
+      // Deduplicate by sourceUrl
+      final existingUrls =
+          state.results.map((r) => r.sourceUrl).whereType<String>().toSet();
+      newResults.removeWhere(
+          (r) => r.sourceUrl != null && existingUrls.contains(r.sourceUrl));
+
+      state = state.copyWith(
+        results: [...state.results, ...newResults],
+        isLoadingMore: false,
+        nextOffset: state.nextOffset + newResults.length,
+        hasMore: hasMore,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoadingMore: false);
     }
   }
 
