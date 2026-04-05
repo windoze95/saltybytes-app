@@ -60,6 +60,9 @@ class ApiEndpoints {
 
   // Search
   static const String search = '$apiVersion/recipes/search';
+  static String resolveMultiRecipe(String multiId) =>
+      '$apiVersion/recipes/search/resolve/$multiId';
+  static const String checkMultiRecipe = '$apiVersion/recipes/search/check-multi';
 
   // Subscription
   static const String subscription = '$apiVersion/subscription';

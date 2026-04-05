@@ -26,6 +26,8 @@ class WebSearchResult {
     this.rating,
     this.cookTimeMinutes,
     this.familySafetyChecks = const [],
+    this.isMulti = false,
+    this.multiId,
   });
 
   final String title;
@@ -36,6 +38,8 @@ class WebSearchResult {
   final double? rating;
   final int? cookTimeMinutes;
   final List<FamilySafetyCheck> familySafetyChecks;
+  final bool isMulti;
+  final String? multiId;
 
   factory WebSearchResult.fromJson(Map<String, dynamic> json) {
     return WebSearchResult(
@@ -50,6 +54,79 @@ class WebSearchResult {
               ?.map(
                 (e) => FamilySafetyCheck.fromJson(e as Map<String, dynamic>),
               )
+              .toList() ??
+          [],
+      isMulti: json['is_multi'] as bool? ?? false,
+      multiId: json['multi_id'] as String?,
+    );
+  }
+}
+
+/// A single recipe card from a resolved multi-recipe page.
+class MultiRecipeCard {
+  const MultiRecipeCard({
+    required this.title,
+    this.imageUrl,
+    this.description,
+    this.sourceUrl,
+    required this.extractionStatus,
+  });
+
+  final String title;
+  final String? imageUrl;
+  final String? description;
+  final String? sourceUrl;
+  final String extractionStatus; // "pending", "extracting", "done", "failed"
+
+  factory MultiRecipeCard.fromJson(Map<String, dynamic> json) {
+    return MultiRecipeCard(
+      title: json['title'] as String? ?? 'Untitled',
+      imageUrl: json['image_url'] as String?,
+      description: json['description'] as String?,
+      sourceUrl: json['source_url'] as String?,
+      extractionStatus: json['extraction_status'] as String? ?? 'pending',
+    );
+  }
+
+  /// Convert to a WebSearchResult for display in the card stack.
+  WebSearchResult toSearchResult() {
+    String? domain;
+    if (sourceUrl != null) {
+      try {
+        domain = Uri.parse(sourceUrl!).host.replaceFirst('www.', '');
+      } catch (_) {}
+    }
+    return WebSearchResult(
+      title: title,
+      sourceUrl: sourceUrl,
+      sourceDomain: domain,
+      imageUrl: imageUrl,
+      description: description,
+    );
+  }
+}
+
+/// Resolution state for a multi-recipe page.
+class MultiRecipeResolution {
+  const MultiRecipeResolution({
+    required this.multiId,
+    required this.sourceUrl,
+    required this.status,
+    this.recipes = const [],
+  });
+
+  final String multiId;
+  final String sourceUrl;
+  final String status; // "resolving", "resolved", "failed"
+  final List<MultiRecipeCard> recipes;
+
+  factory MultiRecipeResolution.fromJson(Map<String, dynamic> json) {
+    return MultiRecipeResolution(
+      multiId: json['multi_id'] as String? ?? '',
+      sourceUrl: json['source_url'] as String? ?? '',
+      status: json['status'] as String? ?? 'resolving',
+      recipes: (json['recipes'] as List?)
+              ?.map((e) => MultiRecipeCard.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
     );
@@ -320,6 +397,71 @@ class SearchNotifier extends StateNotifier<SearchState> {
     final data = response.data as Map<String, dynamic>;
     final recipe = data['recipe'] as Map<String, dynamic>;
     return Recipe.fromJson(recipe);
+  }
+
+  /// Resolve a multi-recipe result: fetch individual cards and replace
+  /// the single multi-recipe card in the results list.
+  Future<void> resolveMultiRecipe(WebSearchResult result) async {
+    if (result.multiId == null) return;
+
+    try {
+      final response = await _apiClient.get(
+        ApiEndpoints.resolveMultiRecipe(result.multiId!),
+      );
+      final data = response.data as Map<String, dynamic>;
+      final resolution = MultiRecipeResolution.fromJson(data);
+
+      if (resolution.recipes.isEmpty) return;
+
+      // Replace the multi-recipe card with individual cards
+      final updatedResults = <WebSearchResult>[];
+      for (final r in state.results) {
+        if (r.multiId == result.multiId) {
+          // Replace with individual recipe cards
+          for (final card in resolution.recipes) {
+            updatedResults.add(card.toSearchResult());
+          }
+        } else {
+          updatedResults.add(r);
+        }
+      }
+      state = state.copyWith(results: updatedResults);
+    } catch (_) {
+      // Resolution failed — fall through to normal preview
+    }
+  }
+
+  /// Late detection: check if a URL is a multi-recipe page.
+  /// Returns the resolution if multi-recipe, null otherwise.
+  Future<MultiRecipeResolution?> checkMultiRecipe(String url) async {
+    try {
+      final response = await _apiClient.post(
+        ApiEndpoints.checkMultiRecipe,
+        data: {'url': url},
+      );
+      final data = response.data as Map<String, dynamic>;
+      final isMulti = data['is_multi'] as bool? ?? false;
+      if (!isMulti) return null;
+      return MultiRecipeResolution.fromJson(data);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Replace a multi-recipe result with its resolved individual cards.
+  void replaceWithResolved(
+      WebSearchResult original, List<MultiRecipeCard> cards) {
+    final updatedResults = <WebSearchResult>[];
+    for (final r in state.results) {
+      if (r.sourceUrl == original.sourceUrl) {
+        for (final card in cards) {
+          updatedResults.add(card.toSearchResult());
+        }
+      } else {
+        updatedResults.add(r);
+      }
+    }
+    state = state.copyWith(results: updatedResults);
   }
 
   void clear() {

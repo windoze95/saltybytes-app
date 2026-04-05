@@ -31,7 +31,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
-  void _previewResult(WebSearchResult result) {
+  void _previewResult(WebSearchResult result) async {
+    if (result.isMulti && result.multiId != null) {
+      // Multi-recipe: resolve and replace card with individual cards
+      await ref.read(searchProvider.notifier).resolveMultiRecipe(result);
+      return;
+    }
     context.push('/search/preview', extra: result);
   }
 
@@ -168,28 +173,64 @@ class _SearchResultCard extends StatelessWidget {
           // Image
           Expanded(
             flex: 3,
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.08),
-              ),
-              child: result.imageUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: result.imageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Center(
-                        child: Icon(Icons.restaurant, size: 40,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                  ),
+                  child: result.imageUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: result.imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Center(
+                            child: Icon(Icons.restaurant, size: 40,
+                                color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                          ),
+                          errorWidget: (_, __, ___) => Center(
+                            child: Icon(Icons.broken_image_outlined, size: 40,
+                                color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                          ),
+                        )
+                      : Center(
+                          child: Icon(Icons.restaurant, size: 48,
+                              color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                        ),
+                ),
+                if (result.isMulti)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      errorWidget: (_, __, ___) => Center(
-                        child: Icon(Icons.broken_image_outlined, size: 40,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.library_books,
+                              size: 14,
+                              color:
+                                  theme.colorScheme.onSecondaryContainer),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Multiple Recipes',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color:
+                                  theme.colorScheme.onSecondaryContainer,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                    )
-                  : Center(
-                      child: Icon(Icons.restaurant, size: 48,
-                          color: theme.colorScheme.primary.withValues(alpha: 0.3)),
                     ),
+                  ),
+              ],
             ),
           ),
 
@@ -273,14 +314,26 @@ class _SearchResultCard extends StatelessWidget {
 
                   const Spacer(),
 
-                  // Preview button
+                  // Preview / multi-recipe button
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: onTap,
-                      icon: const Icon(Icons.visibility, size: 18),
-                      label: const Text('Preview Recipe'),
-                    ),
+                    child: result.isMulti
+                        ? ElevatedButton.icon(
+                            onPressed: onTap,
+                            icon: const Icon(Icons.library_books, size: 18),
+                            label: const Text('View Recipes'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  theme.colorScheme.secondaryContainer,
+                              foregroundColor:
+                                  theme.colorScheme.onSecondaryContainer,
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: onTap,
+                            icon: const Icon(Icons.visibility, size: 18),
+                            label: const Text('Preview Recipe'),
+                          ),
                   ),
                 ],
               ),
