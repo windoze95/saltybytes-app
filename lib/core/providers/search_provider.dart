@@ -497,10 +497,10 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 
   /// Replace a multi-recipe card with its individual recipe cards.
-  /// Returns the index of the first expanded card in the updated list.
-  int replaceWithExpanded(
+  /// Returns the index of the first expanded card, or null if nothing changed.
+  int? replaceWithExpanded(
       WebSearchResult original, MultiRecipeResolution resolution) {
-    if (resolution.recipes.isEmpty) return 0;
+    if (resolution.recipes.isEmpty) return null;
 
     final newCards =
         resolution.recipes.map((c) => c.toSearchResult()).toList();

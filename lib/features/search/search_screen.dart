@@ -74,7 +74,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _previewResult(WebSearchResult result) async {
-    final popResult = await context.push<int>('/search/preview', extra: result);
+    final popResult =
+        await context.push<int?>('/search/preview', extra: result);
     if (popResult != null && mounted && _viewMode == _ViewMode.fullScreen) {
       // Multi-recipe expansion returned a target index
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -235,6 +236,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildGridView(ThemeData theme, SearchState searchState) {
+    // If the grid can't scroll but more results exist, trigger pagination.
+    if (searchState.hasMore && !searchState.isLoadingMore) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_gridScrollController.hasClients) return;
+        final pos = _gridScrollController.position;
+        if (pos.maxScrollExtent <= 0) {
+          ref.read(searchProvider.notifier).loadMore();
+        }
+      });
+    }
+
     final itemCount =
         searchState.results.length + (searchState.isLoadingMore ? 1 : 0);
 

@@ -38,7 +38,7 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
         final targetIndex = ref
             .read(searchProvider.notifier)
             .replaceWithExpanded(e.sourceResult, e.resolution);
-        context.pop(targetIndex);
+        context.pop<int?>(targetIndex);
       }
       return Future.error('multi-recipe redirect');
     }
