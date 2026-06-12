@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/providers/recipe_provider.dart';
 import '../../core/providers/search_provider.dart';
 
 class SearchPreviewScreen extends ConsumerStatefulWidget {
@@ -47,8 +48,11 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
   Future<void> _importRecipe(RecipePreview preview) async {
     setState(() => _isImporting = true);
     try {
-      final recipe =
-          await ref.read(searchProvider.notifier).importPreview(preview);
+      final recipe = await ref.read(searchProvider.notifier).importPreview(
+            preview,
+            imageUrl: widget.searchResult.imageUrl,
+          );
+      ref.invalidate(recipeListProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Imported "${recipe.title}"!')),

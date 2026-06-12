@@ -86,6 +86,41 @@ void main() {
       expect(json['updatedAt'], isA<String>());
       expect(DateTime.parse(json['createdAt'] as String), recipe.createdAt);
     });
+
+    test('fromJson coerces empty imageUrl string to null', () {
+      final recipe = Recipe.fromJson(testRecipeJson(imageUrl: ''));
+
+      expect(recipe.imageUrl, isNull);
+    });
+
+    test('fromJson keeps non-empty imageUrl', () {
+      final recipe = Recipe.fromJson(
+          testRecipeJson(imageUrl: 'https://cdn.example.com/a.jpg'));
+
+      expect(recipe.imageUrl, 'https://cdn.example.com/a.jpg');
+    });
+
+    test('fromJson normalizes numeric ids to strings', () {
+      final json = testRecipeJson();
+      json['id'] = 42;
+      json['ownerId'] = 7;
+      json['parentRecipeId'] = 41;
+
+      final recipe = Recipe.fromJson(json);
+
+      expect(recipe.id, '42');
+      expect(recipe.ownerId, '7');
+      expect(recipe.parentRecipeId, '41');
+    });
+
+    test('fromJson keeps string ids untouched', () {
+      final recipe = Recipe.fromJson(
+          testRecipeJson(id: 'recipe-1', ownerId: 'user-1'));
+
+      expect(recipe.id, 'recipe-1');
+      expect(recipe.ownerId, 'user-1');
+      expect(recipe.parentRecipeId, isNull);
+    });
   });
 
   group('Ingredient', () {

@@ -1,15 +1,33 @@
+// @JsonKey on freezed constructor parameters is the documented freezed
+// pattern; the analyzer flags it as invalid_annotation_target regardless.
+// ignore_for_file: invalid_annotation_target
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'recipe.freezed.dart';
 part 'recipe.g.dart';
 
+/// Normalizes IDs that may arrive as int or String from the API.
+String _idToString(dynamic value) => value?.toString() ?? '';
+
+/// Normalizes nullable IDs that may arrive as int or String from the API.
+String? _idToStringOrNull(dynamic value) => value?.toString();
+
+/// The API sends `""` for unset image URLs; coerce empty strings to null so
+/// render sites don't feed an empty URL into image widgets.
+String? _emptyStringToNull(dynamic value) {
+  if (value == null) return null;
+  final s = value.toString();
+  return s.isEmpty ? null : s;
+}
+
 @freezed
 class Recipe with _$Recipe {
   const factory Recipe({
-    required String id,
+    @JsonKey(fromJson: _idToString) required String id,
     required String title,
-    required String ownerId,
-    String? imageUrl,
+    @JsonKey(fromJson: _idToString) required String ownerId,
+    @JsonKey(fromJson: _emptyStringToNull) String? imageUrl,
     @Default([]) List<Ingredient> ingredients,
     @Default([]) List<String> instructions,
     @Default([]) List<String> tags,
@@ -19,7 +37,7 @@ class Recipe with _$Recipe {
     @Default('ready') String status,
     int? portions,
     String? portionSize,
-    String? parentRecipeId,
+    @JsonKey(fromJson: _idToStringOrNull) String? parentRecipeId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) = _Recipe;

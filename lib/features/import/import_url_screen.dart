@@ -34,6 +34,10 @@ class _ImportUrlScreenState extends ConsumerState<ImportUrlScreen> {
   }
 
   Future<void> _importUrl() async {
+    // The recipe row is created server-side on the first successful import;
+    // never re-import the same input.
+    if (_isLoading || _preview != null) return;
+
     final url = _urlController.text.trim();
     if (url.isEmpty) {
       setState(() => _error = 'Please enter a URL');
@@ -43,16 +47,18 @@ class _ImportUrlScreenState extends ConsumerState<ImportUrlScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
-      _preview = null;
     });
 
     try {
       final recipe = await ref.read(recipeCrudProvider).importFromUrl(url);
+      ref.invalidate(recipeListProvider);
+      if (!mounted) return;
       setState(() {
         _preview = recipe;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Could not extract recipe from this URL. Please try another.';
         _isLoading = false;
@@ -60,12 +66,10 @@ class _ImportUrlScreenState extends ConsumerState<ImportUrlScreen> {
     }
   }
 
-  void _saveRecipe() {
-    if (_preview != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Recipe imported successfully!')),
-      );
-      context.go('/home');
+  void _viewRecipe() {
+    final recipe = _preview;
+    if (recipe != null) {
+      context.go('/recipe/${recipe.id}');
     }
   }
 
@@ -106,6 +110,15 @@ class _ImportUrlScreenState extends ConsumerState<ImportUrlScreen> {
                     ),
                     keyboardType: TextInputType.url,
                     textInputAction: TextInputAction.done,
+                    onChanged: (_) {
+                      // A different URL may be imported; clear previous result.
+                      if (_preview != null || _error != null) {
+                        setState(() {
+                          _preview = null;
+                          _error = null;
+                        });
+                      }
+                    },
                     onSubmitted: (_) => _importUrl(),
                   ),
                 ),
@@ -119,11 +132,13 @@ class _ImportUrlScreenState extends ConsumerState<ImportUrlScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Import button
+            // Import button (disabled after a successful import — the recipe
+            // already exists server-side; re-tapping would create duplicates)
             SizedBox(
               height: 52,
               child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _importUrl,
+                onPressed:
+                    (_isLoading || _preview != null) ? null : _importUrl,
                 icon: _isLoading
                     ? SizedBox(
                         height: 20,
@@ -133,8 +148,10 @@ class _ImportUrlScreenState extends ConsumerState<ImportUrlScreen> {
                           color: theme.colorScheme.onPrimary,
                         ),
                       )
-                    : const Icon(Icons.download),
-                label: Text(_isLoading ? 'Extracting...' : 'Import'),
+                    : Icon(_preview != null ? Icons.check : Icons.download),
+                label: Text(_isLoading
+                    ? 'Extracting...'
+                    : (_preview != null ? 'Imported' : 'Import')),
               ),
             ),
 
@@ -165,21 +182,21 @@ class _ImportUrlScreenState extends ConsumerState<ImportUrlScreen> {
               ),
             ],
 
-            // Preview
+            // Imported recipe
             if (_preview != null) ...[
               const SizedBox(height: 32),
               const Divider(),
               const SizedBox(height: 16),
-              Text('Recipe Preview', style: theme.textTheme.titleMedium),
+              Text('Imported Recipe', style: theme.textTheme.titleMedium),
               const SizedBox(height: 16),
               _RecipePreviewCard(recipe: _preview!),
               const SizedBox(height: 20),
               SizedBox(
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: _saveRecipe,
-                  icon: const Icon(Icons.check),
-                  label: const Text('Save Recipe'),
+                  onPressed: _viewRecipe,
+                  icon: const Icon(Icons.menu_book),
+                  label: const Text('View Recipe'),
                 ),
               ),
             ],

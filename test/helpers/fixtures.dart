@@ -210,11 +210,17 @@ Map<String, dynamic> testPreviewIngredientJson({
   String name = 'all-purpose flour',
   String? unit = 'cups',
   double? amount = 2.0,
+  String? metricUnit,
+  double? metricAmount,
+  String? originalText,
 }) =>
     {
       'name': name,
       'unit': unit,
       'amount': amount,
+      if (metricUnit != null) 'metric_unit': metricUnit,
+      if (metricAmount != null) 'metric_amount': metricAmount,
+      if (originalText != null) 'original_text': originalText,
     };
 
 Map<String, dynamic> testRecipePreviewJson({
@@ -228,6 +234,7 @@ Map<String, dynamic> testRecipePreviewJson({
   List<String>? hashtags,
   String? imagePrompt = 'A rustic margherita pizza with bubbling mozzarella',
   List<String>? linkedSuggestions,
+  String? unitSystem,
 }) =>
     {
       'title': title,
@@ -250,4 +257,5 @@ Map<String, dynamic> testRecipePreviewJson({
       'hashtags': hashtags ?? ['pizza', 'italian'],
       'image_prompt': imagePrompt,
       'linked_recipe_suggestions': linkedSuggestions ?? ['Garlic Bread', 'Tiramisu'],
+      if (unitSystem != null) 'unit_system': unitSystem,
     };

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/recipe.dart';
@@ -14,6 +15,10 @@ final recipeListProvider =
 class RecipeListNotifier extends AsyncNotifier<List<Recipe>> {
   late ApiClient _apiClient;
 
+  /// Monotonically increasing token used to drop stale (out-of-order)
+  /// search/refresh responses.
+  int _fetchGeneration = 0;
+
   @override
   Future<List<Recipe>> build() async {
     _apiClient = ref.watch(apiClientProvider);
@@ -24,6 +29,12 @@ class RecipeListNotifier extends AsyncNotifier<List<Recipe>> {
     }
 
     return _fetchRecipes();
+  }
+
+  /// Removes duplicate recipes (by id), keeping the first occurrence.
+  static List<Recipe> dedupeById(List<Recipe> recipes) {
+    final seen = <String>{};
+    return recipes.where((r) => seen.add(r.id)).toList();
   }
 
   Future<List<Recipe>> _fetchRecipes({
@@ -46,29 +57,33 @@ class RecipeListNotifier extends AsyncNotifier<List<Recipe>> {
 
     final data = response.data;
     if (data is Map<String, dynamic> && data['recipes'] is List) {
-      return (data['recipes'] as List)
+      return dedupeById((data['recipes'] as List)
           .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
-          .toList();
+          .toList());
     }
 
     if (data is List) {
-      return data
+      return dedupeById(data
           .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
-          .toList();
+          .toList());
     }
 
     return [];
   }
 
-  Future<void> refresh() async {
+  Future<void> _guardedFetch({String? query}) async {
+    final generation = ++_fetchGeneration;
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _fetchRecipes());
+    final result = await AsyncValue.guard(() => _fetchRecipes(query: query));
+    // Ignore out-of-order responses: only the latest request may set state.
+    if (generation == _fetchGeneration) {
+      state = result;
+    }
   }
 
-  Future<void> search(String query) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _fetchRecipes(query: query));
-  }
+  Future<void> refresh() => _guardedFetch();
+
+  Future<void> search(String query) => _guardedFetch(query: query);
 
   Future<void> deleteRecipe(String id) async {
     final current = state.valueOrNull ?? [];
@@ -120,24 +135,12 @@ class RecipeCrud {
 
   final ApiClient _apiClient;
 
-  Future<Recipe> create(Recipe recipe) async {
-    final response = await _apiClient.post(
-      ApiEndpoints.recipes,
-      data: recipe.toJson(),
-    );
-    final data = response.data as Map<String, dynamic>;
-    return Recipe.fromJson(
-        data.containsKey('recipe') ? data['recipe'] as Map<String, dynamic> : data);
-  }
-
-  Future<Recipe> update(Recipe recipe) async {
-    final response = await _apiClient.put(
-      ApiEndpoints.recipeById(recipe.id),
-      data: recipe.toJson(),
-    );
-    final data = response.data as Map<String, dynamic>;
-    return Recipe.fromJson(
-        data.containsKey('recipe') ? data['recipe'] as Map<String, dynamic> : data);
+  /// Unwraps the standard `{"recipe": {...}}` envelope (falling back to a
+  /// bare object) and parses it into a [Recipe].
+  static Recipe parseRecipeEnvelope(Map<String, dynamic> data) {
+    return Recipe.fromJson(data.containsKey('recipe')
+        ? data['recipe'] as Map<String, dynamic>
+        : data);
   }
 
   Future<void> delete(String id) async {
@@ -148,19 +151,53 @@ class RecipeCrud {
     final response = await _apiClient.post(
       ApiEndpoints.recipeFork(recipeId),
       data: branchName != null ? {'branch': branchName} : null,
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
     );
-    final data = response.data as Map<String, dynamic>;
-    return Recipe.fromJson(
-        data.containsKey('recipe') ? data['recipe'] as Map<String, dynamic> : data);
+    return parseRecipeEnvelope(response.data as Map<String, dynamic>);
   }
 
   Future<Recipe> importFromUrl(String url) async {
     final response = await _apiClient.post(
       ApiEndpoints.importFromUrl,
       data: {'url': url},
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
     );
-    final data = response.data as Map<String, dynamic>;
-    return Recipe.fromJson(
-        data.containsKey('recipe') ? data['recipe'] as Map<String, dynamic> : data);
+    return parseRecipeEnvelope(response.data as Map<String, dynamic>);
+  }
+
+  Future<Recipe> importFromText(String text) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.importFromText,
+      data: {'text': text},
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
+    );
+    return parseRecipeEnvelope(response.data as Map<String, dynamic>);
+  }
+
+  Future<Recipe> importFromPhoto(FormData formData) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.importFromPhoto,
+      data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+        receiveTimeout: ApiTimeouts.aiGeneration,
+      ),
+    );
+    return parseRecipeEnvelope(response.data as Map<String, dynamic>);
+  }
+
+  /// Creates a recipe via POST /v1/recipes/import/manual.
+  ///
+  /// [body] must follow the backend's snake_case manualImportRequest shape:
+  /// title, ingredients [{name, unit, amount, metric_unit, metric_amount,
+  /// original_text}], instructions, cook_time, portions, portion_size,
+  /// hashtags, source_url, and optionally unit_system / image_url.
+  Future<Recipe> importManual(Map<String, dynamic> body) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.importManual,
+      data: body,
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
+    );
+    return parseRecipeEnvelope(response.data as Map<String, dynamic>);
   }
 }

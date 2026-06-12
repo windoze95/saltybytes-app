@@ -7,8 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../core/network/api_client.dart';
-import '../../core/network/api_endpoints.dart';
+import '../../core/providers/recipe_provider.dart';
 import '../../models/recipe.dart';
 
 class ImportPhotoScreen extends ConsumerStatefulWidget {
@@ -63,7 +62,9 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
   }
 
   Future<void> _extractRecipe() async {
-    if (_imageFile == null) return;
+    // The recipe row is created server-side on the first successful import;
+    // never re-import the same image.
+    if (_imageFile == null || _isLoading || _preview != null) return;
 
     setState(() {
       _isLoading = true;
@@ -72,7 +73,6 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
     });
 
     try {
-      final apiClient = ref.read(apiClientProvider);
       final formData = FormData.fromMap({
         'image': await MultipartFile.fromFile(
           _imageFile!.path,
@@ -80,19 +80,17 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
         ),
       });
 
-      final response = await apiClient.post(
-        ApiEndpoints.importFromPhoto,
-        data: formData,
-        options: Options(contentType: 'multipart/form-data'),
-      );
-
-      final recipe = Recipe.fromJson(response.data as Map<String, dynamic>);
+      final recipe =
+          await ref.read(recipeCrudProvider).importFromPhoto(formData);
+      ref.invalidate(recipeListProvider);
+      if (!mounted) return;
       setState(() {
         _preview = recipe;
         _isLoading = false;
         _loadingMessage = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Could not extract recipe from this image. Try a clearer photo.';
         _isLoading = false;
@@ -101,12 +99,10 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
     }
   }
 
-  void _saveRecipe() {
-    if (_preview != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Recipe imported successfully!')),
-      );
-      context.go('/home');
+  void _viewRecipe() {
+    final recipe = _preview;
+    if (recipe != null) {
+      context.go('/recipe/${recipe.id}');
     }
   }
 
@@ -210,10 +206,14 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
                 ],
               ),
               const SizedBox(height: 20),
+              // Extract button (disabled after a successful import — the
+              // recipe already exists server-side; re-tapping would create
+              // duplicates; picking a new image re-enables it)
               SizedBox(
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _extractRecipe,
+                  onPressed:
+                      (_isLoading || _preview != null) ? null : _extractRecipe,
                   icon: _isLoading
                       ? SizedBox(
                           height: 20,
@@ -223,10 +223,12 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
                             color: theme.colorScheme.onPrimary,
                           ),
                         )
-                      : const Icon(Icons.auto_awesome),
+                      : Icon(_preview != null
+                          ? Icons.check
+                          : Icons.auto_awesome),
                   label: Text(_isLoading
                       ? (_loadingMessage ?? 'Processing...')
-                      : 'Extract Recipe'),
+                      : (_preview != null ? 'Imported' : 'Extract Recipe')),
                 ),
               ),
             ],
@@ -291,9 +293,9 @@ class _ImportPhotoScreenState extends ConsumerState<ImportPhotoScreen> {
               SizedBox(
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: _saveRecipe,
-                  icon: const Icon(Icons.check),
-                  label: const Text('Save Recipe'),
+                  onPressed: _viewRecipe,
+                  icon: const Icon(Icons.menu_book),
+                  label: const Text('View Recipe'),
                 ),
               ),
             ],

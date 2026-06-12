@@ -96,6 +96,33 @@ void main() {
       expect(find.byIcon(Icons.restaurant), findsOneWidget);
     });
 
+    testWidgets('shows placeholder when API sends empty-string imageUrl',
+        (tester) async {
+      // Recipe.fromJson normalizes "" to null
+      final fromApi = buildRecipe(imageUrl: '');
+      expect(fromApi.imageUrl, isNull);
+
+      await pumpCard(tester, RecipeCard(recipe: fromApi));
+      expect(find.byIcon(Icons.restaurant), findsOneWidget);
+      expect(find.byIcon(Icons.broken_image_outlined), findsNothing);
+    });
+
+    testWidgets('render guard also handles an empty imageUrl directly',
+        (tester) async {
+      // Bypass fromJson normalization: even a directly-constructed Recipe
+      // with an empty imageUrl must not be fed into CachedNetworkImage.
+      const recipe = Recipe(
+        id: 'r-1',
+        title: 'No Image',
+        ownerId: 'u-1',
+        imageUrl: '',
+      );
+
+      await pumpCard(tester, const RecipeCard(recipe: recipe));
+      expect(find.byIcon(Icons.restaurant), findsOneWidget);
+      expect(find.byIcon(Icons.broken_image_outlined), findsNothing);
+    });
+
     testWidgets('calls onTap callback when card is tapped', (tester) async {
       var tapped = false;
       await pumpCard(

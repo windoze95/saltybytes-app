@@ -58,7 +58,7 @@ class _RecipeDetailBody extends ConsumerWidget {
             expandedHeight: 280,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              background: recipe.imageUrl != null
+              background: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: recipe.imageUrl!,
                       fit: BoxFit.cover,
@@ -441,7 +441,7 @@ class _SimilarRecipeCard extends StatelessWidget {
                       top: Radius.circular(16),
                     ),
                   ),
-                  child: recipe.imageUrl != null
+                  child: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
                       ? ClipRRect(
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16),

@@ -8,6 +8,21 @@ import 'api_endpoints.dart';
 
 const _saltyId = String.fromEnvironment('SALTYBYTES_ID');
 
+/// Timeouts shared across the app.
+///
+/// The Dio client uses a 15s receive timeout globally, but import and
+/// AI-generation requests (Haiku extraction, Firecrawl fetches, full recipe
+/// generation) routinely take longer. Those calls must override the receive
+/// timeout per-request with [ApiTimeouts.aiGeneration] so the client does not
+/// give up (and the user retry, duplicating rows) while the server is still
+/// working.
+class ApiTimeouts {
+  ApiTimeouts._();
+
+  /// Per-request receive timeout for import / AI-generation endpoints.
+  static const Duration aiGeneration = Duration(seconds: 60);
+}
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
   return ApiClient(secureStorage: secureStorage);

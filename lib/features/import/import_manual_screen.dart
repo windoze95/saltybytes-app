@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers/recipe_provider.dart';
 import '../../core/utils/unit_converter.dart';
-import '../../models/recipe.dart';
 
 class ImportManualScreen extends ConsumerStatefulWidget {
   const ImportManualScreen({super.key});
@@ -84,41 +83,45 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
     }
   }
 
+  /// Builds the snake_case manualImportRequest body for
+  /// POST /v1/recipes/import/manual.
+  Map<String, dynamic> _buildRequestBody() {
+    return {
+      'title': _titleController.text.trim(),
+      'ingredients': _ingredients
+          .where((i) => i.nameController.text.trim().isNotEmpty)
+          .map((i) => {
+                'name': i.nameController.text.trim(),
+                'unit': i.selectedUnit,
+                'amount':
+                    parseFractionalAmount(i.amountController.text.trim()) ?? 0,
+              })
+          .toList(),
+      'instructions': _instructions
+          .map((c) => c.text.trim())
+          .where((t) => t.isNotEmpty)
+          .toList(),
+      'cook_time': int.tryParse(_cookTimeController.text) ?? 0,
+      'portions': int.tryParse(_portionsController.text) ?? 4,
+    };
+  }
+
   Future<void> _saveRecipe() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
 
     try {
-      final recipe = Recipe(
-        id: '',
-        title: _titleController.text.trim(),
-        ownerId: '',
-        ingredients: _ingredients
-            .where((i) => i.nameController.text.trim().isNotEmpty)
-            .map(
-              (i) => Ingredient(
-                name: i.nameController.text.trim(),
-                amount: parseFractionalAmount(i.amountController.text.trim()),
-                unit: i.selectedUnit.isEmpty ? null : i.selectedUnit,
-              ),
-            )
-            .toList(),
-        instructions: _instructions
-            .map((c) => c.text.trim())
-            .where((t) => t.isNotEmpty)
-            .toList(),
-        cookTimeMinutes: int.tryParse(_cookTimeController.text),
-        portions: int.tryParse(_portionsController.text) ?? 4,
-      );
-
-      await ref.read(recipeCrudProvider).create(recipe);
+      final recipe =
+          await ref.read(recipeCrudProvider).importManual(_buildRequestBody());
+      ref.invalidate(recipeListProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Recipe created successfully!')),
         );
-        context.go('/home');
+        context.go('/recipe/${recipe.id}');
       }
     } catch (e) {
       if (mounted) {

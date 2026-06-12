@@ -1,8 +1,49 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'dart:async';
 
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+import 'package:saltybytes_app/core/network/api_client.dart';
+import 'package:saltybytes_app/core/network/api_endpoints.dart';
+import 'package:saltybytes_app/core/providers/auth_provider.dart';
+import 'package:saltybytes_app/core/providers/recipe_provider.dart';
 import 'package:saltybytes_app/models/recipe.dart';
 
 import '../helpers/fixtures.dart';
+import '../helpers/test_helpers.dart';
+
+/// Fake auth notifier that reports authenticated immediately.
+class _FakeAuthNotifier extends AsyncNotifier<AuthStatus>
+    implements AuthNotifier {
+  @override
+  Future<AuthStatus> build() async => AuthStatus.authenticated;
+
+  @override
+  Future<void> login({required String username, required String password}) async {}
+
+  @override
+  Future<void> register({
+    required String username,
+    required String email,
+    required String password,
+  }) async {}
+
+  @override
+  void enterDemoMode() {}
+
+  @override
+  Future<void> logout() async {}
+}
+
+ProviderContainer _buildContainer(MockApiClient apiClient) {
+  final container = ProviderContainer(overrides: [
+    apiClientProvider.overrideWithValue(apiClient),
+    authStateProvider.overrideWith(_FakeAuthNotifier.new),
+  ]);
+  return container;
+}
 
 void main() {
   group('Recipe response parsing', () {
@@ -155,6 +196,229 @@ void main() {
       }
 
       expect(queryParams.containsKey('q'), false);
+    });
+  });
+
+  group('RecipeListNotifier (real notifier)', () {
+    late MockApiClient apiClient;
+    late ProviderContainer container;
+
+    setUp(() {
+      apiClient = MockApiClient();
+      container = _buildContainer(apiClient);
+      addTearDown(container.dispose);
+    });
+
+    /// Resolves auth BEFORE the list provider is first read. Otherwise the
+    /// auth dependency flips to authenticated mid-build and marks the list
+    /// provider dirty while nothing is listening, parking `.future` forever.
+    Future<void> primeAuth() =>
+        container.read(authStateProvider.future);
+
+    test('dedupes recipes by id when setting state', () async {
+      when(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'recipes': [
+              testRecipeJson(id: 'r-1', title: 'Pizza'),
+              testRecipeJson(id: 'r-1', title: 'Pizza (dup)'),
+              testRecipeJson(id: 'r-2', title: 'Pasta'),
+            ],
+          }));
+
+      await primeAuth();
+      final recipes = await container.read(recipeListProvider.future);
+
+      expect(recipes, hasLength(2));
+      expect(recipes.map((r) => r.id), ['r-1', 'r-2']);
+      // First occurrence wins
+      expect(recipes[0].title, 'Pizza');
+    });
+
+    test('ignores stale out-of-order search responses', () async {
+      final slowFirst = Completer<Response<dynamic>>();
+      final fastSecond = Completer<Response<dynamic>>();
+
+      when(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer((invocation) {
+        final params = invocation.namedArguments[#queryParameters]
+            as Map<String, dynamic>?;
+        switch (params?['q']) {
+          case 'first':
+            return slowFirst.future;
+          case 'second':
+            return fastSecond.future;
+          default:
+            return Future.value(
+                fakeResponse<dynamic>({'recipes': <dynamic>[]}));
+        }
+      });
+
+      // Initial build
+      await primeAuth();
+      await container.read(recipeListProvider.future);
+      final notifier = container.read(recipeListProvider.notifier);
+
+      // Fire two overlapping searches; the SECOND completes FIRST.
+      final firstSearch = notifier.search('first');
+      final secondSearch = notifier.search('second');
+
+      fastSecond.complete(fakeResponse<dynamic>({
+        'recipes': [testRecipeJson(id: 'r-2', title: 'Second')],
+      }));
+      await secondSearch;
+
+      // The stale first response arrives late and must be dropped.
+      slowFirst.complete(fakeResponse<dynamic>({
+        'recipes': [testRecipeJson(id: 'r-1', title: 'First')],
+      }));
+      await firstSearch;
+
+      final recipes = container.read(recipeListProvider).value!;
+      expect(recipes, hasLength(1));
+      expect(recipes.single.title, 'Second');
+    });
+
+    test('refresh supersedes an in-flight search', () async {
+      final slowSearch = Completer<Response<dynamic>>();
+
+      when(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer((invocation) {
+        final params = invocation.namedArguments[#queryParameters]
+            as Map<String, dynamic>?;
+        if (params?['q'] == 'stale') return slowSearch.future;
+        return Future.value(fakeResponse<dynamic>({
+          'recipes': [testRecipeJson(id: 'r-9', title: 'Fresh')],
+        }));
+      });
+
+      await primeAuth();
+      await container.read(recipeListProvider.future);
+      final notifier = container.read(recipeListProvider.notifier);
+
+      final search = notifier.search('stale');
+      await notifier.refresh();
+
+      slowSearch.complete(fakeResponse<dynamic>({
+        'recipes': [testRecipeJson(id: 'r-1', title: 'Stale')],
+      }));
+      await search;
+
+      expect(
+          container.read(recipeListProvider).value!.single.title, 'Fresh');
+    });
+  });
+
+  group('RecipeCrud import envelope handling', () {
+    late MockApiClient apiClient;
+    late RecipeCrud crud;
+
+    setUp(() {
+      apiClient = MockApiClient();
+      crud = RecipeCrud(apiClient: apiClient);
+    });
+
+    void stubPost(String path, Map<String, dynamic> responseData) {
+      when(() => apiClient.post(
+            path,
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+          )).thenAnswer((_) async => fakeResponse<dynamic>(responseData));
+    }
+
+    test('importFromText unwraps the {recipe: {...}} envelope', () async {
+      stubPost(ApiEndpoints.importFromText,
+          {'recipe': testRecipeJson(id: 'r-text', title: 'From Text')});
+
+      final recipe = await crud.importFromText('Some pasted recipe text');
+
+      expect(recipe.id, 'r-text');
+      expect(recipe.title, 'From Text');
+    });
+
+    test('importFromPhoto unwraps the {recipe: {...}} envelope', () async {
+      stubPost(ApiEndpoints.importFromPhoto,
+          {'recipe': testRecipeJson(id: 'r-photo', title: 'From Photo')});
+
+      final formData = FormData.fromMap({
+        'image': MultipartFile.fromString('fake-bytes',
+            filename: 'recipe_image.jpg'),
+      });
+      final recipe = await crud.importFromPhoto(formData);
+
+      expect(recipe.id, 'r-photo');
+      expect(recipe.title, 'From Photo');
+    });
+
+    test('importFromUrl unwraps envelope and uses the 60s AI timeout',
+        () async {
+      stubPost(ApiEndpoints.importFromUrl,
+          {'recipe': testRecipeJson(id: 'r-url', title: 'From URL')});
+
+      final recipe = await crud.importFromUrl('https://example.com/r');
+      expect(recipe.id, 'r-url');
+
+      final captured = verify(() => apiClient.post(
+            ApiEndpoints.importFromUrl,
+            data: captureAny(named: 'data'),
+            options: captureAny(named: 'options'),
+          )).captured;
+      expect(captured[0], {'url': 'https://example.com/r'});
+      expect((captured[1] as Options).receiveTimeout, ApiTimeouts.aiGeneration);
+    });
+
+    test('importFromText and importManual use the 60s AI timeout', () async {
+      stubPost(ApiEndpoints.importFromText,
+          {'recipe': testRecipeJson(id: 'r-1')});
+      stubPost(ApiEndpoints.importManual,
+          {'recipe': testRecipeJson(id: 'r-2')});
+
+      await crud.importFromText('text');
+      await crud.importManual({'title': 'T'});
+
+      final textOptions = verify(() => apiClient.post(
+            ApiEndpoints.importFromText,
+            data: any(named: 'data'),
+            options: captureAny(named: 'options'),
+          )).captured.single as Options;
+      final manualOptions = verify(() => apiClient.post(
+            ApiEndpoints.importManual,
+            data: any(named: 'data'),
+            options: captureAny(named: 'options'),
+          )).captured.single as Options;
+
+      expect(textOptions.receiveTimeout, ApiTimeouts.aiGeneration);
+      expect(manualOptions.receiveTimeout, ApiTimeouts.aiGeneration);
+    });
+
+    test('importManual posts the body unchanged and parses the envelope',
+        () async {
+      stubPost(ApiEndpoints.importManual,
+          {'recipe': testRecipeJson(id: 'r-manual', title: 'Manual')});
+
+      final body = {
+        'title': 'Manual',
+        'ingredients': [
+          {'name': 'flour', 'unit': 'cup', 'amount': 2.0},
+        ],
+        'instructions': ['Mix'],
+        'cook_time': 10,
+        'portions': 4,
+      };
+      final recipe = await crud.importManual(body);
+
+      expect(recipe.id, 'r-manual');
+      final captured = verify(() => apiClient.post(
+            ApiEndpoints.importManual,
+            data: captureAny(named: 'data'),
+            options: any(named: 'options'),
+          )).captured.single;
+      expect(captured, body);
     });
   });
 
