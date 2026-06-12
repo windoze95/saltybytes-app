@@ -89,6 +89,48 @@ Map<String, dynamic> testRecipeNodeJson({
       'children': children ?? [],
     };
 
+/// Mirrors the GET /v1/recipes/:id/tree contract: a flat node list (children
+/// are rebuilt client-side from parent_id). Default shape is a 3-node tree:
+/// root "original" (active) with two child branches.
+Map<String, dynamic> testRecipeTreeJson({
+  int treeId = 1,
+  String recipeId = 'r-1',
+  int rootNodeId = 1,
+  int? activeNodeId = 1,
+  List<Map<String, dynamic>>? nodes,
+}) =>
+    {
+      'tree_id': treeId,
+      'recipe_id': recipeId,
+      'root_node_id': rootNodeId,
+      'active_node_id': activeNodeId,
+      'nodes': nodes ??
+          [
+            testRecipeNodeJson(
+              id: 1,
+              branchName: 'original',
+              summary: 'Initial recipe',
+              isActive: activeNodeId == 1,
+            ),
+            testRecipeNodeJson(
+              id: 2,
+              parentId: 1,
+              branchName: 'spicy-version',
+              summary: 'Doubled the chili',
+              type: 'fork',
+              isActive: activeNodeId == 2,
+            ),
+            testRecipeNodeJson(
+              id: 3,
+              parentId: 1,
+              branchName: 'vegan-version',
+              summary: 'Swapped dairy for cashew cream',
+              type: 'fork',
+              isActive: activeNodeId == 3,
+            ),
+          ],
+    };
+
 Map<String, dynamic> testUserSettingsJson({
   bool keepScreenAwake = true,
 }) =>
