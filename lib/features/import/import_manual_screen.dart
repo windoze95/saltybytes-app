@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../core/utils/unit_converter.dart';
 
@@ -112,21 +113,34 @@ class _ImportManualScreenState extends ConsumerState<ImportManualScreen> {
 
     setState(() => _isSaving = true);
 
+    // The container stays usable after this screen is popped (a disposed
+    // widget's `ref` throws), so the list still refreshes if the user backs
+    // out while saving.
+    final container = ProviderScope.containerOf(context, listen: false);
+
     try {
       final recipe =
           await ref.read(recipeCrudProvider).importManual(_buildRequestBody());
-      ref.invalidate(recipeListProvider);
+      container.invalidate(recipeListProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Recipe created successfully!')),
         );
-        context.go('/recipe/${recipe.id}');
+        // pushReplacement keeps the underlying stack (import hub / home) so
+        // the detail screen still has a back route; go() would replace the
+        // whole stack and strand the user.
+        context.pushReplacement('/recipe/${recipe.id}');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to save the recipe. Please try again.',
+            )),
+          ),
         );
       }
     } finally {

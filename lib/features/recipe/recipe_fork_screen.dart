@@ -69,6 +69,10 @@ class _RecipeForkScreenState extends ConsumerState<RecipeForkScreen> {
 
     try {
       final crud = ref.read(recipeCrudProvider);
+      // The container stays usable after this screen is popped (a disposed
+      // widget's `ref` throws), so the list still refreshes if the user
+      // backs out mid-fork.
+      final container = ProviderScope.containerOf(context, listen: false);
       // The backend returns a placeholder (status == "generating") and
       // finishes the fork asynchronously; wait for it to complete so the
       // user lands on a fully formed recipe.
@@ -77,15 +81,18 @@ class _RecipeForkScreenState extends ConsumerState<RecipeForkScreen> {
         userPrompt: _buildUserPrompt(),
       );
 
-      ref.invalidate(recipeListProvider);
+      container.invalidate(recipeListProvider);
 
       final newRecipe = await crud.waitUntilGenerated(placeholder.id);
 
-      ref.invalidate(recipeListProvider);
-      ref.invalidate(recipeDetailProvider(newRecipe.id));
+      container.invalidate(recipeListProvider);
+      container.invalidate(recipeDetailProvider(newRecipe.id));
 
       if (mounted) {
-        context.goNamed(
+        // pushReplacement keeps the underlying stack (the source recipe) so
+        // the new detail screen still has a back route; go() would replace
+        // the whole stack and strand the user.
+        context.pushReplacementNamed(
           'recipe-detail',
           pathParameters: {'id': newRecipe.id},
         );

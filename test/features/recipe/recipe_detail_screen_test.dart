@@ -151,6 +151,25 @@ void main() {
       expect(text, contains('Source: https://example.com/pizza'));
       expect(text, endsWith('Shared from SaltyBytes'));
     });
+
+    test('buildRecipeShareText matches the in-app ingredient formatting: '
+        'no "0" for unquantified amounts, cooking fractions for partials',
+        () {
+      final recipe = Recipe.fromJson(testRecipeJson(
+        ingredients: [
+          // Go serializes Amount without omitempty: "to taste" arrives as 0.
+          testIngredientJson(name: 'salt', amount: 0, unit: ''),
+          testIngredientJson(name: 'flour', amount: 0.5, unit: 'cup'),
+        ],
+      ));
+
+      final text = buildRecipeShareText(recipe);
+
+      expect(text, contains('- salt'));
+      expect(text, isNot(contains('- 0 salt')));
+      expect(text, contains('- 1/2 cup flour'));
+      expect(text, isNot(contains('0.5')));
+    });
   });
 
   group('RecipeDetailScreen unit conversion', () {

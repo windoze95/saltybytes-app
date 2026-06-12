@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/family.dart' as models;
@@ -279,12 +280,17 @@ class DietaryInterviewNotifier extends StateNotifier<InterviewState> {
     try {
       // POST /v1/family/members/:member_id/dietary/interview with the full
       // running conversation: {"messages": [{role, content}, ...]}.
+      // The interview runs a full LLM turn server-side (and the completion
+      // turn also extracts the structured profile), so it needs the longer
+      // AI receive timeout like the other AI endpoints.
       final response = await _apiClient.post(
         ApiEndpoints.familyMemberInterview(memberId),
         data: {
           'messages': state.messages.map((m) => m.toWireJson()).toList(),
         },
+        options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
       );
+      if (!mounted) return;
 
       final data = response.data as Map<String, dynamic>;
       final reply = data['response'] as String? ?? 'Could you tell me more?';
@@ -310,6 +316,7 @@ class DietaryInterviewNotifier extends StateNotifier<InterviewState> {
         extractedProfile: extracted ?? state.extractedProfile,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(
         status: InterviewStatus.responding,
         messages: [

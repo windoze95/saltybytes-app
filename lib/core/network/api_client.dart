@@ -294,6 +294,15 @@ class _ErrorInterceptor extends Interceptor {
   }
 }
 
+/// Extracts a user-facing message from a caught error for snackbars and
+/// inline error text: unwraps the [ApiError] that [_ErrorInterceptor] puts
+/// on every [DioException], falling back to [fallback] for anything else
+/// (so raw exception plumbing never reaches the UI).
+String userFacingErrorMessage(Object error, String fallback) {
+  final unwrapped = error is DioException ? error.error : error;
+  return unwrapped is ApiError ? unwrapped.message : fallback;
+}
+
 class ApiError {
   const ApiError({
     required this.message,

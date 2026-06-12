@@ -76,6 +76,7 @@ void main() {
       when(() => apiClient.post(
             ApiEndpoints.familyMemberInterview('1'),
             data: any(named: 'data'),
+            options: any(named: 'options'),
           )).thenAnswer((_) async => fakeResponse<dynamic>({
             'response': 'Got it. Any intolerances I should know about?',
             'complete': false,
@@ -111,6 +112,7 @@ void main() {
       final body = verify(() => apiClient.post(
             ApiEndpoints.familyMemberInterview('1'),
             data: captureAny(named: 'data'),
+            options: any(named: 'options'),
           )).captured.single as Map<String, dynamic>;
       final messages = body['messages'] as List;
       expect(messages, hasLength(2));
@@ -127,6 +129,7 @@ void main() {
       when(() => apiClient.post(
             ApiEndpoints.familyMemberInterview('1'),
             data: any(named: 'data'),
+            options: any(named: 'options'),
           )).thenAnswer((_) async => fakeResponse<dynamic>({
             'response': 'That covers everything — thanks!',
             'complete': true,

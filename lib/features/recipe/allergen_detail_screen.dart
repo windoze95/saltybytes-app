@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/allergen_provider.dart';
 import '../../core/providers/family_provider.dart';
 import '../../core/providers/recipe_provider.dart';
@@ -30,12 +32,27 @@ class _AllergenDetailScreenState extends ConsumerState<AllergenDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Analysis failed: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Analysis failed. Please try again.',
+            )),
+          ),
         );
       }
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
+  }
+
+  /// The backend 404s when no analysis exists yet; anything else (offline,
+  /// 500, ...) is a load failure, not "not yet analyzed".
+  static bool _isNoAnalysisYet(Object error) {
+    if (error is! DioException) return false;
+    final apiError = error.error;
+    final statusCode = error.response?.statusCode ??
+        (apiError is ApiError ? apiError.statusCode : null);
+    return statusCode == 404;
   }
 
   @override
@@ -51,15 +68,72 @@ class _AllergenDetailScreenState extends ConsumerState<AllergenDetailScreen> {
       ),
       body: analysisAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _NotAnalyzedState(
-          recipeTitle: recipeTitle,
-          isAnalyzing: _isAnalyzing,
-          onAnalyze: _runAnalysis,
-        ),
+        error: (error, _) => _isNoAnalysisYet(error)
+            ? _NotAnalyzedState(
+                recipeTitle: recipeTitle,
+                isAnalyzing: _isAnalyzing,
+                onAnalyze: _runAnalysis,
+              )
+            : _LoadErrorState(
+                onRetry: () => ref
+                    .invalidate(allergenAnalysisProvider(widget.recipeId)),
+              ),
         data: (analysis) => _AnalysisBody(
           analysis: analysis,
           onReanalyze: _runAnalysis,
           isAnalyzing: _isAnalyzing,
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when the cached analysis could not be loaded (offline, server
+/// error). Distinct from [_NotAnalyzedState] so a transient failure does not
+/// offer a quota-consuming re-analysis of an already-analyzed recipe.
+class _LoadErrorState extends StatelessWidget {
+  const _LoadErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: colors.error.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Could not load analysis',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Check your connection and try again.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
         ),
       ),
     );

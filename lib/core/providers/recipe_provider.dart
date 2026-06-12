@@ -87,13 +87,17 @@ class RecipeListNotifier extends AsyncNotifier<List<Recipe>> {
 
   Future<void> deleteRecipe(String id) async {
     final current = state.valueOrNull ?? [];
-    // Optimistic removal
+    // Optimistic removal. Bump the generation so any in-flight
+    // refresh/search (whose response predates the delete) is discarded
+    // instead of resurrecting the deleted recipe.
+    _fetchGeneration++;
     state = AsyncData(current.where((r) => r.id != id).toList());
 
     try {
       await _apiClient.delete(ApiEndpoints.recipeById(id));
     } catch (e) {
       // Revert on failure
+      _fetchGeneration++;
       state = AsyncData(current);
       rethrow;
     }
@@ -251,6 +255,39 @@ class RecipeCrud {
       if (DateTime.now().isAfter(deadline)) {
         throw const RecipeGenerationException(
           'Recipe generation timed out. Please try again.',
+        );
+      }
+    }
+  }
+
+  /// Polls GET /v1/recipes/:id until its `updatedAt` advances past [since],
+  /// returning the updated recipe.
+  ///
+  /// The regen endpoint (PUT /v1/recipes/:id/chat) returns immediately and
+  /// rewrites the recipe asynchronously WITHOUT flipping status to
+  /// "generating" (unlike chat/fork), so completion is detected by watching
+  /// the recipe's updatedAt timestamp move. Throws
+  /// [RecipeGenerationException] on timeout.
+  Future<Recipe> waitUntilRegenerated(
+    String recipeId, {
+    DateTime? since,
+    Duration pollInterval = const Duration(seconds: 2),
+    Duration timeout = const Duration(minutes: 3),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (true) {
+      await Future<void>.delayed(pollInterval);
+
+      final recipe = await getById(recipeId);
+      final updatedAt = recipe.updatedAt;
+      final hasUpdated = updatedAt != null &&
+          (since == null || updatedAt.isAfter(since));
+      if (hasUpdated) {
+        return recipe;
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        throw const RecipeGenerationException(
+          'Recipe regeneration timed out. Please try again.',
         );
       }
     }

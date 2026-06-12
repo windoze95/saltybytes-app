@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/branch_provider.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../models/recipe.dart';
@@ -66,7 +67,12 @@ class _RecipeBranchesScreenState extends ConsumerState<RecipeBranchesScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create branch: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to create branch. Please try again.',
+            )),
+          ),
         );
       }
     }
@@ -89,7 +95,12 @@ class _RecipeBranchesScreenState extends ConsumerState<RecipeBranchesScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to switch node: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to switch node. Please try again.',
+            )),
+          ),
         );
       }
     }

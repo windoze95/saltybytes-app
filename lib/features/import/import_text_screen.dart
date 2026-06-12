@@ -40,9 +40,14 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
       _error = null;
     });
 
+    // The container stays usable after this screen is popped (a disposed
+    // widget's `ref` throws), so the list still refreshes if the user backs
+    // out during a slow import.
+    final container = ProviderScope.containerOf(context, listen: false);
+
     try {
       final recipe = await ref.read(recipeCrudProvider).importFromText(text);
-      ref.invalidate(recipeListProvider);
+      container.invalidate(recipeListProvider);
       if (!mounted) return;
       setState(() {
         _preview = recipe;
@@ -60,7 +65,10 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
   void _viewRecipe() {
     final recipe = _preview;
     if (recipe != null) {
-      context.go('/recipe/${recipe.id}');
+      // pushReplacement keeps the underlying stack (import hub / home) so
+      // the detail screen still has a back route; go() would replace the
+      // whole stack and strand the user.
+      context.pushReplacement('/recipe/${recipe.id}');
     }
   }
 

@@ -6,6 +6,9 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:saltybytes_app/core/network/api_client.dart';
 import 'package:saltybytes_app/core/network/api_endpoints.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:saltybytes_app/core/providers/auth_provider.dart';
+import 'package:saltybytes_app/core/providers/subscription_provider.dart';
 import 'package:saltybytes_app/features/settings/subscription_screen.dart';
 import 'package:saltybytes_app/models/subscription.dart';
 
@@ -65,6 +68,26 @@ void main() {
     });
   });
 
+  group('subscriptionProvider auth scoping', () {
+    test('returns defaults without fetching when signed out, so a previous '
+        "user's tier/usage cannot leak into the next session", () async {
+      final apiClient = MockApiClient();
+      final container = ProviderContainer(overrides: [
+        apiClientProvider.overrideWithValue(apiClient),
+        authStateProvider
+            .overrideWith(() => FakeAuthNotifier(AuthStatus.unauthenticated)),
+      ]);
+      addTearDown(container.dispose);
+
+      await container.read(authStateProvider.future);
+      final sub = await container.read(subscriptionProvider.future);
+
+      expect(sub.tier, 'free');
+      expect(sub.allergenAnalysesUsed, 0);
+      verifyNever(() => apiClient.get(ApiEndpoints.subscription));
+    });
+  });
+
   group('SubscriptionScreen', () {
     testWidgets('renders real tier and usage from GET /v1/subscription',
         (tester) async {
@@ -82,7 +105,12 @@ void main() {
 
       await tester.pumpWidget(testAppScaffold(
         const SubscriptionScreen(),
-        overrides: [apiClientProvider.overrideWithValue(apiClient)],
+        overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+          // subscriptionProvider is auth-scoped; report a signed-in user so
+          // it actually fetches.
+          authStateProvider.overrideWith(FakeAuthNotifier.new),
+        ],
       ));
       await _settle(tester);
 
@@ -106,7 +134,12 @@ void main() {
 
       await tester.pumpWidget(testAppScaffold(
         const SubscriptionScreen(),
-        overrides: [apiClientProvider.overrideWithValue(apiClient)],
+        overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+          // subscriptionProvider is auth-scoped; report a signed-in user so
+          // it actually fetches.
+          authStateProvider.overrideWith(FakeAuthNotifier.new),
+        ],
       ));
       await _settle(tester);
 
@@ -141,7 +174,12 @@ void main() {
 
       await tester.pumpWidget(testAppScaffold(
         const SubscriptionScreen(),
-        overrides: [apiClientProvider.overrideWithValue(apiClient)],
+        overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+          // subscriptionProvider is auth-scoped; report a signed-in user so
+          // it actually fetches.
+          authStateProvider.overrideWith(FakeAuthNotifier.new),
+        ],
       ));
       await _settle(tester);
 

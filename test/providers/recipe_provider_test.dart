@@ -322,6 +322,39 @@ void main() {
       expect(recipes.map((r) => r.id), ['r-1', 'r-2', 'r-3']);
     });
 
+    test('an in-flight refresh cannot resurrect a recipe deleted while it '
+        'was running', () async {
+      final slowRefresh = Completer<Response<dynamic>>();
+      when(() => apiClient.delete(ApiEndpoints.recipeById('r-2')))
+          .thenAnswer((_) async => fakeResponse<dynamic>(null, statusCode: 204));
+
+      final notifier = await primedNotifier();
+
+      // Refresh stalls server-side with a response that predates the delete.
+      when(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer((_) => slowRefresh.future);
+      final refresh = notifier.refresh();
+
+      await notifier.deleteRecipe('r-2');
+
+      slowRefresh.complete(fakeResponse<dynamic>({
+        'recipes': [
+          testRecipeJson(id: 'r-1', title: 'Keep'),
+          testRecipeJson(id: 'r-2', title: 'Delete Me'),
+          testRecipeJson(id: 'r-3', title: 'Also Keep'),
+        ],
+      }));
+      await refresh;
+
+      // The stale fetch result must be discarded, not re-include r-2.
+      expect(
+        container.read(recipeListProvider).value!.map((r) => r.id),
+        ['r-1', 'r-3'],
+      );
+    });
+
     test('deleting a non-existent id leaves the list unchanged', () async {
       when(() => apiClient.delete(ApiEndpoints.recipeById('r-999')))
           .thenAnswer((_) async => fakeResponse<dynamic>(null, statusCode: 204));

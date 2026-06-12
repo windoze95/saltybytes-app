@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/family_provider.dart';
 import '../../models/family.dart';
 
@@ -93,7 +94,12 @@ class FamilyScreen extends ConsumerWidget {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to add member: $e')),
+                    SnackBar(
+                      content: Text(userFacingErrorMessage(
+                        e,
+                        'Failed to add member. Please try again.',
+                      )),
+                    ),
                   );
                 }
               }
@@ -135,7 +141,12 @@ class _CreateFamilyStateState extends ConsumerState<_CreateFamilyState> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create family: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to create family. Please try again.',
+            )),
+          ),
         );
       }
     } finally {

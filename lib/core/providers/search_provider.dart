@@ -54,11 +54,15 @@ class WebSearchResult {
   final List<FamilySafetyCheck> familySafetyChecks;
 
   factory WebSearchResult.fromJson(Map<String, dynamic> json) {
+    // The backend serializes image_url without omitempty, so hits with no
+    // thumbnail arrive as "" — coerce to null so render sites fall back to
+    // the placeholder instead of feeding an empty URL to the image widget.
+    final imageUrl = json['image_url'] as String?;
     return WebSearchResult(
       title: json['title'] as String? ?? 'Untitled',
       sourceUrl: json['source_url'] as String?,
       sourceDomain: json['source_domain'] as String?,
-      imageUrl: json['image_url'] as String?,
+      imageUrl: (imageUrl == null || imageUrl.isEmpty) ? null : imageUrl,
       description: json['description'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       cookTimeMinutes: json['cook_time_minutes'] as int?,

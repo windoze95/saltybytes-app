@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/providers/branch_provider.dart';
 import '../../core/providers/recipe_provider.dart';
 
 class RecipeEditScreen extends ConsumerStatefulWidget {
@@ -50,14 +53,27 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
 
     try {
       final crud = ref.read(recipeCrudProvider);
+      // The backend regenerates asynchronously WITHOUT flipping the recipe's
+      // status to "generating", so refetching now would just re-cache the old
+      // version. Capture the container (valid after this screen is disposed)
+      // and the current updatedAt so a background poll can refresh the
+      // providers once the regenerated recipe actually lands.
+      final container = ProviderScope.containerOf(context, listen: false);
+      final regeneratingSince =
+          ref.read(recipeDetailProvider(widget.recipeId)).valueOrNull?.updatedAt;
+
       await crud.regenerate(
         widget.recipeId,
         userPrompt: prompt,
         genImage: _generateNewImage,
       );
 
-      ref.invalidate(recipeDetailProvider(widget.recipeId));
-      ref.invalidate(recipeListProvider);
+      unawaited(_refreshWhenRegenerated(
+        container,
+        crud,
+        widget.recipeId,
+        since: regeneratingSince,
+      ));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,6 +96,30 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
         });
       }
     }
+  }
+
+  /// Waits for the async regeneration to land server-side, then refreshes
+  /// every provider that caches this recipe (detail, home list, and the
+  /// recipe tree, which gains a new node). Uses the [ProviderContainer]
+  /// rather than `ref` because this screen pops right after the PUT and a
+  /// disposed widget's `ref` cannot be used.
+  static Future<void> _refreshWhenRegenerated(
+    ProviderContainer container,
+    RecipeCrud crud,
+    String recipeId, {
+    DateTime? since,
+  }) async {
+    try {
+      await crud.waitUntilRegenerated(recipeId, since: since);
+    } catch (_) {
+      // Timed out or failed server-side; the providers still hold the valid
+      // previous version, so there is nothing to refresh.
+      return;
+    }
+
+    container.invalidate(recipeDetailProvider(recipeId));
+    container.invalidate(recipeListProvider);
+    container.invalidate(recipeBranchesProvider(recipeId));
   }
 
   @override

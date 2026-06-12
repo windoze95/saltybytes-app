@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -139,7 +140,30 @@ void main() {
       expect(find.byType(AllergenBadge), findsNothing);
     });
 
-    testWidgets('falls back to the not-analyzed state when the fetch fails',
+    testWidgets('shows the not-analyzed state when the fetch 404s '
+        '(no analysis exists)', (tester) async {
+      final recipe =
+          Recipe.fromJson(testRecipeJson(id: 'r-1', imageUrl: null));
+      await tester.pumpWidget(testAppScaffold(
+        const AllergenDetailScreen(recipeId: 'r-1'),
+        overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+          authStateProvider.overrideWith(FakeAuthNotifier.new),
+          recipeDetailProvider.overrideWith((ref, id) async => recipe),
+          allergenAnalysisProvider.overrideWith(
+            (ref, id) async => throw _notFoundException(),
+          ),
+        ],
+      ));
+      await _settle(tester);
+
+      expect(find.text('Not Yet Analyzed'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Analyze'), findsOneWidget);
+    });
+
+    testWidgets(
+        'shows a load-error state (not "Not Yet Analyzed") for non-404 '
+        'failures so transient errors cannot burn analysis quota',
         (tester) async {
       final recipe =
           Recipe.fromJson(testRecipeJson(id: 'r-1', imageUrl: null));
@@ -150,14 +174,28 @@ void main() {
           authStateProvider.overrideWith(FakeAuthNotifier.new),
           recipeDetailProvider.overrideWith((ref, id) async => recipe),
           allergenAnalysisProvider.overrideWith(
-            (ref, id) async => throw Exception('404'),
+            (ref, id) async => throw DioException(
+              requestOptions: RequestOptions(path: '/v1/recipes/r-1/allergens'),
+              type: DioExceptionType.connectionError,
+            ),
           ),
         ],
       ));
       await _settle(tester);
 
-      expect(find.text('Not Yet Analyzed'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Analyze'), findsOneWidget);
+      expect(find.text('Could not load analysis'), findsOneWidget);
+      expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
+      expect(find.text('Not Yet Analyzed'), findsNothing);
     });
   });
+}
+
+/// A DioException shaped like the backend's 404 "no analysis exists yet".
+DioException _notFoundException() {
+  final requestOptions = RequestOptions(path: '/v1/recipes/r-1/allergens');
+  return DioException(
+    requestOptions: requestOptions,
+    response: Response(requestOptions: requestOptions, statusCode: 404),
+    type: DioExceptionType.badResponse,
+  );
 }

@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/providers/allergen_provider.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/unit_converter.dart';
 import '../../models/recipe.dart';
 import 'widgets/ingredient_list.dart';
 import 'widgets/instruction_list.dart';
@@ -84,10 +85,12 @@ String buildRecipeShareText(Recipe recipe) {
 String _formatIngredient(Ingredient ingredient) {
   final parts = <String>[];
   final amount = ingredient.amount;
-  if (amount != null) {
-    parts.add(amount == amount.roundToDouble()
-        ? amount.toInt().toString()
-        : amount.toString());
+  // amount == 0 means "no quantity" (e.g. salt to taste): the API serializes
+  // Amount as a plain float64, so unquantified ingredients arrive as 0.
+  // Format with cooking fractions so the share text matches the in-app
+  // ingredient list (see IngredientList's _formatQuantity).
+  if (amount != null && amount > 0) {
+    parts.add(formatAmountForUnit(amount, ingredient.unit));
   }
   final unit = ingredient.unit;
   if (unit != null && unit.isNotEmpty) {

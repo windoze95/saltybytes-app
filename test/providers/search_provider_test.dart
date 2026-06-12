@@ -40,6 +40,14 @@ void main() {
       expect(result.familySafetyChecks, isEmpty);
     });
 
+    test('fromJson coerces an empty image_url to null (Go serializes '
+        'image_url without omitempty)', () {
+      final result = WebSearchResult.fromJson(
+          testWebSearchResultJson()..['image_url'] = '');
+
+      expect(result.imageUrl, isNull);
+    });
+
     test('fromJson defaults title to Untitled when null', () {
       final json = <String, dynamic>{};
       final result = WebSearchResult.fromJson(json);

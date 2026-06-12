@@ -53,6 +53,10 @@ class _GenerateRecipeScreenState extends ConsumerState<GenerateRecipeScreen> {
 
     try {
       final crud = ref.read(recipeCrudProvider);
+      // The container stays usable after this screen is popped (a disposed
+      // widget's `ref` throws), so the list still refreshes if the user
+      // backs out mid-generation.
+      final container = ProviderScope.containerOf(context, listen: false);
 
       // Returns a placeholder recipe (status == "generating") immediately.
       final placeholder = await crud.generate(
@@ -60,16 +64,19 @@ class _GenerateRecipeScreenState extends ConsumerState<GenerateRecipeScreen> {
         genImage: _generateImage,
       );
 
-      ref.invalidate(recipeListProvider);
+      container.invalidate(recipeListProvider);
 
       // Poll until the backend finishes generating.
       final recipe = await crud.waitUntilGenerated(placeholder.id);
 
-      ref.invalidate(recipeListProvider);
-      ref.invalidate(recipeDetailProvider(recipe.id));
+      container.invalidate(recipeListProvider);
+      container.invalidate(recipeDetailProvider(recipe.id));
 
       if (mounted) {
-        context.goNamed(
+        // pushReplacement keeps the underlying stack (home) so the detail
+        // screen still has a back route; go() would replace the whole stack
+        // and strand the user.
+        context.pushReplacementNamed(
           'recipe-detail',
           pathParameters: {'id': recipe.id},
         );

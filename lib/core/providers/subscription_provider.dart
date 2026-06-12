@@ -3,10 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/subscription.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
+import 'auth_provider.dart';
 
 /// Fetches GET /v1/subscription -> {"subscription": {...}}.
+///
+/// Watches auth state so the cached tier/usage counters reset on logout and
+/// refetch for the next signed-in account instead of leaking across users.
 final subscriptionProvider = FutureProvider<SubscriptionInfo>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
+
+  final authStatus = ref.watch(authStateProvider).valueOrNull;
+  if (authStatus != AuthStatus.authenticated) {
+    return const SubscriptionInfo();
+  }
+
   final response = await apiClient.get(ApiEndpoints.subscription);
 
   final data = response.data;

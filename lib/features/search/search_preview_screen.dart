@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../core/providers/search_provider.dart';
 
@@ -47,23 +48,35 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
 
   Future<void> _importRecipe(RecipePreview preview) async {
     setState(() => _isImporting = true);
+    // The container stays usable after this screen is popped (a disposed
+    // widget's `ref` throws), so the list still refreshes if the user backs
+    // out during a slow import.
+    final container = ProviderScope.containerOf(context, listen: false);
     try {
       final recipe = await ref.read(searchProvider.notifier).importPreview(
             preview,
             imageUrl: widget.searchResult.imageUrl,
           );
-      ref.invalidate(recipeListProvider);
+      container.invalidate(recipeListProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Imported "${recipe.title}"!')),
         );
-        context.go('/recipe/${recipe.id}');
+        // pushReplacement keeps the underlying stack (search) so the detail
+        // screen still has a back route; go() would replace the whole stack
+        // and strand the user.
+        context.pushReplacement('/recipe/${recipe.id}');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isImporting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to import: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to import the recipe. Please try again.',
+            )),
+          ),
         );
       }
     }

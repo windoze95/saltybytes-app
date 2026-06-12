@@ -37,10 +37,16 @@ class _FakeAuthNotifier extends AsyncNotifier<AuthStatus>
   Future<void> logout() async {}
 }
 
-Widget _buildApp(MockApiClient apiClient) {
-  final router = GoRouter(
-    initialLocation: '/generate',
+GoRouter _buildRouter({String initialLocation = '/generate'}) {
+  return GoRouter(
+    initialLocation: initialLocation,
     routes: [
+      GoRoute(
+        path: '/home',
+        name: 'home',
+        builder: (context, state) =>
+            const Scaffold(body: Text('home-stub')),
+      ),
       GoRoute(
         path: '/generate',
         name: 'generate',
@@ -55,6 +61,10 @@ Widget _buildApp(MockApiClient apiClient) {
       ),
     ],
   );
+}
+
+Widget _buildApp(MockApiClient apiClient, {GoRouter? router}) {
+  router ??= _buildRouter();
 
   return ProviderScope(
     overrides: [
@@ -117,8 +127,13 @@ void main() {
         });
       });
 
-      await tester.pumpWidget(_buildApp(apiClient));
+      // Mimic the real app: the generate screen is pushed from home, so
+      // there is a stack underneath it.
+      final router = _buildRouter(initialLocation: '/home');
+      await tester.pumpWidget(_buildApp(apiClient, router: router));
+      router.pushNamed('generate');
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 400));
 
       await tester.enterText(
           find.byType(TextField), 'A cozy chicken pot pie');
@@ -140,6 +155,14 @@ void main() {
 
       expect(find.text('detail-42'), findsOneWidget);
       expect(polls, 2);
+
+      // pushReplacement (not go) keeps the underlying stack, so the detail
+      // screen still has a back route to home instead of stranding the user.
+      expect(router.canPop(), isTrue);
+      router.pop();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('home-stub'), findsOneWidget);
 
       // Request shape: user_prompt + gen_image (toggle defaults to true).
       final captured = verify(() => apiClient.post(
