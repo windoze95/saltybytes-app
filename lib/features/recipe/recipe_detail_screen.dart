@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/providers/allergen_provider.dart';
 import '../../core/providers/recipe_provider.dart';
@@ -33,6 +34,78 @@ class RecipeDetailScreen extends ConsumerWidget {
       data: (recipe) => _RecipeDetailBody(recipe: recipe),
     );
   }
+}
+
+/// Builds a plain-text rendition of a recipe for sharing.
+String buildRecipeShareText(Recipe recipe) {
+  final buffer = StringBuffer()..writeln(recipe.title);
+
+  if (recipe.cookTimeMinutes != null) {
+    buffer.writeln('Cook time: ${recipe.cookTimeMinutes} min');
+  }
+  if (recipe.portions != null) {
+    final size = recipe.portionSize;
+    buffer.writeln(
+      'Serves: ${recipe.portions}'
+      '${size != null && size.isNotEmpty ? ' $size' : ''}',
+    );
+  }
+
+  if (recipe.ingredients.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln('Ingredients:');
+    for (final ingredient in recipe.ingredients) {
+      buffer.writeln('- ${_formatIngredient(ingredient)}');
+    }
+  }
+
+  if (recipe.instructions.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln('Instructions:');
+    for (var i = 0; i < recipe.instructions.length; i++) {
+      buffer.writeln('${i + 1}. ${recipe.instructions[i]}');
+    }
+  }
+
+  if (recipe.sourceUrl != null && recipe.sourceUrl!.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln('Source: ${recipe.sourceUrl}');
+  }
+
+  buffer
+    ..writeln()
+    ..write('Shared from SaltyBytes');
+  return buffer.toString();
+}
+
+String _formatIngredient(Ingredient ingredient) {
+  final parts = <String>[];
+  final amount = ingredient.amount;
+  if (amount != null) {
+    parts.add(amount == amount.roundToDouble()
+        ? amount.toInt().toString()
+        : amount.toString());
+  }
+  final unit = ingredient.unit;
+  if (unit != null && unit.isNotEmpty) {
+    parts.add(unit);
+  }
+  parts.add(ingredient.name);
+  return parts.join(' ');
+}
+
+Future<void> _shareRecipe(BuildContext context, Recipe recipe) async {
+  // sharePositionOrigin is required for the iPad share popover.
+  final box = context.findRenderObject() as RenderBox?;
+  await Share.share(
+    buildRecipeShareText(recipe),
+    subject: recipe.title,
+    sharePositionOrigin:
+        box != null ? box.localToGlobal(Offset.zero) & box.size : null,
+  );
 }
 
 class _RecipeDetailBody extends ConsumerWidget {
@@ -96,9 +169,12 @@ class _RecipeDetailBody extends ConsumerWidget {
                     ),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
-                onPressed: () {},
+              Builder(
+                builder: (buttonContext) => IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  tooltip: 'Share',
+                  onPressed: () => _shareRecipe(buttonContext, recipe),
+                ),
               ),
             ],
           ),

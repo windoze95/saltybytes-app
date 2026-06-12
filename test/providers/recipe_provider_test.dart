@@ -31,9 +31,6 @@ class _FakeAuthNotifier extends AsyncNotifier<AuthStatus>
   }) async {}
 
   @override
-  void enterDemoMode() {}
-
-  @override
   Future<void> logout() async {}
 }
 
@@ -419,6 +416,170 @@ void main() {
             options: any(named: 'options'),
           )).captured.single;
       expect(captured, body);
+    });
+  });
+
+  group('RecipeCrud generate / regenerate / fork request shapes', () {
+    late MockApiClient apiClient;
+    late RecipeCrud crud;
+
+    setUp(() {
+      apiClient = MockApiClient();
+      crud = RecipeCrud(apiClient: apiClient);
+    });
+
+    test(
+        'generate POSTs /v1/recipes/chat with user_prompt + gen_image '
+        'and a 60s receive timeout', () async {
+      when(() => apiClient.post(
+            ApiEndpoints.generateRecipe,
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'recipe': testRecipeJson(id: '42', status: 'generating'),
+            'message': 'Generating recipe',
+          }));
+
+      final recipe = await crud.generate(
+        userPrompt: 'A cozy chicken pot pie',
+        genImage: true,
+      );
+
+      expect(recipe.id, '42');
+      expect(recipe.status, 'generating');
+
+      final captured = verify(() => apiClient.post(
+            ApiEndpoints.generateRecipe,
+            data: captureAny(named: 'data'),
+            options: captureAny(named: 'options'),
+          )).captured;
+      expect(captured[0], {
+        'user_prompt': 'A cozy chicken pot pie',
+        'gen_image': true,
+      });
+      expect(
+          (captured[1] as Options).receiveTimeout, ApiTimeouts.aiGeneration);
+    });
+
+    test('regenerate PUTs /v1/recipes/:id/chat with user_prompt + gen_image',
+        () async {
+      when(() => apiClient.put(
+            ApiEndpoints.recipeChat('7'),
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+          )).thenAnswer((_) async =>
+          fakeResponse<dynamic>({'message': 'Regenerating recipe'}));
+
+      await crud.regenerate('7', userPrompt: 'Make it vegan', genImage: false);
+
+      final captured = verify(() => apiClient.put(
+            '/v1/recipes/7/chat',
+            data: captureAny(named: 'data'),
+            options: any(named: 'options'),
+          )).captured.single;
+      expect(captured, {
+        'user_prompt': 'Make it vegan',
+        'gen_image': false,
+      });
+    });
+
+    test(
+        'fork POSTs /v1/recipes/:id/fork with user_prompt + gen_image '
+        'and unwraps the placeholder envelope', () async {
+      when(() => apiClient.post(
+            ApiEndpoints.recipeFork('7'),
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'recipe': testRecipeJson(id: '99', status: 'generating'),
+            'message': 'Regenerating recipe',
+          }));
+
+      final recipe = await crud.fork(
+        '7',
+        userPrompt: 'Variation name: spicy. Changes: Double the chili',
+      );
+
+      expect(recipe.id, '99');
+
+      final captured = verify(() => apiClient.post(
+            '/v1/recipes/7/fork',
+            data: captureAny(named: 'data'),
+            options: any(named: 'options'),
+          )).captured.single;
+      expect(captured, {
+        'user_prompt': 'Variation name: spicy. Changes: Double the chili',
+        'gen_image': true,
+      });
+    });
+  });
+
+  group('RecipeCrud.waitUntilGenerated', () {
+    late MockApiClient apiClient;
+    late RecipeCrud crud;
+
+    setUp(() {
+      apiClient = MockApiClient();
+      crud = RecipeCrud(apiClient: apiClient);
+    });
+
+    test('polls until status leaves "generating"', () async {
+      var calls = 0;
+      when(() => apiClient.get(ApiEndpoints.recipeById('42')))
+          .thenAnswer((_) async {
+        calls++;
+        return fakeResponse<dynamic>({
+          'recipe': testRecipeJson(
+            id: '42',
+            status: calls < 3 ? 'generating' : 'ready',
+          ),
+        });
+      });
+
+      final recipe = await crud.waitUntilGenerated(
+        '42',
+        pollInterval: const Duration(milliseconds: 1),
+      );
+
+      expect(recipe.status, 'ready');
+      expect(calls, 3);
+    });
+
+    test('throws RecipeGenerationException when status becomes failed',
+        () async {
+      when(() => apiClient.get(ApiEndpoints.recipeById('42')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'recipe': testRecipeJson(id: '42', status: 'failed'),
+              }));
+
+      await expectLater(
+        crud.waitUntilGenerated(
+          '42',
+          pollInterval: const Duration(milliseconds: 1),
+        ),
+        throwsA(isA<RecipeGenerationException>()),
+      );
+    });
+
+    test('throws RecipeGenerationException on 404 (backend deleted the row)',
+        () async {
+      when(() => apiClient.get(ApiEndpoints.recipeById('42'))).thenAnswer(
+        (_) async => throw DioException(
+          requestOptions: RequestOptions(path: '/v1/recipes/42'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/v1/recipes/42'),
+            statusCode: 404,
+          ),
+        ),
+      );
+
+      await expectLater(
+        crud.waitUntilGenerated(
+          '42',
+          pollInterval: const Duration(milliseconds: 1),
+        ),
+        throwsA(isA<RecipeGenerationException>()),
+      );
     });
   });
 

@@ -29,9 +29,6 @@ class _FakeAuthNotifier extends AsyncNotifier<AuthStatus>
   }) async {}
 
   @override
-  void enterDemoMode() {}
-
-  @override
   Future<void> logout() async {}
 }
 

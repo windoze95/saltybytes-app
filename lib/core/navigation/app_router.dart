@@ -8,6 +8,7 @@ import '../../features/cooking/cooking_mode_screen.dart';
 import '../../features/family/dietary_interview_screen.dart';
 import '../../features/family/family_member_detail_screen.dart';
 import '../../features/family/family_screen.dart';
+import '../../features/generate/generate_recipe_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/import/import_manual_screen.dart';
 import '../../features/import/import_photo_screen.dart';
@@ -146,6 +147,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
         ],
+      ),
+
+      // Generate with AI (outside shell for full-screen)
+      GoRoute(
+        path: '/generate',
+        name: 'generate',
+        builder: (context, state) => const GenerateRecipeScreen(),
       ),
 
       // Import routes

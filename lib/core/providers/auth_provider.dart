@@ -133,10 +133,6 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
     });
   }
 
-  void enterDemoMode() {
-    state = const AsyncData(AuthStatus.authenticated);
-  }
-
   Future<void> logout() async {
     try {
       // No server-side logout endpoint; just clear local tokens

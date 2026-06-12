@@ -147,13 +147,113 @@ class RecipeCrud {
     await _apiClient.delete(ApiEndpoints.recipeById(id));
   }
 
-  Future<Recipe> fork(String recipeId, {String? branchName}) async {
+  /// Fetches a single recipe by id, unwrapping the {"recipe": ...} envelope.
+  Future<Recipe> getById(String id) async {
+    final response = await _apiClient.get(ApiEndpoints.recipeById(id));
+    return parseRecipeEnvelope(response.data as Map<String, dynamic>);
+  }
+
+  /// Generates a brand-new recipe via POST /v1/recipes/chat.
+  ///
+  /// The backend immediately returns a placeholder recipe with
+  /// status == "generating" and finishes asynchronously; callers should
+  /// follow up with [waitUntilGenerated].
+  Future<Recipe> generate({
+    required String userPrompt,
+    required bool genImage,
+  }) async {
     final response = await _apiClient.post(
-      ApiEndpoints.recipeFork(recipeId),
-      data: branchName != null ? {'branch': branchName} : null,
+      ApiEndpoints.generateRecipe,
+      data: {
+        'user_prompt': userPrompt,
+        'gen_image': genImage,
+      },
       options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
     );
     return parseRecipeEnvelope(response.data as Map<String, dynamic>);
+  }
+
+  /// Regenerates an existing recipe via PUT /v1/recipes/:id/chat.
+  ///
+  /// The backend responds with {"message": "Regenerating recipe"} and
+  /// updates the recipe asynchronously.
+  Future<void> regenerate(
+    String recipeId, {
+    required String userPrompt,
+    required bool genImage,
+  }) async {
+    await _apiClient.put(
+      ApiEndpoints.recipeChat(recipeId),
+      data: {
+        'user_prompt': userPrompt,
+        'gen_image': genImage,
+      },
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
+    );
+  }
+
+  /// Forks a recipe via POST /v1/recipes/:id/fork.
+  ///
+  /// Returns the placeholder recipe (status == "generating"); the backend
+  /// finishes the fork asynchronously, so callers should follow up with
+  /// [waitUntilGenerated].
+  Future<Recipe> fork(
+    String recipeId, {
+    required String userPrompt,
+    bool genImage = true,
+  }) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.recipeFork(recipeId),
+      data: {
+        'user_prompt': userPrompt,
+        'gen_image': genImage,
+      },
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
+    );
+    return parseRecipeEnvelope(response.data as Map<String, dynamic>);
+  }
+
+  /// Polls GET /v1/recipes/:id until the recipe leaves the "generating"
+  /// status, returning the finished recipe.
+  ///
+  /// The backend deletes recipes whose generation failed, so a 404 while
+  /// polling means the generation did not succeed. Throws
+  /// [RecipeGenerationException] on failure or timeout.
+  Future<Recipe> waitUntilGenerated(
+    String recipeId, {
+    Duration pollInterval = const Duration(seconds: 2),
+    Duration timeout = const Duration(minutes: 3),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (true) {
+      await Future<void>.delayed(pollInterval);
+
+      Recipe recipe;
+      try {
+        recipe = await getById(recipeId);
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 404) {
+          throw const RecipeGenerationException(
+            'Recipe generation failed. Please try again.',
+          );
+        }
+        rethrow;
+      }
+
+      if (recipe.status == 'failed') {
+        throw const RecipeGenerationException(
+          'Recipe generation failed. Please try again.',
+        );
+      }
+      if (recipe.status != 'generating') {
+        return recipe;
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        throw const RecipeGenerationException(
+          'Recipe generation timed out. Please try again.',
+        );
+      }
+    }
   }
 
   Future<Recipe> importFromUrl(String url) async {
@@ -200,4 +300,14 @@ class RecipeCrud {
     );
     return parseRecipeEnvelope(response.data as Map<String, dynamic>);
   }
+}
+
+/// Thrown when an async recipe generation fails or times out.
+class RecipeGenerationException implements Exception {
+  const RecipeGenerationException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

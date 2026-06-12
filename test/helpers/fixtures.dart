@@ -293,6 +293,29 @@ Map<String, dynamic> testFamilyJson({
           ],
     };
 
+/// Mirrors GET /v1/subscription: models.Subscription has no json tags, so
+/// Go serializes its field names (PascalCase) verbatim.
+Map<String, dynamic> testSubscriptionJson({
+  String tier = 'free',
+  int allergenAnalysesUsed = 2,
+  int webSearchesUsed = 7,
+  int aiGenerationsUsed = 12,
+  String monthlyResetAt = '2026-07-01T00:00:00Z',
+}) =>
+    {
+      'ID': 1,
+      'CreatedAt': '2026-01-01T00:00:00Z',
+      'UpdatedAt': '2026-06-01T00:00:00Z',
+      'DeletedAt': null,
+      'UserID': 5,
+      'Tier': tier,
+      'ExpiresAt': null,
+      'AllergenAnalysesUsed': allergenAnalysesUsed,
+      'WebSearchesUsed': webSearchesUsed,
+      'AIGenerationsUsed': aiGenerationsUsed,
+      'MonthlyResetAt': monthlyResetAt,
+    };
+
 Map<String, dynamic> testWebSearchResultJson({
   String title = 'Best Margherita Pizza Recipe',
   String? sourceUrl = 'https://www.seriouseats.com/margherita-pizza',

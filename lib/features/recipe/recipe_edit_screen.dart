@@ -1,11 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
-import '../../core/network/api_endpoints.dart';
 import '../../core/providers/recipe_provider.dart';
-import '../../models/recipe.dart';
 
 class RecipeEditScreen extends ConsumerStatefulWidget {
   const RecipeEditScreen({super.key, required this.recipeId});
@@ -23,7 +22,19 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    // Rebuild as the user types so the submit button enables/disables live.
+    _promptController.addListener(_onPromptChanged);
+  }
+
+  void _onPromptChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _promptController.removeListener(_onPromptChanged);
     _promptController.dispose();
     super.dispose();
   }
@@ -38,26 +49,29 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
     });
 
     try {
-      final apiClient = ref.read(apiClientProvider);
-      await apiClient.post(
-        ApiEndpoints.recipeById(widget.recipeId),
-        data: {
-          'prompt': prompt,
-          'regenerate_image': _generateNewImage,
-        },
+      final crud = ref.read(recipeCrudProvider);
+      await crud.regenerate(
+        widget.recipeId,
+        userPrompt: prompt,
+        genImage: _generateNewImage,
       );
 
       ref.invalidate(recipeDetailProvider(widget.recipeId));
       ref.invalidate(recipeListProvider);
 
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Regenerating recipe — this may take a minute.'),
+          ),
+        );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          final error = e;
+          final error = e is DioException ? e.error : e;
           if (error is ApiError) {
             _errorMessage = error.message;
           } else {

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers/recipe_provider.dart';
-import '../../models/recipe.dart';
 
 class RecipeForkScreen extends ConsumerStatefulWidget {
   const RecipeForkScreen({super.key, required this.recipeId});
@@ -21,15 +20,47 @@ class _RecipeForkScreenState extends ConsumerState<RecipeForkScreen> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    // Rebuild as the user types so the submit button enables/disables live.
+    _branchNameController.addListener(_onInputChanged);
+    _modificationsController.addListener(_onInputChanged);
+  }
+
+  void _onInputChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _branchNameController.removeListener(_onInputChanged);
+    _modificationsController.removeListener(_onInputChanged);
     _branchNameController.dispose();
     _modificationsController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleFork() async {
+  /// The backend's fork endpoint takes a free-text user_prompt; combine the
+  /// optional variation name with the modifications text.
+  String _buildUserPrompt() {
     final branchName = _branchNameController.text.trim();
-    if (branchName.isEmpty) return;
+    final modifications = _modificationsController.text.trim();
+
+    if (branchName.isNotEmpty && modifications.isNotEmpty) {
+      return 'Variation name: $branchName. Changes: $modifications';
+    }
+    if (modifications.isNotEmpty) {
+      return modifications;
+    }
+    return 'Create a variation of this recipe named "$branchName".';
+  }
+
+  bool get _canSubmit =>
+      _branchNameController.text.trim().isNotEmpty ||
+      _modificationsController.text.trim().isNotEmpty;
+
+  Future<void> _handleFork() async {
+    if (!_canSubmit) return;
 
     setState(() {
       _isSubmitting = true;
@@ -38,12 +69,20 @@ class _RecipeForkScreenState extends ConsumerState<RecipeForkScreen> {
 
     try {
       final crud = ref.read(recipeCrudProvider);
-      final newRecipe = await crud.fork(
+      // The backend returns a placeholder (status == "generating") and
+      // finishes the fork asynchronously; wait for it to complete so the
+      // user lands on a fully formed recipe.
+      final placeholder = await crud.fork(
         widget.recipeId,
-        branchName: branchName,
+        userPrompt: _buildUserPrompt(),
       );
 
       ref.invalidate(recipeListProvider);
+
+      final newRecipe = await crud.waitUntilGenerated(placeholder.id);
+
+      ref.invalidate(recipeListProvider);
+      ref.invalidate(recipeDetailProvider(newRecipe.id));
 
       if (mounted) {
         context.goNamed(
@@ -55,7 +94,9 @@ class _RecipeForkScreenState extends ConsumerState<RecipeForkScreen> {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _errorMessage = 'Failed to fork recipe. Please try again.';
+          _errorMessage = e is RecipeGenerationException
+              ? e.message
+              : 'Failed to fork recipe. Please try again.';
         });
       }
     }
@@ -237,10 +278,7 @@ class _RecipeForkScreenState extends ConsumerState<RecipeForkScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ||
-                          _branchNameController.text.trim().isEmpty
-                      ? null
-                      : _handleFork,
+                  onPressed: _isSubmitting || !_canSubmit ? null : _handleFork,
                   icon: _isSubmitting
                       ? SizedBox(
                           width: 20,

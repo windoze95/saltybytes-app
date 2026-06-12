@@ -76,8 +76,11 @@ class _RecipeBranchesScreenState extends ConsumerState<RecipeBranchesScreen> {
     try {
       final ops = ref.read(branchOperationsProvider);
       await ops.setActiveNode(widget.recipeId, nodeId);
+      // Switching the active node rewrites the recipe's definition, so both
+      // the tree and the recipe detail (and list) must be refetched.
       ref.invalidate(recipeBranchesProvider(widget.recipeId));
       ref.invalidate(recipeDetailProvider(widget.recipeId));
+      ref.invalidate(recipeListProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Switched active node')),
@@ -119,7 +122,8 @@ class _RecipeBranchesScreenState extends ConsumerState<RecipeBranchesScreen> {
             ],
           ),
         ),
-        data: (rootNode) {
+        data: (treeData) {
+          final rootNode = treeData?.root;
           if (rootNode == null) {
             return Center(
               child: Column(

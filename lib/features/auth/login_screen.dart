@@ -219,19 +219,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-
-                    // Demo mode
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        ref.read(authStateProvider.notifier).enterDemoMode();
-                      },
-                      icon: const Icon(Icons.explore_outlined),
-                      label: const Text('Browse Demo'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                    ),
                     const SizedBox(height: 32),
                   ],
                 ),

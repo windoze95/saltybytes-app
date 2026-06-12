@@ -97,7 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    context.pushNamed('import');
+                    context.pushNamed('generate');
                   },
                 ),
                 const SizedBox(height: 4),
