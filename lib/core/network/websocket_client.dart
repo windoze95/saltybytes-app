@@ -33,6 +33,11 @@ class WebSocketClient {
   static const int _maxReconnectAttempts = 5;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
 
+  /// If nothing (pong or otherwise) arrives within this window the
+  /// connection is considered dead and a reconnect is forced.
+  static const Duration _livenessTimeout = Duration(seconds: 75);
+  DateTime _lastMessageAt = DateTime.now();
+
   String? _currentRecipeId;
 
   final _stateController =
@@ -88,6 +93,8 @@ class WebSocketClient {
   }
 
   void _onMessage(dynamic data) {
+    // Any inbound message (including pong) counts as liveness.
+    _lastMessageAt = DateTime.now();
     try {
       final Map<String, dynamic> message;
       if (data is String) {
@@ -127,8 +134,15 @@ class WebSocketClient {
 
   void _startHeartbeat() {
     _stopHeartbeat();
+    _lastMessageAt = DateTime.now();
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-      send({'type': 'ping'});
+      if (DateTime.now().difference(_lastMessageAt) > _livenessTimeout) {
+        developer.log('Liveness timeout, forcing reconnect', name: 'WS');
+        // Closing the sink triggers _onDone, which schedules a reconnect.
+        _channel?.sink.close();
+        return;
+      }
+      send({'type': 'ping', 'payload': const <String, dynamic>{}});
     });
   }
 

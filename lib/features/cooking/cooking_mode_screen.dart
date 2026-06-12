@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../core/network/websocket_client.dart';
 import '../../core/providers/cooking_provider.dart';
 import '../../core/providers/recipe_provider.dart';
 
@@ -90,6 +91,19 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
     final cookState = ref.watch(cookingProvider);
     final recipe = cookState.recipe;
 
+    // Surface WS / voice errors as snackbars.
+    ref.listen<CookingState>(cookingProvider, (previous, next) {
+      final error = next.error;
+      if (error != null && error != previous?.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+
     if (recipe == null) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -172,6 +186,21 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                       color: Colors.white54,
                     ),
                   ),
+                  if (cookState.wsState !=
+                      WebSocketConnectionState.connected) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      switch (cookState.wsState) {
+                        WebSocketConnectionState.connecting => 'Connecting…',
+                        WebSocketConnectionState.reconnecting =>
+                          'Reconnecting…',
+                        _ => 'Offline — assistant unavailable',
+                      },
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.amber.shade300,
+                      ),
+                    ),
+                  ],
 
                   // Step content
                   Expanded(
@@ -199,6 +228,25 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                       ),
                     ),
                   ),
+
+                  // Live voice transcript while listening
+                  if (cookState.isListening)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 4),
+                      child: Text(
+                        cookState.voiceTranscript.isEmpty
+                            ? 'Listening…'
+                            : cookState.voiceTranscript,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white54,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
 
                   // Navigation buttons
                   Padding(
@@ -293,25 +341,36 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             right: 16,
-            child: GestureDetector(
-              onTap: () =>
-                  ref.read(cookingProvider.notifier).toggleListening(),
-              child: AnimatedContainer(
-                duration: 300.ms,
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cookState.isListening
-                      ? theme.colorScheme.primary
-                      : Colors.white12,
-                ),
-                child: Icon(
-                  cookState.isListening ? Icons.mic : Icons.mic_none,
-                  color: cookState.isListening
-                      ? Colors.white
-                      : Colors.white54,
-                  size: 20,
+            child: Tooltip(
+              message: cookState.voiceAvailable
+                  ? 'Voice commands'
+                  : 'Voice input unavailable',
+              child: GestureDetector(
+                onTap: () =>
+                    ref.read(cookingProvider.notifier).toggleListening(),
+                child: AnimatedContainer(
+                  duration: 300.ms,
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cookState.isListening
+                        ? theme.colorScheme.primary
+                        : Colors.white12,
+                  ),
+                  child: Icon(
+                    !cookState.voiceAvailable
+                        ? Icons.mic_off
+                        : cookState.isListening
+                            ? Icons.mic
+                            : Icons.mic_none,
+                    color: !cookState.voiceAvailable
+                        ? Colors.white24
+                        : cookState.isListening
+                            ? Colors.white
+                            : Colors.white54,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
