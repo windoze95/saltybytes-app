@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -145,6 +146,41 @@ void main() {
       verify(() => apiClient.get(
             ApiEndpoints.recipes,
             queryParameters: any(named: 'queryParameters'),
+          )).called(1);
+    });
+
+    testWidgets('failure shows the error state without retrying silently',
+        (tester) async {
+      when(() => apiClient.post(
+            ApiEndpoints.importFromUrl,
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+          )).thenAnswer((_) async => throw DioException(
+            requestOptions: RequestOptions(path: ApiEndpoints.importFromUrl),
+          ));
+
+      await pumpScreen(tester);
+      await tester.enterText(
+          find.byType(TextField).first, 'https://example.com/broken');
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Import'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text('Could not extract recipe from this URL. '
+            'Please try another.'),
+        findsOneWidget,
+      );
+      expect(find.text('View Recipe'), findsNothing);
+
+      // The button returns to an enabled manual-retry state and exactly one
+      // request was made (no automatic retry loop).
+      final importButton = find.widgetWithText(ElevatedButton, 'Import');
+      expect(tester.widget<ElevatedButton>(importButton).onPressed, isNotNull);
+      await tester.pump(const Duration(seconds: 2));
+      verify(() => apiClient.post(
+            ApiEndpoints.importFromUrl,
+            data: any(named: 'data'),
+            options: any(named: 'options'),
           )).called(1);
     });
 

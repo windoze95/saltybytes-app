@@ -157,6 +157,63 @@ void main() {
       expect(find.text('detail-r-77'), findsOneWidget);
     });
 
+    testWidgets('add-ingredient flow posts every named row', (tester) async {
+      await pumpScreen(tester);
+
+      // One ingredient row to start; the 'Add' button appends another.
+      expect(find.widgetWithText(TextField, 'Amt'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Add'));
+      await tester.pump();
+      expect(find.widgetWithText(TextField, 'Amt'), findsNWidgets(2));
+
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'Recipe Title'), 'Two Rows');
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Amt').at(0), '2');
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Ingredient name').at(0), 'flour');
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Amt').at(1), '3/4');
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Ingredient name').at(1), 'sugar');
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final captured = verify(() => apiClient.post(
+            ApiEndpoints.importManual,
+            data: captureAny(named: 'data'),
+            options: any(named: 'options'),
+          )).captured.single as Map<String, dynamic>;
+
+      final ingredients = captured['ingredients'] as List;
+      expect(ingredients, hasLength(2));
+      expect((ingredients[0] as Map)['name'], 'flour');
+      expect((ingredients[0] as Map)['amount'], 2);
+      expect((ingredients[1] as Map)['name'], 'sugar');
+      expect((ingredients[1] as Map)['amount'], 0.75); // "3/4" parsed
+    });
+
+    testWidgets('removing an ingredient row keeps the remaining row',
+        (tester) async {
+      await pumpScreen(tester);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Add'));
+      await tester.pump();
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Ingredient name').at(1), 'sugar');
+      await tester.pump();
+
+      // Remove icons: ingredient rows come before the instruction row.
+      await tester.tap(find.byIcon(Icons.remove_circle_outline).first);
+      await tester.pump();
+
+      expect(find.widgetWithText(TextField, 'Amt'), findsOneWidget);
+      // The second row's value survives the removal of the first.
+      expect(find.widgetWithText(TextField, 'sugar'), findsOneWidget);
+    });
+
     testWidgets('does not POST when title is missing', (tester) async {
       await pumpScreen(tester);
 

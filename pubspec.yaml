@@ -40,6 +40,11 @@ dev_dependencies:
   # Already transitive via web_socket_channel; direct dev dep because the
   # WebSocket test fakes extend StreamChannelMixin.
   stream_channel: ^2.1.2
+  # Already transitive via image_picker/image_cropper; direct dev deps because
+  # the import-photo widget tests install fake platform implementations.
+  image_picker_platform_interface: ^2.10.1
+  image_cropper_platform_interface: ^7.2.0
+  plugin_platform_interface: ^2.1.8
 
 flutter:
   uses-material-design: true

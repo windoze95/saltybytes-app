@@ -337,6 +337,44 @@ Map<String, dynamic> testWebSearchResultJson({
       'family_safety_checks': familySafetyChecks ?? [],
     };
 
+Map<String, dynamic> testMultiRecipeCardJson({
+  String title = 'Weeknight Pad Thai',
+  String? imageUrl,
+  String? description = 'A 30-minute pad thai for busy evenings',
+  String? sourceUrl = 'https://example.com/roundup/pad-thai',
+  String extractionStatus = 'done',
+}) =>
+    {
+      'title': title,
+      'image_url': imageUrl,
+      'description': description,
+      'source_url': sourceUrl,
+      'extraction_status': extractionStatus,
+    };
+
+Map<String, dynamic> testMultiRecipeResolutionJson({
+  String multiId = 'multi-abc-1',
+  String sourceUrl = 'https://example.com/roundup',
+  String status = 'resolved',
+  List<Map<String, dynamic>>? recipes,
+}) =>
+    {
+      'multi_id': multiId,
+      'source_url': sourceUrl,
+      'status': status,
+      'recipes': recipes ??
+          [
+            testMultiRecipeCardJson(
+              title: 'Weeknight Pad Thai',
+              sourceUrl: 'https://example.com/roundup/pad-thai',
+            ),
+            testMultiRecipeCardJson(
+              title: 'Crispy Spring Rolls',
+              sourceUrl: 'https://example.com/roundup/spring-rolls',
+            ),
+          ],
+    };
+
 Map<String, dynamic> testPreviewIngredientJson({
   String name = 'all-purpose flour',
   String? unit = 'cups',
