@@ -20,11 +20,19 @@ enum WebSocketConnectionState {
   reconnecting,
 }
 
+/// Creates the underlying channel; injectable so tests can supply a fake
+/// channel instead of opening a real socket.
+typedef WebSocketConnector = WebSocketChannel Function(Uri uri);
+
 class WebSocketClient {
-  WebSocketClient({required SecureStorage secureStorage})
-      : _secureStorage = secureStorage;
+  WebSocketClient({
+    required SecureStorage secureStorage,
+    WebSocketConnector? connector,
+  })  : _secureStorage = secureStorage,
+        _connector = connector ?? WebSocketChannel.connect;
 
   final SecureStorage _secureStorage;
+  final WebSocketConnector _connector;
 
   WebSocketChannel? _channel;
   Timer? _reconnectTimer;
@@ -74,7 +82,7 @@ class WebSocketClient {
         ApiEndpoints.wsCookingSession(_currentRecipeId!),
       ).replace(queryParameters: {'token': token});
 
-      _channel = WebSocketChannel.connect(uri);
+      _channel = _connector(uri);
       await _channel!.ready;
 
       _updateState(WebSocketConnectionState.connected);

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
@@ -12,14 +15,21 @@ class MockSecureStorage extends Mock implements SecureStorage {}
 
 class MockApiClient extends Mock implements ApiClient {}
 
-/// Fake auth notifier that reports authenticated immediately.
+/// Fake auth notifier that reports the given [status] immediately
+/// (authenticated by default).
 ///
 /// Use with `authStateProvider.overrideWith(FakeAuthNotifier.new)` so
-/// providers that watch auth (e.g. familyProvider) can build in tests.
+/// providers that watch auth (e.g. familyProvider) can build in tests, or
+/// `overrideWith(() => FakeAuthNotifier(AuthStatus.unauthenticated))` to
+/// exercise the signed-out paths.
 class FakeAuthNotifier extends AsyncNotifier<AuthStatus>
     implements AuthNotifier {
+  FakeAuthNotifier([this.status = AuthStatus.authenticated]);
+
+  final AuthStatus status;
+
   @override
-  Future<AuthStatus> build() async => AuthStatus.authenticated;
+  Future<AuthStatus> build() async => status;
 
   @override
   Future<void> login(
@@ -58,5 +68,42 @@ Response<T> fakeResponse<T>(
     data: data,
     statusCode: statusCode,
     requestOptions: requestOptions ?? RequestOptions(path: '/test'),
+  );
+}
+
+/// A [HttpClientAdapter] that routes every request through [handler],
+/// letting interceptor tests run a REAL Dio pipeline fully offline.
+///
+/// Install with `apiClient.dio.httpClientAdapter = FakeHttpClientAdapter(...)`.
+class FakeHttpClientAdapter implements HttpClientAdapter {
+  FakeHttpClientAdapter(this.handler);
+
+  final Future<ResponseBody> Function(RequestOptions options) handler;
+
+  /// Every request this adapter served, in order.
+  final List<RequestOptions> requests = [];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) {
+    requests.add(options);
+    return handler(options);
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// JSON [ResponseBody] for [FakeHttpClientAdapter] handlers.
+ResponseBody jsonResponseBody(Object? data, {int statusCode = 200}) {
+  return ResponseBody.fromString(
+    jsonEncode(data),
+    statusCode,
+    headers: {
+      Headers.contentTypeHeader: [Headers.jsonContentType],
+    },
   );
 }

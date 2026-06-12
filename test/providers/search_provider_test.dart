@@ -1,8 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
+import 'package:saltybytes_app/core/network/api_client.dart';
+import 'package:saltybytes_app/core/network/api_endpoints.dart';
 import 'package:saltybytes_app/core/providers/search_provider.dart';
 
 import '../helpers/fixtures.dart';
+import '../helpers/test_helpers.dart';
 
 void main() {
   group('WebSearchResult', () {
@@ -416,6 +420,56 @@ void main() {
       final cleared = withError.copyWith(query: 'new query');
       // error parameter defaults to null in copyWith (it uses positional null)
       expect(cleared.error, isNull);
+    });
+  });
+
+  group('searchSuggestionsProvider (q >= 2 gate)', () {
+    test('short-circuits to [] without a network call when the query is '
+        'shorter than 2 chars', () async {
+      final apiClient = MockApiClient();
+      final container = createTestContainer(overrides: [
+        apiClientProvider.overrideWithValue(apiClient),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(searchSuggestionsProvider('p'), (_, __) {});
+      container.listen(searchSuggestionsProvider(''), (_, __) {});
+
+      expect(await container.read(searchSuggestionsProvider('p').future),
+          isEmpty);
+      expect(await container.read(searchSuggestionsProvider('').future),
+          isEmpty);
+      verifyNever(() => apiClient.get(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          ));
+    });
+
+    test('queries GET /v1/recipes/search with q when 2+ chars, parsing both '
+        'bare-list and {suggestions: [...]} payloads', () async {
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(
+            ApiEndpoints.search,
+            queryParameters: {'q': 'pi'},
+          )).thenAnswer(
+          (_) async => fakeResponse<dynamic>(['pizza', 'pie']));
+      when(() => apiClient.get(
+            ApiEndpoints.search,
+            queryParameters: {'q': 'pa'},
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'suggestions': ['pasta', 'paella'],
+          }));
+
+      final container = createTestContainer(overrides: [
+        apiClientProvider.overrideWithValue(apiClient),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(searchSuggestionsProvider('pi'), (_, __) {});
+      container.listen(searchSuggestionsProvider('pa'), (_, __) {});
+
+      expect(await container.read(searchSuggestionsProvider('pi').future),
+          ['pizza', 'pie']);
+      expect(await container.read(searchSuggestionsProvider('pa').future),
+          ['pasta', 'paella']);
     });
   });
 }

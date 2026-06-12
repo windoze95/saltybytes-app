@@ -80,6 +80,91 @@ void main() {
       final root = buildRecipeNodeTree(nodes, rootNodeId: 1);
       expect(root!.children.map((c) => c.id), [3, 5]);
     });
+
+    test('excludes orphan nodes whose parent_id references a missing node',
+        () {
+      final nodes = [
+        RecipeNode.fromJson(_flatNodeJson(id: 1, parentId: null)),
+        RecipeNode.fromJson(_flatNodeJson(id: 2, parentId: 1)),
+        // Parent 99 does not exist; this node is unreachable from the root.
+        RecipeNode.fromJson(
+            _flatNodeJson(id: 7, parentId: 99, branchName: 'orphan')),
+      ];
+
+      final root = buildRecipeNodeTree(nodes, rootNodeId: 1);
+
+      expect(root!.id, 1);
+      expect(root.children.map((c) => c.id), [2]);
+
+      Iterable<int> collectIds(RecipeNode node) sync* {
+        yield node.id;
+        for (final child in node.children) {
+          yield* collectIds(child);
+        }
+      }
+
+      expect(collectIds(root), isNot(contains(7)));
+    });
+
+    test('falls back to the parentless node when rootNodeId does not match '
+        'any node', () {
+      final nodes = [
+        RecipeNode.fromJson(_flatNodeJson(id: 2, parentId: 1)),
+        RecipeNode.fromJson(_flatNodeJson(id: 1, parentId: null)),
+      ];
+
+      final root = buildRecipeNodeTree(nodes, rootNodeId: 99);
+
+      expect(root!.id, 1);
+      expect(root.children.single.id, 2);
+    });
+
+    test('falls back to the first node when every node has a parent_id', () {
+      // Defensive: a payload where no node is parentless (the root itself
+      // was orphaned) must not crash or return null. NOTE: a true parent_id
+      // CYCLE would still recurse forever in buildRecipeNodeTree; the
+      // backend's tree contract cannot produce one, so it is untested here.
+      final nodes = [
+        RecipeNode.fromJson(_flatNodeJson(id: 3, parentId: 99)),
+        RecipeNode.fromJson(_flatNodeJson(id: 4, parentId: 3)),
+      ];
+
+      final root = buildRecipeNodeTree(nodes);
+
+      expect(root, isNotNull);
+      expect(root!.id, 3);
+      expect(root.children.single.id, 4);
+    });
+
+    test('builds a multi-branch fan-out (three siblings, nested children)',
+        () {
+      final nodes = [
+        RecipeNode.fromJson(_flatNodeJson(id: 1, parentId: null)),
+        RecipeNode.fromJson(
+            _flatNodeJson(id: 4, parentId: 1, branchName: 'spicy')),
+        RecipeNode.fromJson(
+            _flatNodeJson(id: 2, parentId: 1, branchName: 'vegan')),
+        RecipeNode.fromJson(
+            _flatNodeJson(id: 3, parentId: 1, branchName: 'gluten-free')),
+        RecipeNode.fromJson(
+            _flatNodeJson(id: 5, parentId: 2, branchName: 'vegan-v2')),
+        RecipeNode.fromJson(
+            _flatNodeJson(id: 6, parentId: 4, branchName: 'spicy-v2')),
+      ];
+
+      final root = buildRecipeNodeTree(nodes, rootNodeId: 1);
+
+      expect(root!.children.map((c) => c.id), [2, 3, 4]);
+      expect(root.children.map((c) => c.branchName),
+          ['vegan', 'gluten-free', 'spicy']);
+
+      final vegan = root.children[0];
+      expect(vegan.children.single.id, 5);
+      final glutenFree = root.children[1];
+      expect(glutenFree.children, isEmpty);
+      final spicy = root.children[2];
+      expect(spicy.children.single.id, 6);
+    });
   });
 
   group('RecipeTreeData.fromJson', () {
@@ -120,6 +205,46 @@ void main() {
       expect(tree.rootNodeId, 1);
       expect(tree.root!.id, 1);
       expect(tree.root!.children.single.id, 2);
+    });
+
+    test('resolves the active node: active_node_id matches the node flagged '
+        'is_active deep in the rebuilt tree', () {
+      final tree = RecipeTreeData.fromJson({
+        'tree_id': 10,
+        'recipe_id': 7,
+        'root_node_id': 1,
+        'active_node_id': 3,
+        'nodes': [
+          _flatNodeJson(id: 1, parentId: null),
+          _flatNodeJson(id: 2, parentId: 1, branchName: 'vegan'),
+          _flatNodeJson(
+              id: 3, parentId: 2, branchName: 'vegan-v2', isActive: true),
+        ],
+      });
+
+      expect(tree.activeNodeId, 3);
+
+      // Walk to the deep node and confirm the active flag survived the
+      // flat-list -> tree rebuild.
+      final deep = tree.root!.children.single.children.single;
+      expect(deep.id, tree.activeNodeId);
+      expect(deep.isActive, isTrue);
+      expect(tree.root!.isActive, isFalse);
+      expect(tree.root!.children.single.isActive, isFalse);
+    });
+
+    test('tolerates a missing nodes list (root is null, ids default)', () {
+      final tree = RecipeTreeData.fromJson({
+        'tree_id': null,
+        'recipe_id': null,
+        'active_node_id': null,
+      });
+
+      expect(tree.treeId, 0);
+      expect(tree.recipeId, '');
+      expect(tree.rootNodeId, isNull);
+      expect(tree.activeNodeId, isNull);
+      expect(tree.root, isNull);
     });
   });
 

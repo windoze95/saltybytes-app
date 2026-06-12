@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../storage/secure_storage.dart';
@@ -29,8 +30,13 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 class ApiClient {
-  ApiClient({required SecureStorage secureStorage})
-      : _secureStorage = secureStorage {
+  /// [refreshDio] lets tests inject the Dio used for the token-refresh call
+  /// (which deliberately bypasses this client's interceptors). When null, a
+  /// plain Dio pointed at [ApiEndpoints.baseUrl] is built on demand.
+  ApiClient({
+    required SecureStorage secureStorage,
+    @visibleForTesting Dio? refreshDio,
+  }) : _secureStorage = secureStorage {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiEndpoints.baseUrl,
@@ -49,6 +55,7 @@ class ApiClient {
         dio: _dio,
         secureStorage: _secureStorage,
         onAuthFailure: _onAuthFailure,
+        refreshDio: refreshDio,
       ),
       _LoggingInterceptor(),
       _ErrorInterceptor(),
@@ -150,13 +157,16 @@ class _AuthInterceptor extends Interceptor {
     required Dio dio,
     required SecureStorage secureStorage,
     required VoidCallback onAuthFailure,
+    Dio? refreshDio,
   })  : _dio = dio,
         _secureStorage = secureStorage,
-        _onAuthFailure = onAuthFailure;
+        _onAuthFailure = onAuthFailure,
+        _refreshDio = refreshDio;
 
   final Dio _dio;
   final SecureStorage _secureStorage;
   final VoidCallback _onAuthFailure;
+  final Dio? _refreshDio;
   bool _isRefreshing = false;
 
   @override
@@ -200,14 +210,15 @@ class _AuthInterceptor extends Interceptor {
         return;
       }
 
-      final refreshDio = Dio(BaseOptions(
-        baseUrl: ApiEndpoints.baseUrl,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (_saltyId.isNotEmpty) 'X-SaltyBytes-Identifier': _saltyId,
-        },
-      ));
+      final refreshDio = _refreshDio ??
+          Dio(BaseOptions(
+            baseUrl: ApiEndpoints.baseUrl,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              if (_saltyId.isNotEmpty) 'X-SaltyBytes-Identifier': _saltyId,
+            },
+          ));
 
       final response = await refreshDio.post(
         ApiEndpoints.refreshToken,

@@ -14,189 +14,19 @@ import 'package:saltybytes_app/models/recipe.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/test_helpers.dart';
 
-/// Fake auth notifier that reports authenticated immediately.
-class _FakeAuthNotifier extends AsyncNotifier<AuthStatus>
-    implements AuthNotifier {
-  @override
-  Future<AuthStatus> build() async => AuthStatus.authenticated;
-
-  @override
-  Future<void> login({required String username, required String password}) async {}
-
-  @override
-  Future<void> register({
-    required String username,
-    required String email,
-    required String password,
-  }) async {}
-
-  @override
-  Future<void> logout() async {}
-}
-
-ProviderContainer _buildContainer(MockApiClient apiClient) {
+ProviderContainer _buildContainer(
+  MockApiClient apiClient, {
+  AuthStatus authStatus = AuthStatus.authenticated,
+}) {
   final container = ProviderContainer(overrides: [
     apiClientProvider.overrideWithValue(apiClient),
-    authStateProvider.overrideWith(_FakeAuthNotifier.new),
+    authStateProvider.overrideWith(() => FakeAuthNotifier(authStatus)),
   ]);
   return container;
 }
 
 void main() {
-  group('Recipe response parsing', () {
-    test('parses {recipes: [...]} format', () {
-      final data = <String, dynamic>{
-        'recipes': [
-          testRecipeJson(id: 'r-1', title: 'Pizza'),
-          testRecipeJson(id: 'r-2', title: 'Pasta'),
-        ],
-      };
-
-      // Mirrors the parsing logic in RecipeListNotifier._fetchRecipes
-      List<Recipe> recipes = [];
-      if (data is Map<String, dynamic> && data['recipes'] is List) {
-        recipes = (data['recipes'] as List)
-            .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
-            .toList();
-      }
-
-      expect(recipes, hasLength(2));
-      expect(recipes[0].id, 'r-1');
-      expect(recipes[1].id, 'r-2');
-    });
-
-    test('parses bare [...] format', () {
-      final data = [
-        testRecipeJson(id: 'r-1', title: 'Pizza'),
-        testRecipeJson(id: 'r-2', title: 'Pasta'),
-        testRecipeJson(id: 'r-3', title: 'Salad'),
-      ];
-
-      // Mirrors the parsing logic in RecipeListNotifier._fetchRecipes
-      List<Recipe> recipes = [];
-      if (data is List) {
-        recipes = data
-            .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
-            .toList();
-      }
-
-      expect(recipes, hasLength(3));
-      expect(recipes[2].title, 'Salad');
-    });
-
-    test('returns empty list for unexpected format', () {
-      final dynamic data = 'unexpected string response';
-
-      List<Recipe> recipes = [];
-      if (data is Map<String, dynamic> && data['recipes'] is List) {
-        recipes = (data['recipes'] as List)
-            .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
-            .toList();
-      } else if (data is List) {
-        recipes = (data as List)
-            .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
-            .toList();
-      }
-
-      expect(recipes, isEmpty);
-    });
-
-    test('Recipe.fromJson with actual API response shape', () {
-      // Simulates unwrapping { recipe: {...} } as recipeDetailProvider does
-      final apiResponse = <String, dynamic>{
-        'recipe': testRecipeJson(
-          id: 'r-detail',
-          title: 'Detailed Recipe',
-          sourceUrl: 'https://example.com/recipe',
-        ),
-      };
-
-      final recipeJson = apiResponse['recipe'] as Map<String, dynamic>;
-      final recipe = Recipe.fromJson(recipeJson);
-
-      expect(recipe.id, 'r-detail');
-      expect(recipe.title, 'Detailed Recipe');
-      expect(recipe.sourceUrl, 'https://example.com/recipe');
-    });
-
-    test('handles empty recipe list', () {
-      final data = <String, dynamic>{
-        'recipes': <dynamic>[],
-      };
-
-      final recipes = (data['recipes'] as List)
-          .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
-          .toList();
-
-      expect(recipes, isEmpty);
-    });
-  });
-
-  group('Delete optimistic update logic', () {
-    test('filters out the deleted recipe by id', () {
-      final recipes = [
-        Recipe.fromJson(testRecipeJson(id: 'r-1', title: 'Keep')),
-        Recipe.fromJson(testRecipeJson(id: 'r-2', title: 'Delete Me')),
-        Recipe.fromJson(testRecipeJson(id: 'r-3', title: 'Also Keep')),
-      ];
-
-      // Mirrors the optimistic removal in RecipeListNotifier.deleteRecipe
-      final idToDelete = 'r-2';
-      final afterDelete = recipes.where((r) => r.id != idToDelete).toList();
-
-      expect(afterDelete, hasLength(2));
-      expect(afterDelete.map((r) => r.id), isNot(contains('r-2')));
-      expect(afterDelete[0].title, 'Keep');
-      expect(afterDelete[1].title, 'Also Keep');
-    });
-
-    test('deleting non-existent id leaves list unchanged', () {
-      final recipes = [
-        Recipe.fromJson(testRecipeJson(id: 'r-1')),
-        Recipe.fromJson(testRecipeJson(id: 'r-2')),
-      ];
-
-      final afterDelete = recipes.where((r) => r.id != 'r-999').toList();
-
-      expect(afterDelete, hasLength(2));
-    });
-  });
-
-  group('Pagination parameters', () {
-    test('query parameters have expected shape', () {
-      // Mirrors RecipeListNotifier._fetchRecipes parameter building
-      final page = 2;
-      final pageSize = 10;
-      final query = 'pizza';
-
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'page_size': pageSize,
-      };
-      if (query.isNotEmpty) {
-        queryParams['q'] = query;
-      }
-
-      expect(queryParams['page'], 2);
-      expect(queryParams['page_size'], 10);
-      expect(queryParams['q'], 'pizza');
-    });
-
-    test('query parameter omitted when empty', () {
-      final query = '';
-      final queryParams = <String, dynamic>{
-        'page': 1,
-        'page_size': 20,
-      };
-      if (query.isNotEmpty) {
-        queryParams['q'] = query;
-      }
-
-      expect(queryParams.containsKey('q'), false);
-    });
-  });
-
-  group('RecipeListNotifier (real notifier)', () {
+  group('RecipeListNotifier fetch (real notifier)', () {
     late MockApiClient apiClient;
     late ProviderContainer container;
 
@@ -209,20 +39,99 @@ void main() {
     /// Resolves auth BEFORE the list provider is first read. Otherwise the
     /// auth dependency flips to authenticated mid-build and marks the list
     /// provider dirty while nothing is listening, parking `.future` forever.
-    Future<void> primeAuth() =>
-        container.read(authStateProvider.future);
+    Future<void> primeAuth() => container.read(authStateProvider.future);
 
-    test('dedupes recipes by id when setting state', () async {
+    void stubList(dynamic responseData) {
       when(() => apiClient.get(
             ApiEndpoints.recipes,
             queryParameters: any(named: 'queryParameters'),
-          )).thenAnswer((_) async => fakeResponse<dynamic>({
-            'recipes': [
-              testRecipeJson(id: 'r-1', title: 'Pizza'),
-              testRecipeJson(id: 'r-1', title: 'Pizza (dup)'),
-              testRecipeJson(id: 'r-2', title: 'Pasta'),
-            ],
-          }));
+          )).thenAnswer((_) async => fakeResponse<dynamic>(responseData));
+    }
+
+    test('parses the {recipes: [...]} envelope and sends default pagination '
+        'params (page=1, page_size=20, no q)', () async {
+      stubList({
+        'recipes': [
+          testRecipeJson(id: 'r-1', title: 'Pizza'),
+          testRecipeJson(id: 'r-2', title: 'Pasta'),
+        ],
+      });
+
+      await primeAuth();
+      final recipes = await container.read(recipeListProvider.future);
+
+      expect(recipes, hasLength(2));
+      expect(recipes[0].id, 'r-1');
+      expect(recipes[1].id, 'r-2');
+
+      final params = verify(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: captureAny(named: 'queryParameters'),
+          )).captured.single as Map<String, dynamic>;
+      expect(params, {'page': 1, 'page_size': 20});
+      expect(params.containsKey('q'), isFalse);
+    });
+
+    test('parses a bare [...] payload', () async {
+      stubList([
+        testRecipeJson(id: 'r-1', title: 'Pizza'),
+        testRecipeJson(id: 'r-2', title: 'Pasta'),
+        testRecipeJson(id: 'r-3', title: 'Salad'),
+      ]);
+
+      await primeAuth();
+      final recipes = await container.read(recipeListProvider.future);
+
+      expect(recipes, hasLength(3));
+      expect(recipes[2].title, 'Salad');
+    });
+
+    test('returns an empty list for an unexpected payload shape', () async {
+      stubList('unexpected string response');
+
+      await primeAuth();
+      final recipes = await container.read(recipeListProvider.future);
+
+      expect(recipes, isEmpty);
+    });
+
+    test('returns an empty list when the recipes key is an empty list',
+        () async {
+      stubList({'recipes': <dynamic>[]});
+
+      await primeAuth();
+      final recipes = await container.read(recipeListProvider.future);
+
+      expect(recipes, isEmpty);
+    });
+
+    test('returns [] without hitting the network when unauthenticated',
+        () async {
+      final unauthContainer = _buildContainer(
+        apiClient,
+        authStatus: AuthStatus.unauthenticated,
+      );
+      addTearDown(unauthContainer.dispose);
+
+      await unauthContainer.read(authStateProvider.future);
+      final recipes =
+          await unauthContainer.read(recipeListProvider.future);
+
+      expect(recipes, isEmpty);
+      verifyNever(() => apiClient.get(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          ));
+    });
+
+    test('dedupes recipes by id when setting state', () async {
+      stubList({
+        'recipes': [
+          testRecipeJson(id: 'r-1', title: 'Pizza'),
+          testRecipeJson(id: 'r-1', title: 'Pizza (dup)'),
+          testRecipeJson(id: 'r-2', title: 'Pasta'),
+        ],
+      });
 
       await primeAuth();
       final recipes = await container.read(recipeListProvider.future);
@@ -231,6 +140,48 @@ void main() {
       expect(recipes.map((r) => r.id), ['r-1', 'r-2']);
       // First occurrence wins
       expect(recipes[0].title, 'Pizza');
+    });
+
+    test('search sends q while refresh omits it', () async {
+      stubList({'recipes': <dynamic>[]});
+
+      await primeAuth();
+      await container.read(recipeListProvider.future);
+      final notifier = container.read(recipeListProvider.notifier);
+      clearInteractions(apiClient);
+
+      await notifier.search('pizza');
+      var params = verify(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: captureAny(named: 'queryParameters'),
+          )).captured.single as Map<String, dynamic>;
+      expect(params['q'], 'pizza');
+      expect(params['page'], 1);
+      expect(params['page_size'], 20);
+
+      await notifier.refresh();
+      params = verify(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: captureAny(named: 'queryParameters'),
+          )).captured.single as Map<String, dynamic>;
+      expect(params.containsKey('q'), isFalse);
+    });
+
+    test('search with an empty query omits q (matches refresh semantics)',
+        () async {
+      stubList({'recipes': <dynamic>[]});
+
+      await primeAuth();
+      await container.read(recipeListProvider.future);
+      clearInteractions(apiClient);
+
+      await container.read(recipeListProvider.notifier).search('');
+
+      final params = verify(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: captureAny(named: 'queryParameters'),
+          )).captured.single as Map<String, dynamic>;
+      expect(params.containsKey('q'), isFalse);
     });
 
     test('ignores stale out-of-order search responses', () async {
@@ -308,6 +259,136 @@ void main() {
 
       expect(
           container.read(recipeListProvider).value!.single.title, 'Fresh');
+    });
+  });
+
+  group('RecipeListNotifier.deleteRecipe (real notifier)', () {
+    late MockApiClient apiClient;
+    late ProviderContainer container;
+
+    setUp(() {
+      apiClient = MockApiClient();
+      container = _buildContainer(apiClient);
+      addTearDown(container.dispose);
+
+      when(() => apiClient.get(
+            ApiEndpoints.recipes,
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'recipes': [
+              testRecipeJson(id: 'r-1', title: 'Keep'),
+              testRecipeJson(id: 'r-2', title: 'Delete Me'),
+              testRecipeJson(id: 'r-3', title: 'Also Keep'),
+            ],
+          }));
+    });
+
+    Future<RecipeListNotifier> primedNotifier() async {
+      await container.read(authStateProvider.future);
+      await container.read(recipeListProvider.future);
+      return container.read(recipeListProvider.notifier);
+    }
+
+    test('optimistically removes the recipe and DELETEs it on the server',
+        () async {
+      when(() => apiClient.delete(ApiEndpoints.recipeById('r-2')))
+          .thenAnswer((_) async => fakeResponse<dynamic>(null, statusCode: 204));
+
+      final notifier = await primedNotifier();
+      await notifier.deleteRecipe('r-2');
+
+      final recipes = container.read(recipeListProvider).value!;
+      expect(recipes.map((r) => r.id), ['r-1', 'r-3']);
+      expect(recipes.map((r) => r.title), ['Keep', 'Also Keep']);
+      verify(() => apiClient.delete('/v1/recipes/r-2')).called(1);
+    });
+
+    test('reverts the optimistic removal and rethrows when the server '
+        'call fails', () async {
+      when(() => apiClient.delete(ApiEndpoints.recipeById('r-2'))).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/v1/recipes/r-2'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
+
+      final notifier = await primedNotifier();
+      await expectLater(
+        notifier.deleteRecipe('r-2'),
+        throwsA(isA<DioException>()),
+      );
+
+      final recipes = container.read(recipeListProvider).value!;
+      expect(recipes.map((r) => r.id), ['r-1', 'r-2', 'r-3']);
+    });
+
+    test('deleting a non-existent id leaves the list unchanged', () async {
+      when(() => apiClient.delete(ApiEndpoints.recipeById('r-999')))
+          .thenAnswer((_) async => fakeResponse<dynamic>(null, statusCode: 204));
+
+      final notifier = await primedNotifier();
+      await notifier.deleteRecipe('r-999');
+
+      expect(container.read(recipeListProvider).value, hasLength(3));
+    });
+  });
+
+  group('recipeDetailProvider', () {
+    test('fetches GET /v1/recipes/:id and unwraps the {recipe: {...}} '
+        'envelope', () async {
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.recipeById('r-detail')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'recipe': testRecipeJson(
+                  id: 'r-detail',
+                  title: 'Detailed Recipe',
+                  sourceUrl: 'https://example.com/recipe',
+                ),
+              }));
+
+      final container = createTestContainer(overrides: [
+        apiClientProvider.overrideWithValue(apiClient),
+      ]);
+      addTearDown(container.dispose);
+      // Family-provider gotcha: attach a listener before awaiting .future.
+      container.listen(recipeDetailProvider('r-detail'), (_, __) {});
+
+      final recipe =
+          await container.read(recipeDetailProvider('r-detail').future);
+
+      expect(recipe.id, 'r-detail');
+      expect(recipe.title, 'Detailed Recipe');
+      expect(recipe.sourceUrl, 'https://example.com/recipe');
+      verify(() => apiClient.get('/v1/recipes/r-detail')).called(1);
+    });
+  });
+
+  group('similarRecipesProvider', () {
+    test('parses {similar_recipes: [...]} and tolerates a missing key',
+        () async {
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.recipeSimilar('r-1')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'similar_recipes': [
+                  testRecipeJson(id: 'r-2', title: 'Cousin Pizza'),
+                ],
+              }));
+      when(() => apiClient.get(ApiEndpoints.recipeSimilar('r-9')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({'nope': true}));
+
+      final container = createTestContainer(overrides: [
+        apiClientProvider.overrideWithValue(apiClient),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(similarRecipesProvider('r-1'), (_, __) {});
+      container.listen(similarRecipesProvider('r-9'), (_, __) {});
+
+      final similar =
+          await container.read(similarRecipesProvider('r-1').future);
+      expect(similar.single.title, 'Cousin Pizza');
+
+      final none = await container.read(similarRecipesProvider('r-9').future);
+      expect(none, isEmpty);
     });
   });
 
@@ -584,7 +665,7 @@ void main() {
   });
 
   group('RecipeSearchResult', () {
-    test('fromJson parses paginated result', () {
+    test('fromJson parses paginated result (total/page/pageSize)', () {
       final json = <String, dynamic>{
         'recipes': [
           testRecipeJson(id: 'r-1'),
