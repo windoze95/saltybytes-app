@@ -7,56 +7,55 @@ part of 'family.dart';
 // **************************************************************************
 
 _$FamilyImpl _$$FamilyImplFromJson(Map<String, dynamic> json) => _$FamilyImpl(
-      id: json['id'] as String,
+      id: _idToString(json['id']),
       name: json['name'] as String,
-      ownerId: json['ownerId'] as String,
-      description: json['description'] as String?,
+      ownerId: json['owner_id'] == null ? '' : _idToString(json['owner_id']),
       members: (json['members'] as List<dynamic>?)
               ?.map((e) => FamilyMember.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      createdAt: json['createdAt'] == null
+      createdAt: json['created_at'] == null
           ? null
-          : DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] == null
+          : DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] == null
           ? null
-          : DateTime.parse(json['updatedAt'] as String),
+          : DateTime.parse(json['updated_at'] as String),
     );
 
 Map<String, dynamic> _$$FamilyImplToJson(_$FamilyImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
-      'ownerId': instance.ownerId,
-      'description': instance.description,
+      'owner_id': instance.ownerId,
       'members': instance.members,
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
+      'created_at': instance.createdAt?.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
     };
 
 _$FamilyMemberImpl _$$FamilyMemberImplFromJson(Map<String, dynamic> json) =>
     _$FamilyMemberImpl(
-      id: json['id'] as String,
+      id: _idToString(json['id']),
       name: json['name'] as String,
-      userId: json['userId'] as String?,
-      role: json['role'] as String? ?? 'member',
-      dietaryProfile: json['dietaryProfile'] == null
+      familyId: _idToStringOrNull(json['family_id']),
+      userId: _idToStringOrNull(json['user_id']),
+      relationship: json['relationship'] as String? ?? '',
+      dietaryProfile: json['dietary_profile'] == null
           ? const DietaryProfile()
-          : DietaryProfile.fromJson(
-              json['dietaryProfile'] as Map<String, dynamic>),
-      createdAt: json['createdAt'] == null
+          : _profileFromJson(json['dietary_profile']),
+      createdAt: json['created_at'] == null
           ? null
-          : DateTime.parse(json['createdAt'] as String),
+          : DateTime.parse(json['created_at'] as String),
     );
 
 Map<String, dynamic> _$$FamilyMemberImplToJson(_$FamilyMemberImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
-      'userId': instance.userId,
-      'role': instance.role,
-      'dietaryProfile': instance.dietaryProfile,
-      'createdAt': instance.createdAt?.toIso8601String(),
+      'family_id': instance.familyId,
+      'user_id': instance.userId,
+      'relationship': instance.relationship,
+      'dietary_profile': instance.dietaryProfile,
+      'created_at': instance.createdAt?.toIso8601String(),
     };
 
 _$DietaryProfileImpl _$$DietaryProfileImplFromJson(Map<String, dynamic> json) =>

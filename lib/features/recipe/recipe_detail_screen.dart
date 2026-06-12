@@ -47,8 +47,9 @@ class _RecipeDetailBody extends ConsumerWidget {
     final allergenAsync = ref.watch(allergenAnalysisProvider(recipe.id));
 
     final hasAllergenWarning = allergenAsync.whenOrNull(
-      data: (analysis) => !analysis.isSafeForAll,
-    ) ?? false;
+          data: (analysis) => analysis.hasUnsafeMembers,
+        ) ??
+        false;
 
     return Scaffold(
       body: CustomScrollView(

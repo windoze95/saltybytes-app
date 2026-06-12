@@ -128,61 +128,169 @@ Map<String, dynamic> testUserJson({
       'updatedAt': updatedAt ?? '2025-02-20T10:30:00.000Z',
     };
 
-Map<String, dynamic> testAllergenInfoJson({
-  String allergen = 'gluten',
-  String severity = 'high',
-  String source = 'wheat flour',
-  String? ingredient = 'all-purpose flour',
-  String? notes = 'Contains wheat gluten',
+Map<String, dynamic> testIngredientAnalysisJson({
+  String ingredientName = 'all-purpose flour',
+  List<String>? commonAllergens,
+  List<String>? possibleAllergens,
+  List<String>? subIngredients,
+  bool seedOilRisk = false,
+  double confidence = 0.95,
 }) =>
     {
-      'allergen': allergen,
-      'severity': severity,
-      'source': source,
-      'ingredient': ingredient,
-      'notes': notes,
+      'ingredient_name': ingredientName,
+      'common_allergens': commonAllergens ?? ['gluten', 'wheat'],
+      'possible_allergens': possibleAllergens ?? [],
+      'sub_ingredients': subIngredients ?? [],
+      'seed_oil_risk': seedOilRisk,
+      'confidence': confidence,
     };
 
 Map<String, dynamic> testFamilySafetyCheckJson({
-  String memberId = 'member-001',
+  dynamic memberId = 1,
   String memberName = 'Junior',
-  bool isSafe = false,
-  List<String>? conflicts,
+  String status = 'unsafe',
   List<String>? warnings,
 }) =>
     {
-      'memberId': memberId,
-      'memberName': memberName,
-      'isSafe': isSafe,
-      'conflicts': conflicts ?? ['Contains peanuts - Junior has peanut allergy'],
-      'warnings': warnings ?? ['May contain traces of tree nuts'],
+      'member_id': memberId,
+      'member_name': memberName,
+      'status': status,
+      'warnings': warnings ?? ['Contains peanuts - Junior has peanut allergy'],
     };
 
 Map<String, dynamic> testAllergenAnalysisJson({
-  String recipeId = 'recipe-abc-123',
-  List<Map<String, dynamic>>? detectedAllergens,
-  List<Map<String, dynamic>>? possibleAllergens,
-  List<Map<String, dynamic>>? familySafetyChecks,
-  bool isSafeForAll = false,
-  String? analyzedAt,
+  dynamic id = 42,
+  dynamic recipeId = 7,
+  List<Map<String, dynamic>>? ingredientAnalyses,
+  bool containsNuts = false,
+  bool containsDairy = true,
+  bool containsGluten = true,
+  bool containsSoy = false,
+  bool containsSeedOils = false,
+  bool containsShellfish = false,
+  bool containsEggs = false,
+  List<dynamic>? safeForProfiles,
+  List<dynamic>? unsafeForProfiles,
+  double confidence = 0.92,
+  bool requiresReview = false,
+  bool isPremium = false,
+  String promptVersion = 'v1',
+  String disclaimer =
+      'AI-generated analysis. Does not replace medical advice.',
+  String? updatedAt,
 }) =>
     {
-      'recipeId': recipeId,
-      'detectedAllergens': detectedAllergens ??
+      'id': id,
+      'created_at': '2025-02-20T10:30:00.000Z',
+      'updated_at': updatedAt ?? '2025-02-21T14:45:00.000Z',
+      'recipe_id': recipeId,
+      'node_id': null,
+      'ingredient_analyses': ingredientAnalyses ??
           [
-            testAllergenInfoJson(allergen: 'gluten', severity: 'high', source: 'wheat flour'),
-            testAllergenInfoJson(allergen: 'dairy', severity: 'high', source: 'mozzarella cheese', ingredient: 'mozzarella'),
+            testIngredientAnalysisJson(
+              ingredientName: 'all-purpose flour',
+              commonAllergens: ['gluten', 'wheat'],
+            ),
+            testIngredientAnalysisJson(
+              ingredientName: 'mozzarella',
+              commonAllergens: ['dairy'],
+              possibleAllergens: ['lactose'],
+              confidence: 0.9,
+            ),
           ],
-      'possibleAllergens': possibleAllergens ??
+      'contains_nuts': containsNuts,
+      'contains_dairy': containsDairy,
+      'contains_gluten': containsGluten,
+      'contains_soy': containsSoy,
+      'contains_seed_oils': containsSeedOils,
+      'contains_shellfish': containsShellfish,
+      'contains_eggs': containsEggs,
+      'safe_for_profiles': safeForProfiles ?? [2],
+      'unsafe_for_profiles': unsafeForProfiles ?? [1],
+      'confidence': confidence,
+      'requires_review': requiresReview,
+      'is_premium': isPremium,
+      'prompt_version': promptVersion,
+      'disclaimer': disclaimer,
+    };
+
+Map<String, dynamic> testAllergyJson({
+  String name = 'peanuts',
+  String severity = 'severe',
+  List<String>? subForms,
+  String notes = '',
+}) =>
+    {
+      'name': name,
+      'severity': severity,
+      'sub_forms': subForms ?? [],
+      'notes': notes,
+    };
+
+Map<String, dynamic> testDietaryProfileJson({
+  dynamic id = 1,
+  dynamic memberId = 1,
+  List<Map<String, dynamic>>? allergies,
+  List<String>? intolerances,
+  List<String>? restrictions,
+  List<String>? preferences,
+  String medicalNotes = '',
+}) =>
+    {
+      'id': id,
+      'created_at': '2025-02-20T10:30:00.000Z',
+      'updated_at': '2025-02-21T14:45:00.000Z',
+      'member_id': memberId,
+      'allergies': allergies ?? [testAllergyJson()],
+      'intolerances': intolerances ?? ['lactose'],
+      'restrictions': restrictions ?? ['vegetarian'],
+      'preferences': preferences ?? ['no cilantro'],
+      'medical_notes': medicalNotes,
+    };
+
+Map<String, dynamic> testFamilyMemberJson({
+  dynamic id = 1,
+  dynamic familyId = 1,
+  String name = 'Junior',
+  String relationship = 'son',
+  dynamic userId,
+  Map<String, dynamic>? dietaryProfile,
+  bool includeProfile = true,
+}) =>
+    {
+      'id': id,
+      'created_at': '2025-02-20T10:30:00.000Z',
+      'updated_at': '2025-02-21T14:45:00.000Z',
+      'family_id': familyId,
+      'name': name,
+      'relationship': relationship,
+      'user_id': userId,
+      'dietary_profile':
+          includeProfile ? (dietaryProfile ?? testDietaryProfileJson()) : null,
+    };
+
+Map<String, dynamic> testFamilyJson({
+  dynamic id = 1,
+  String name = 'The Smiths',
+  dynamic ownerId = 99,
+  List<Map<String, dynamic>>? members,
+}) =>
+    {
+      'id': id,
+      'created_at': '2025-02-20T10:30:00.000Z',
+      'updated_at': '2025-02-21T14:45:00.000Z',
+      'name': name,
+      'owner_id': ownerId,
+      'members': members ??
           [
-            testAllergenInfoJson(allergen: 'soy', severity: 'low', source: 'soy lecithin in dough', ingredient: 'pizza dough', notes: 'May be present in commercial dough'),
+            testFamilyMemberJson(id: 1, name: 'Junior', relationship: 'son'),
+            testFamilyMemberJson(
+              id: 2,
+              name: 'Sarah',
+              relationship: 'spouse',
+              includeProfile: false,
+            ),
           ],
-      'familySafetyChecks': familySafetyChecks ??
-          [
-            testFamilySafetyCheckJson(),
-          ],
-      'isSafeForAll': isSafeForAll,
-      'analyzedAt': analyzedAt ?? '2025-02-21T14:45:00.000Z',
     };
 
 Map<String, dynamic> testWebSearchResultJson({

@@ -2,141 +2,184 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:saltybytes_app/core/providers/allergen_provider.dart';
 import 'package:saltybytes_app/models/allergen.dart';
 
 import '../helpers/fixtures.dart';
 
 void main() {
   group('AllergenAnalysis', () {
-    test('fromJson with full data', () {
+    test('fromJson with full snake_case backend payload', () {
       final json = testAllergenAnalysisJson();
       final analysis = AllergenAnalysis.fromJson(json);
 
-      expect(analysis.recipeId, 'recipe-abc-123');
-      expect(analysis.detectedAllergens, hasLength(2));
-      expect(analysis.possibleAllergens, hasLength(1));
-      expect(analysis.familySafetyChecks, hasLength(1));
-      expect(analysis.isSafeForAll, false);
+      expect(analysis.recipeId, '7');
+      expect(analysis.ingredientAnalyses, hasLength(2));
+      expect(analysis.containsDairy, true);
+      expect(analysis.containsGluten, true);
+      expect(analysis.containsNuts, false);
+      expect(analysis.safeForProfiles, ['2']);
+      expect(analysis.unsafeForProfiles, ['1']);
+      expect(analysis.confidence, 0.92);
+      expect(analysis.requiresReview, false);
+      expect(analysis.disclaimer, contains('medical advice'));
       expect(analysis.analyzedAt, isA<DateTime>());
     });
 
-    test('fromJson with empty lists', () {
-      final json = <String, dynamic>{
-        'recipeId': 'r-safe',
-        'detectedAllergens': <dynamic>[],
-        'possibleAllergens': <dynamic>[],
-        'familySafetyChecks': <dynamic>[],
-        'isSafeForAll': true,
-      };
-      final analysis = AllergenAnalysis.fromJson(json);
+    test('normalizes int and String IDs', () {
+      final fromInt = AllergenAnalysis.fromJson(
+        testAllergenAnalysisJson(recipeId: 7, unsafeForProfiles: [1, 2]),
+      );
+      final fromString = AllergenAnalysis.fromJson(
+        testAllergenAnalysisJson(recipeId: '7', unsafeForProfiles: ['1', '2']),
+      );
 
-      expect(analysis.recipeId, 'r-safe');
+      expect(fromInt.recipeId, fromString.recipeId);
+      expect(fromInt.unsafeForProfiles, fromString.unsafeForProfiles);
+    });
+
+    test('detectedAllergens derives labels from contains_* flags', () {
+      final analysis = AllergenAnalysis.fromJson(testAllergenAnalysisJson(
+        containsNuts: true,
+        containsDairy: true,
+        containsGluten: false,
+        containsSeedOils: true,
+      ));
+
+      expect(analysis.detectedAllergens, ['Nuts', 'Dairy', 'Seed Oils']);
+      expect(analysis.hasDetectedAllergens, true);
+    });
+
+    test('hasUnsafeMembers reflects unsafe_for_profiles', () {
+      final unsafe = AllergenAnalysis.fromJson(
+        testAllergenAnalysisJson(unsafeForProfiles: [1]),
+      );
+      final safe = AllergenAnalysis.fromJson(
+        testAllergenAnalysisJson(unsafeForProfiles: []),
+      );
+
+      expect(unsafe.hasUnsafeMembers, true);
+      expect(safe.hasUnsafeMembers, false);
+    });
+
+    test('fromJson tolerates null jsonb lists and missing keys', () {
+      final analysis = AllergenAnalysis.fromJson(<String, dynamic>{
+        'recipe_id': 3,
+        'ingredient_analyses': null,
+        'safe_for_profiles': null,
+        'unsafe_for_profiles': null,
+      });
+
+      expect(analysis.recipeId, '3');
+      expect(analysis.ingredientAnalyses, isEmpty);
+      expect(analysis.safeForProfiles, isEmpty);
+      expect(analysis.unsafeForProfiles, isEmpty);
       expect(analysis.detectedAllergens, isEmpty);
-      expect(analysis.possibleAllergens, isEmpty);
-      expect(analysis.familySafetyChecks, isEmpty);
-      expect(analysis.isSafeForAll, true);
       expect(analysis.analyzedAt, isNull);
     });
 
-    test('fromJson with null lists defaults to empty', () {
-      final json = <String, dynamic>{
-        'recipeId': 'r-1',
+    test('parseAnalysisEnvelope unwraps {"analysis": ...}', () {
+      final envelope = <String, dynamic>{
+        'analysis': testAllergenAnalysisJson(recipeId: 11),
       };
-      final analysis = AllergenAnalysis.fromJson(json);
+      final analysis = parseAnalysisEnvelope(envelope);
 
-      expect(analysis.detectedAllergens, isEmpty);
-      expect(analysis.possibleAllergens, isEmpty);
-      expect(analysis.familySafetyChecks, isEmpty);
-      expect(analysis.isSafeForAll, false);
+      expect(analysis.recipeId, '11');
+      expect(analysis.containsDairy, true);
+    });
+
+    test('parseAnalysisEnvelope falls back to bare object', () {
+      final analysis =
+          parseAnalysisEnvelope(testAllergenAnalysisJson(recipeId: 12));
+
+      expect(analysis.recipeId, '12');
     });
   });
 
-  group('AllergenInfo', () {
+  group('IngredientAnalysis', () {
     test('fromJson with all fields', () {
-      final json = testAllergenInfoJson(
-        allergen: 'dairy',
-        severity: 'moderate',
-        source: 'cream cheese',
-        ingredient: 'cream cheese frosting',
-        notes: 'Contains lactose',
+      final json = testIngredientAnalysisJson(
+        ingredientName: 'soy sauce',
+        commonAllergens: ['soy', 'gluten'],
+        possibleAllergens: ['wheat'],
+        subIngredients: ['soybeans', 'wheat'],
+        seedOilRisk: true,
+        confidence: 0.85,
       );
-      final info = AllergenInfo.fromJson(json);
+      final ia = IngredientAnalysis.fromJson(json);
 
-      expect(info.allergen, 'dairy');
-      expect(info.severity, 'moderate');
-      expect(info.source, 'cream cheese');
-      expect(info.ingredient, 'cream cheese frosting');
-      expect(info.notes, 'Contains lactose');
+      expect(ia.ingredientName, 'soy sauce');
+      expect(ia.commonAllergens, ['soy', 'gluten']);
+      expect(ia.possibleAllergens, ['wheat']);
+      expect(ia.subIngredients, ['soybeans', 'wheat']);
+      expect(ia.seedOilRisk, true);
+      expect(ia.confidence, 0.85);
     });
 
-    test('fromJson with only required fields', () {
-      final json = <String, dynamic>{
-        'allergen': 'shellfish',
-        'severity': 'high',
-        'source': 'shrimp',
-      };
-      final info = AllergenInfo.fromJson(json);
+    test('fromJson with null lists defaults to empty', () {
+      final ia = IngredientAnalysis.fromJson(<String, dynamic>{
+        'ingredient_name': 'salt',
+        'common_allergens': null,
+        'possible_allergens': null,
+        'sub_ingredients': null,
+      });
 
-      expect(info.allergen, 'shellfish');
-      expect(info.ingredient, isNull);
-      expect(info.notes, isNull);
+      expect(ia.ingredientName, 'salt');
+      expect(ia.commonAllergens, isEmpty);
+      expect(ia.possibleAllergens, isEmpty);
+      expect(ia.subIngredients, isEmpty);
+      expect(ia.seedOilRisk, false);
     });
 
     test('round-trip toJson/fromJson', () {
-      final original = AllergenInfo.fromJson(testAllergenInfoJson());
+      final original =
+          IngredientAnalysis.fromJson(testIngredientAnalysisJson());
       final jsonString = jsonEncode(original.toJson());
-      final roundTripped = AllergenInfo.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
+      final roundTripped = IngredientAnalysis.fromJson(
+          jsonDecode(jsonString) as Map<String, dynamic>);
 
-      expect(roundTripped.allergen, original.allergen);
-      expect(roundTripped.severity, original.severity);
-      expect(roundTripped.source, original.source);
-      expect(roundTripped.ingredient, original.ingredient);
-      expect(roundTripped.notes, original.notes);
+      expect(roundTripped, original);
     });
   });
 
   group('FamilySafetyCheck', () {
-    test('fromJson with conflicts and warnings', () {
+    test('fromJson with snake_case keys', () {
       final json = testFamilySafetyCheckJson(
-        memberId: 'member-002',
+        memberId: 2,
         memberName: 'Sarah',
-        isSafe: false,
-        conflicts: ['Contains dairy - Sarah is lactose intolerant'],
-        warnings: ['Cross-contamination risk'],
+        status: 'unsafe',
+        warnings: ['Contains dairy - Sarah is lactose intolerant'],
       );
       final check = FamilySafetyCheck.fromJson(json);
 
-      expect(check.memberId, 'member-002');
+      expect(check.memberId, '2');
       expect(check.memberName, 'Sarah');
+      expect(check.status, 'unsafe');
       expect(check.isSafe, false);
-      expect(check.conflicts, hasLength(1));
-      expect(check.conflicts[0], contains('dairy'));
       expect(check.warnings, hasLength(1));
+      expect(check.warnings[0], contains('dairy'));
     });
 
-    test('fromJson with empty conflicts defaults to empty lists', () {
-      final json = <String, dynamic>{
-        'memberId': 'member-003',
-        'memberName': 'Alex',
-        'isSafe': true,
-      };
-      final check = FamilySafetyCheck.fromJson(json);
+    test('isSafe is true only for safe status', () {
+      expect(
+        FamilySafetyCheck.fromJson(testFamilySafetyCheckJson(status: 'safe'))
+            .isSafe,
+        true,
+      );
+      expect(
+        FamilySafetyCheck.fromJson(testFamilySafetyCheckJson(status: 'caution'))
+            .isSafe,
+        false,
+      );
+    });
 
-      expect(check.isSafe, true);
-      expect(check.conflicts, isEmpty);
+    test('fromJson with missing keys uses defaults', () {
+      final check = FamilySafetyCheck.fromJson(<String, dynamic>{});
+
+      expect(check.memberId, '');
+      expect(check.memberName, '');
+      expect(check.status, 'safe');
       expect(check.warnings, isEmpty);
-    });
-
-    test('round-trip toJson/fromJson', () {
-      final original = FamilySafetyCheck.fromJson(testFamilySafetyCheckJson());
-      final jsonString = jsonEncode(original.toJson());
-      final roundTripped = FamilySafetyCheck.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
-
-      expect(roundTripped.memberId, original.memberId);
-      expect(roundTripped.memberName, original.memberName);
-      expect(roundTripped.isSafe, original.isSafe);
-      expect(roundTripped.conflicts, original.conflicts);
-      expect(roundTripped.warnings, original.warnings);
     });
   });
 }

@@ -49,9 +49,8 @@ void main() {
           testFamilySafetyCheckJson(
             memberId: 'm-1',
             memberName: 'Kid',
-            isSafe: false,
-            conflicts: ['Contains nuts'],
-            warnings: [],
+            status: 'unsafe',
+            warnings: ['Contains nuts'],
           ),
         ],
       );
@@ -60,7 +59,7 @@ void main() {
       expect(result.familySafetyChecks, hasLength(1));
       expect(result.familySafetyChecks[0].memberName, 'Kid');
       expect(result.familySafetyChecks[0].isSafe, false);
-      expect(result.familySafetyChecks[0].conflicts, ['Contains nuts']);
+      expect(result.familySafetyChecks[0].warnings, ['Contains nuts']);
     });
 
     test('fromJson parses rating as double from int', () {

@@ -97,7 +97,8 @@ class _DietaryInterviewScreenState
           'Dietary Interview${member != null ? ' - ${member.name}' : ''}',
         ),
         actions: [
-          if (interviewState.status == InterviewStatus.complete)
+          if (interviewState.status == InterviewStatus.complete &&
+              interviewState.extractedProfile != null)
             TextButton.icon(
               onPressed: _saveProfile,
               icon: const Icon(Icons.save),
@@ -157,7 +158,8 @@ class _DietaryInterviewScreenState
             ),
 
           // Completion banner
-          if (interviewState.status == InterviewStatus.complete)
+          if (interviewState.status == InterviewStatus.complete &&
+              interviewState.extractedProfile != null)
             Container(
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

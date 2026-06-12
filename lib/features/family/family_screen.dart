@@ -11,8 +11,8 @@ class FamilyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final familyAsync = ref.watch(familyProvider);
+    final hasFamily = familyAsync.valueOrNull != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -25,36 +25,54 @@ class FamilyScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(familyProvider),
         ),
         data: (family) {
-          if (family == null || family.members.isEmpty) {
+          if (family == null) {
+            return const _CreateFamilyState();
+          }
+          if (family.members.isEmpty) {
             return const _EmptyState();
           }
           return _MemberList(members: family.members);
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddMemberDialog(context, ref),
-        tooltip: 'Add Member',
-        child: const Icon(Icons.person_add),
-      ),
+      floatingActionButton: hasFamily
+          ? FloatingActionButton(
+              onPressed: () => _showAddMemberDialog(context, ref),
+              tooltip: 'Add Member',
+              child: const Icon(Icons.person_add),
+            )
+          : null,
     );
   }
 
   void _showAddMemberDialog(BuildContext context, WidgetRef ref) {
     final nameController = TextEditingController();
-    final theme = Theme.of(context);
+    final relationshipController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Add Family Member'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Name',
-            hintText: 'Enter member name',
-          ),
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                hintText: 'Enter member name',
+              ),
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: relationshipController,
+              decoration: const InputDecoration(
+                labelText: 'Relationship (optional)',
+                hintText: 'e.g. spouse, daughter',
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -65,9 +83,13 @@ class FamilyScreen extends ConsumerWidget {
             onPressed: () async {
               final name = nameController.text.trim();
               if (name.isEmpty) return;
+              final relationship = relationshipController.text.trim();
               Navigator.pop(ctx);
               try {
-                await ref.read(familyProvider.notifier).addMember(name: name);
+                await ref.read(familyProvider.notifier).addMember(
+                      name: name,
+                      relationship: relationship,
+                    );
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -79,6 +101,110 @@ class FamilyScreen extends ConsumerWidget {
             child: const Text('Add'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown when the user has no family yet -- lets them create one so the
+/// member-add flow becomes available.
+class _CreateFamilyState extends ConsumerStatefulWidget {
+  const _CreateFamilyState();
+
+  @override
+  ConsumerState<_CreateFamilyState> createState() => _CreateFamilyStateState();
+}
+
+class _CreateFamilyStateState extends ConsumerState<_CreateFamilyState> {
+  final _nameController = TextEditingController();
+  bool _isCreating = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _createFamily() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty || _isCreating) return;
+
+    setState(() => _isCreating = true);
+    try {
+      await ref.read(familyProvider.notifier).createFamily(name);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create family: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCreating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.family_restroom,
+              size: 80,
+              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Create your family',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Set up a family to track dietary needs and get personalized '
+              'allergen warnings for everyone you cook for.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 32),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Family name',
+                hintText: 'e.g. The Smiths',
+              ),
+              textCapitalization: TextCapitalization.words,
+              onSubmitted: (_) => _createFamily(),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _isCreating ? null : _createFamily,
+                icon: _isCreating
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.add),
+                label: Text(_isCreating ? 'Creating...' : 'Create Family'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -154,7 +280,6 @@ class _MemberCard extends StatelessWidget {
     final theme = Theme.of(context);
     final profile = member.dietaryProfile;
     final allergyCount = profile.allergies.length;
-    final restrictionCount = profile.restrictions.length;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -188,11 +313,13 @@ class _MemberCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      member.role,
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    if (member.relationship.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        member.relationship,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
                     if (profile.allergies.isNotEmpty ||
                         profile.restrictions.isNotEmpty) ...[
                       const SizedBox(height: 8),
@@ -202,7 +329,8 @@ class _MemberCard extends StatelessWidget {
                         children: [
                           if (allergyCount > 0)
                             _Badge(
-                              label: '$allergyCount allergi${allergyCount == 1 ? 'y' : 'es'}',
+                              label:
+                                  '$allergyCount ${allergyCount == 1 ? 'allergy' : 'allergies'}',
                               color: theme.colorScheme.error,
                             ),
                           ...profile.restrictions.take(3).map(

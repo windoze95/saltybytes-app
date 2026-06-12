@@ -20,14 +20,38 @@ AllergenAnalysis _$AllergenAnalysisFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$AllergenAnalysis {
+  @JsonKey(name: 'recipe_id', fromJson: _idToString)
   String get recipeId => throw _privateConstructorUsedError;
-  List<AllergenInfo> get detectedAllergens =>
+  @JsonKey(name: 'ingredient_analyses')
+  List<IngredientAnalysis> get ingredientAnalyses =>
       throw _privateConstructorUsedError;
-  List<AllergenInfo> get possibleAllergens =>
-      throw _privateConstructorUsedError;
-  List<FamilySafetyCheck> get familySafetyChecks =>
-      throw _privateConstructorUsedError;
-  bool get isSafeForAll => throw _privateConstructorUsedError;
+  @JsonKey(name: 'contains_nuts')
+  bool get containsNuts => throw _privateConstructorUsedError;
+  @JsonKey(name: 'contains_dairy')
+  bool get containsDairy => throw _privateConstructorUsedError;
+  @JsonKey(name: 'contains_gluten')
+  bool get containsGluten => throw _privateConstructorUsedError;
+  @JsonKey(name: 'contains_soy')
+  bool get containsSoy => throw _privateConstructorUsedError;
+  @JsonKey(name: 'contains_seed_oils')
+  bool get containsSeedOils => throw _privateConstructorUsedError;
+  @JsonKey(name: 'contains_shellfish')
+  bool get containsShellfish => throw _privateConstructorUsedError;
+  @JsonKey(name: 'contains_eggs')
+  bool get containsEggs => throw _privateConstructorUsedError;
+  @JsonKey(name: 'safe_for_profiles', fromJson: _idListToStrings)
+  List<String> get safeForProfiles => throw _privateConstructorUsedError;
+  @JsonKey(name: 'unsafe_for_profiles', fromJson: _idListToStrings)
+  List<String> get unsafeForProfiles => throw _privateConstructorUsedError;
+  double get confidence => throw _privateConstructorUsedError;
+  @JsonKey(name: 'requires_review')
+  bool get requiresReview => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_premium')
+  bool get isPremium => throw _privateConstructorUsedError;
+  @JsonKey(name: 'prompt_version')
+  String get promptVersion => throw _privateConstructorUsedError;
+  String get disclaimer => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
   DateTime? get analyzedAt => throw _privateConstructorUsedError;
 
   /// Serializes this AllergenAnalysis to a JSON map.
@@ -47,12 +71,26 @@ abstract class $AllergenAnalysisCopyWith<$Res> {
       _$AllergenAnalysisCopyWithImpl<$Res, AllergenAnalysis>;
   @useResult
   $Res call(
-      {String recipeId,
-      List<AllergenInfo> detectedAllergens,
-      List<AllergenInfo> possibleAllergens,
-      List<FamilySafetyCheck> familySafetyChecks,
-      bool isSafeForAll,
-      DateTime? analyzedAt});
+      {@JsonKey(name: 'recipe_id', fromJson: _idToString) String recipeId,
+      @JsonKey(name: 'ingredient_analyses')
+      List<IngredientAnalysis> ingredientAnalyses,
+      @JsonKey(name: 'contains_nuts') bool containsNuts,
+      @JsonKey(name: 'contains_dairy') bool containsDairy,
+      @JsonKey(name: 'contains_gluten') bool containsGluten,
+      @JsonKey(name: 'contains_soy') bool containsSoy,
+      @JsonKey(name: 'contains_seed_oils') bool containsSeedOils,
+      @JsonKey(name: 'contains_shellfish') bool containsShellfish,
+      @JsonKey(name: 'contains_eggs') bool containsEggs,
+      @JsonKey(name: 'safe_for_profiles', fromJson: _idListToStrings)
+      List<String> safeForProfiles,
+      @JsonKey(name: 'unsafe_for_profiles', fromJson: _idListToStrings)
+      List<String> unsafeForProfiles,
+      double confidence,
+      @JsonKey(name: 'requires_review') bool requiresReview,
+      @JsonKey(name: 'is_premium') bool isPremium,
+      @JsonKey(name: 'prompt_version') String promptVersion,
+      String disclaimer,
+      @JsonKey(name: 'updated_at') DateTime? analyzedAt});
 }
 
 /// @nodoc
@@ -71,10 +109,21 @@ class _$AllergenAnalysisCopyWithImpl<$Res, $Val extends AllergenAnalysis>
   @override
   $Res call({
     Object? recipeId = null,
-    Object? detectedAllergens = null,
-    Object? possibleAllergens = null,
-    Object? familySafetyChecks = null,
-    Object? isSafeForAll = null,
+    Object? ingredientAnalyses = null,
+    Object? containsNuts = null,
+    Object? containsDairy = null,
+    Object? containsGluten = null,
+    Object? containsSoy = null,
+    Object? containsSeedOils = null,
+    Object? containsShellfish = null,
+    Object? containsEggs = null,
+    Object? safeForProfiles = null,
+    Object? unsafeForProfiles = null,
+    Object? confidence = null,
+    Object? requiresReview = null,
+    Object? isPremium = null,
+    Object? promptVersion = null,
+    Object? disclaimer = null,
     Object? analyzedAt = freezed,
   }) {
     return _then(_value.copyWith(
@@ -82,22 +131,66 @@ class _$AllergenAnalysisCopyWithImpl<$Res, $Val extends AllergenAnalysis>
           ? _value.recipeId
           : recipeId // ignore: cast_nullable_to_non_nullable
               as String,
-      detectedAllergens: null == detectedAllergens
-          ? _value.detectedAllergens
-          : detectedAllergens // ignore: cast_nullable_to_non_nullable
-              as List<AllergenInfo>,
-      possibleAllergens: null == possibleAllergens
-          ? _value.possibleAllergens
-          : possibleAllergens // ignore: cast_nullable_to_non_nullable
-              as List<AllergenInfo>,
-      familySafetyChecks: null == familySafetyChecks
-          ? _value.familySafetyChecks
-          : familySafetyChecks // ignore: cast_nullable_to_non_nullable
-              as List<FamilySafetyCheck>,
-      isSafeForAll: null == isSafeForAll
-          ? _value.isSafeForAll
-          : isSafeForAll // ignore: cast_nullable_to_non_nullable
+      ingredientAnalyses: null == ingredientAnalyses
+          ? _value.ingredientAnalyses
+          : ingredientAnalyses // ignore: cast_nullable_to_non_nullable
+              as List<IngredientAnalysis>,
+      containsNuts: null == containsNuts
+          ? _value.containsNuts
+          : containsNuts // ignore: cast_nullable_to_non_nullable
               as bool,
+      containsDairy: null == containsDairy
+          ? _value.containsDairy
+          : containsDairy // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsGluten: null == containsGluten
+          ? _value.containsGluten
+          : containsGluten // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsSoy: null == containsSoy
+          ? _value.containsSoy
+          : containsSoy // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsSeedOils: null == containsSeedOils
+          ? _value.containsSeedOils
+          : containsSeedOils // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsShellfish: null == containsShellfish
+          ? _value.containsShellfish
+          : containsShellfish // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsEggs: null == containsEggs
+          ? _value.containsEggs
+          : containsEggs // ignore: cast_nullable_to_non_nullable
+              as bool,
+      safeForProfiles: null == safeForProfiles
+          ? _value.safeForProfiles
+          : safeForProfiles // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      unsafeForProfiles: null == unsafeForProfiles
+          ? _value.unsafeForProfiles
+          : unsafeForProfiles // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      confidence: null == confidence
+          ? _value.confidence
+          : confidence // ignore: cast_nullable_to_non_nullable
+              as double,
+      requiresReview: null == requiresReview
+          ? _value.requiresReview
+          : requiresReview // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isPremium: null == isPremium
+          ? _value.isPremium
+          : isPremium // ignore: cast_nullable_to_non_nullable
+              as bool,
+      promptVersion: null == promptVersion
+          ? _value.promptVersion
+          : promptVersion // ignore: cast_nullable_to_non_nullable
+              as String,
+      disclaimer: null == disclaimer
+          ? _value.disclaimer
+          : disclaimer // ignore: cast_nullable_to_non_nullable
+              as String,
       analyzedAt: freezed == analyzedAt
           ? _value.analyzedAt
           : analyzedAt // ignore: cast_nullable_to_non_nullable
@@ -115,12 +208,26 @@ abstract class _$$AllergenAnalysisImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {String recipeId,
-      List<AllergenInfo> detectedAllergens,
-      List<AllergenInfo> possibleAllergens,
-      List<FamilySafetyCheck> familySafetyChecks,
-      bool isSafeForAll,
-      DateTime? analyzedAt});
+      {@JsonKey(name: 'recipe_id', fromJson: _idToString) String recipeId,
+      @JsonKey(name: 'ingredient_analyses')
+      List<IngredientAnalysis> ingredientAnalyses,
+      @JsonKey(name: 'contains_nuts') bool containsNuts,
+      @JsonKey(name: 'contains_dairy') bool containsDairy,
+      @JsonKey(name: 'contains_gluten') bool containsGluten,
+      @JsonKey(name: 'contains_soy') bool containsSoy,
+      @JsonKey(name: 'contains_seed_oils') bool containsSeedOils,
+      @JsonKey(name: 'contains_shellfish') bool containsShellfish,
+      @JsonKey(name: 'contains_eggs') bool containsEggs,
+      @JsonKey(name: 'safe_for_profiles', fromJson: _idListToStrings)
+      List<String> safeForProfiles,
+      @JsonKey(name: 'unsafe_for_profiles', fromJson: _idListToStrings)
+      List<String> unsafeForProfiles,
+      double confidence,
+      @JsonKey(name: 'requires_review') bool requiresReview,
+      @JsonKey(name: 'is_premium') bool isPremium,
+      @JsonKey(name: 'prompt_version') String promptVersion,
+      String disclaimer,
+      @JsonKey(name: 'updated_at') DateTime? analyzedAt});
 }
 
 /// @nodoc
@@ -137,10 +244,21 @@ class __$$AllergenAnalysisImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? recipeId = null,
-    Object? detectedAllergens = null,
-    Object? possibleAllergens = null,
-    Object? familySafetyChecks = null,
-    Object? isSafeForAll = null,
+    Object? ingredientAnalyses = null,
+    Object? containsNuts = null,
+    Object? containsDairy = null,
+    Object? containsGluten = null,
+    Object? containsSoy = null,
+    Object? containsSeedOils = null,
+    Object? containsShellfish = null,
+    Object? containsEggs = null,
+    Object? safeForProfiles = null,
+    Object? unsafeForProfiles = null,
+    Object? confidence = null,
+    Object? requiresReview = null,
+    Object? isPremium = null,
+    Object? promptVersion = null,
+    Object? disclaimer = null,
     Object? analyzedAt = freezed,
   }) {
     return _then(_$AllergenAnalysisImpl(
@@ -148,22 +266,66 @@ class __$$AllergenAnalysisImplCopyWithImpl<$Res>
           ? _value.recipeId
           : recipeId // ignore: cast_nullable_to_non_nullable
               as String,
-      detectedAllergens: null == detectedAllergens
-          ? _value._detectedAllergens
-          : detectedAllergens // ignore: cast_nullable_to_non_nullable
-              as List<AllergenInfo>,
-      possibleAllergens: null == possibleAllergens
-          ? _value._possibleAllergens
-          : possibleAllergens // ignore: cast_nullable_to_non_nullable
-              as List<AllergenInfo>,
-      familySafetyChecks: null == familySafetyChecks
-          ? _value._familySafetyChecks
-          : familySafetyChecks // ignore: cast_nullable_to_non_nullable
-              as List<FamilySafetyCheck>,
-      isSafeForAll: null == isSafeForAll
-          ? _value.isSafeForAll
-          : isSafeForAll // ignore: cast_nullable_to_non_nullable
+      ingredientAnalyses: null == ingredientAnalyses
+          ? _value._ingredientAnalyses
+          : ingredientAnalyses // ignore: cast_nullable_to_non_nullable
+              as List<IngredientAnalysis>,
+      containsNuts: null == containsNuts
+          ? _value.containsNuts
+          : containsNuts // ignore: cast_nullable_to_non_nullable
               as bool,
+      containsDairy: null == containsDairy
+          ? _value.containsDairy
+          : containsDairy // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsGluten: null == containsGluten
+          ? _value.containsGluten
+          : containsGluten // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsSoy: null == containsSoy
+          ? _value.containsSoy
+          : containsSoy // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsSeedOils: null == containsSeedOils
+          ? _value.containsSeedOils
+          : containsSeedOils // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsShellfish: null == containsShellfish
+          ? _value.containsShellfish
+          : containsShellfish // ignore: cast_nullable_to_non_nullable
+              as bool,
+      containsEggs: null == containsEggs
+          ? _value.containsEggs
+          : containsEggs // ignore: cast_nullable_to_non_nullable
+              as bool,
+      safeForProfiles: null == safeForProfiles
+          ? _value._safeForProfiles
+          : safeForProfiles // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      unsafeForProfiles: null == unsafeForProfiles
+          ? _value._unsafeForProfiles
+          : unsafeForProfiles // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      confidence: null == confidence
+          ? _value.confidence
+          : confidence // ignore: cast_nullable_to_non_nullable
+              as double,
+      requiresReview: null == requiresReview
+          ? _value.requiresReview
+          : requiresReview // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isPremium: null == isPremium
+          ? _value.isPremium
+          : isPremium // ignore: cast_nullable_to_non_nullable
+              as bool,
+      promptVersion: null == promptVersion
+          ? _value.promptVersion
+          : promptVersion // ignore: cast_nullable_to_non_nullable
+              as String,
+      disclaimer: null == disclaimer
+          ? _value.disclaimer
+          : disclaimer // ignore: cast_nullable_to_non_nullable
+              as String,
       analyzedAt: freezed == analyzedAt
           ? _value.analyzedAt
           : analyzedAt // ignore: cast_nullable_to_non_nullable
@@ -174,62 +336,111 @@ class __$$AllergenAnalysisImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$AllergenAnalysisImpl implements _AllergenAnalysis {
+class _$AllergenAnalysisImpl extends _AllergenAnalysis {
   const _$AllergenAnalysisImpl(
-      {required this.recipeId,
-      final List<AllergenInfo> detectedAllergens = const [],
-      final List<AllergenInfo> possibleAllergens = const [],
-      final List<FamilySafetyCheck> familySafetyChecks = const [],
-      this.isSafeForAll = false,
-      this.analyzedAt})
-      : _detectedAllergens = detectedAllergens,
-        _possibleAllergens = possibleAllergens,
-        _familySafetyChecks = familySafetyChecks;
+      {@JsonKey(name: 'recipe_id', fromJson: _idToString) this.recipeId = '',
+      @JsonKey(name: 'ingredient_analyses')
+      final List<IngredientAnalysis> ingredientAnalyses = const [],
+      @JsonKey(name: 'contains_nuts') this.containsNuts = false,
+      @JsonKey(name: 'contains_dairy') this.containsDairy = false,
+      @JsonKey(name: 'contains_gluten') this.containsGluten = false,
+      @JsonKey(name: 'contains_soy') this.containsSoy = false,
+      @JsonKey(name: 'contains_seed_oils') this.containsSeedOils = false,
+      @JsonKey(name: 'contains_shellfish') this.containsShellfish = false,
+      @JsonKey(name: 'contains_eggs') this.containsEggs = false,
+      @JsonKey(name: 'safe_for_profiles', fromJson: _idListToStrings)
+      final List<String> safeForProfiles = const [],
+      @JsonKey(name: 'unsafe_for_profiles', fromJson: _idListToStrings)
+      final List<String> unsafeForProfiles = const [],
+      this.confidence = 0.0,
+      @JsonKey(name: 'requires_review') this.requiresReview = false,
+      @JsonKey(name: 'is_premium') this.isPremium = false,
+      @JsonKey(name: 'prompt_version') this.promptVersion = '',
+      this.disclaimer = '',
+      @JsonKey(name: 'updated_at') this.analyzedAt})
+      : _ingredientAnalyses = ingredientAnalyses,
+        _safeForProfiles = safeForProfiles,
+        _unsafeForProfiles = unsafeForProfiles,
+        super._();
 
   factory _$AllergenAnalysisImpl.fromJson(Map<String, dynamic> json) =>
       _$$AllergenAnalysisImplFromJson(json);
 
   @override
+  @JsonKey(name: 'recipe_id', fromJson: _idToString)
   final String recipeId;
-  final List<AllergenInfo> _detectedAllergens;
+  final List<IngredientAnalysis> _ingredientAnalyses;
   @override
-  @JsonKey()
-  List<AllergenInfo> get detectedAllergens {
-    if (_detectedAllergens is EqualUnmodifiableListView)
-      return _detectedAllergens;
+  @JsonKey(name: 'ingredient_analyses')
+  List<IngredientAnalysis> get ingredientAnalyses {
+    if (_ingredientAnalyses is EqualUnmodifiableListView)
+      return _ingredientAnalyses;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_detectedAllergens);
-  }
-
-  final List<AllergenInfo> _possibleAllergens;
-  @override
-  @JsonKey()
-  List<AllergenInfo> get possibleAllergens {
-    if (_possibleAllergens is EqualUnmodifiableListView)
-      return _possibleAllergens;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_possibleAllergens);
-  }
-
-  final List<FamilySafetyCheck> _familySafetyChecks;
-  @override
-  @JsonKey()
-  List<FamilySafetyCheck> get familySafetyChecks {
-    if (_familySafetyChecks is EqualUnmodifiableListView)
-      return _familySafetyChecks;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_familySafetyChecks);
+    return EqualUnmodifiableListView(_ingredientAnalyses);
   }
 
   @override
-  @JsonKey()
-  final bool isSafeForAll;
+  @JsonKey(name: 'contains_nuts')
+  final bool containsNuts;
   @override
+  @JsonKey(name: 'contains_dairy')
+  final bool containsDairy;
+  @override
+  @JsonKey(name: 'contains_gluten')
+  final bool containsGluten;
+  @override
+  @JsonKey(name: 'contains_soy')
+  final bool containsSoy;
+  @override
+  @JsonKey(name: 'contains_seed_oils')
+  final bool containsSeedOils;
+  @override
+  @JsonKey(name: 'contains_shellfish')
+  final bool containsShellfish;
+  @override
+  @JsonKey(name: 'contains_eggs')
+  final bool containsEggs;
+  final List<String> _safeForProfiles;
+  @override
+  @JsonKey(name: 'safe_for_profiles', fromJson: _idListToStrings)
+  List<String> get safeForProfiles {
+    if (_safeForProfiles is EqualUnmodifiableListView) return _safeForProfiles;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_safeForProfiles);
+  }
+
+  final List<String> _unsafeForProfiles;
+  @override
+  @JsonKey(name: 'unsafe_for_profiles', fromJson: _idListToStrings)
+  List<String> get unsafeForProfiles {
+    if (_unsafeForProfiles is EqualUnmodifiableListView)
+      return _unsafeForProfiles;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_unsafeForProfiles);
+  }
+
+  @override
+  @JsonKey()
+  final double confidence;
+  @override
+  @JsonKey(name: 'requires_review')
+  final bool requiresReview;
+  @override
+  @JsonKey(name: 'is_premium')
+  final bool isPremium;
+  @override
+  @JsonKey(name: 'prompt_version')
+  final String promptVersion;
+  @override
+  @JsonKey()
+  final String disclaimer;
+  @override
+  @JsonKey(name: 'updated_at')
   final DateTime? analyzedAt;
 
   @override
   String toString() {
-    return 'AllergenAnalysis(recipeId: $recipeId, detectedAllergens: $detectedAllergens, possibleAllergens: $possibleAllergens, familySafetyChecks: $familySafetyChecks, isSafeForAll: $isSafeForAll, analyzedAt: $analyzedAt)';
+    return 'AllergenAnalysis(recipeId: $recipeId, ingredientAnalyses: $ingredientAnalyses, containsNuts: $containsNuts, containsDairy: $containsDairy, containsGluten: $containsGluten, containsSoy: $containsSoy, containsSeedOils: $containsSeedOils, containsShellfish: $containsShellfish, containsEggs: $containsEggs, safeForProfiles: $safeForProfiles, unsafeForProfiles: $unsafeForProfiles, confidence: $confidence, requiresReview: $requiresReview, isPremium: $isPremium, promptVersion: $promptVersion, disclaimer: $disclaimer, analyzedAt: $analyzedAt)';
   }
 
   @override
@@ -240,13 +451,35 @@ class _$AllergenAnalysisImpl implements _AllergenAnalysis {
             (identical(other.recipeId, recipeId) ||
                 other.recipeId == recipeId) &&
             const DeepCollectionEquality()
-                .equals(other._detectedAllergens, _detectedAllergens) &&
+                .equals(other._ingredientAnalyses, _ingredientAnalyses) &&
+            (identical(other.containsNuts, containsNuts) ||
+                other.containsNuts == containsNuts) &&
+            (identical(other.containsDairy, containsDairy) ||
+                other.containsDairy == containsDairy) &&
+            (identical(other.containsGluten, containsGluten) ||
+                other.containsGluten == containsGluten) &&
+            (identical(other.containsSoy, containsSoy) ||
+                other.containsSoy == containsSoy) &&
+            (identical(other.containsSeedOils, containsSeedOils) ||
+                other.containsSeedOils == containsSeedOils) &&
+            (identical(other.containsShellfish, containsShellfish) ||
+                other.containsShellfish == containsShellfish) &&
+            (identical(other.containsEggs, containsEggs) ||
+                other.containsEggs == containsEggs) &&
             const DeepCollectionEquality()
-                .equals(other._possibleAllergens, _possibleAllergens) &&
+                .equals(other._safeForProfiles, _safeForProfiles) &&
             const DeepCollectionEquality()
-                .equals(other._familySafetyChecks, _familySafetyChecks) &&
-            (identical(other.isSafeForAll, isSafeForAll) ||
-                other.isSafeForAll == isSafeForAll) &&
+                .equals(other._unsafeForProfiles, _unsafeForProfiles) &&
+            (identical(other.confidence, confidence) ||
+                other.confidence == confidence) &&
+            (identical(other.requiresReview, requiresReview) ||
+                other.requiresReview == requiresReview) &&
+            (identical(other.isPremium, isPremium) ||
+                other.isPremium == isPremium) &&
+            (identical(other.promptVersion, promptVersion) ||
+                other.promptVersion == promptVersion) &&
+            (identical(other.disclaimer, disclaimer) ||
+                other.disclaimer == disclaimer) &&
             (identical(other.analyzedAt, analyzedAt) ||
                 other.analyzedAt == analyzedAt));
   }
@@ -256,10 +489,21 @@ class _$AllergenAnalysisImpl implements _AllergenAnalysis {
   int get hashCode => Object.hash(
       runtimeType,
       recipeId,
-      const DeepCollectionEquality().hash(_detectedAllergens),
-      const DeepCollectionEquality().hash(_possibleAllergens),
-      const DeepCollectionEquality().hash(_familySafetyChecks),
-      isSafeForAll,
+      const DeepCollectionEquality().hash(_ingredientAnalyses),
+      containsNuts,
+      containsDairy,
+      containsGluten,
+      containsSoy,
+      containsSeedOils,
+      containsShellfish,
+      containsEggs,
+      const DeepCollectionEquality().hash(_safeForProfiles),
+      const DeepCollectionEquality().hash(_unsafeForProfiles),
+      confidence,
+      requiresReview,
+      isPremium,
+      promptVersion,
+      disclaimer,
       analyzedAt);
 
   /// Create a copy of AllergenAnalysis
@@ -279,29 +523,82 @@ class _$AllergenAnalysisImpl implements _AllergenAnalysis {
   }
 }
 
-abstract class _AllergenAnalysis implements AllergenAnalysis {
+abstract class _AllergenAnalysis extends AllergenAnalysis {
   const factory _AllergenAnalysis(
-      {required final String recipeId,
-      final List<AllergenInfo> detectedAllergens,
-      final List<AllergenInfo> possibleAllergens,
-      final List<FamilySafetyCheck> familySafetyChecks,
-      final bool isSafeForAll,
+      {@JsonKey(name: 'recipe_id', fromJson: _idToString) final String recipeId,
+      @JsonKey(name: 'ingredient_analyses')
+      final List<IngredientAnalysis> ingredientAnalyses,
+      @JsonKey(name: 'contains_nuts') final bool containsNuts,
+      @JsonKey(name: 'contains_dairy') final bool containsDairy,
+      @JsonKey(name: 'contains_gluten') final bool containsGluten,
+      @JsonKey(name: 'contains_soy') final bool containsSoy,
+      @JsonKey(name: 'contains_seed_oils') final bool containsSeedOils,
+      @JsonKey(name: 'contains_shellfish') final bool containsShellfish,
+      @JsonKey(name: 'contains_eggs') final bool containsEggs,
+      @JsonKey(name: 'safe_for_profiles', fromJson: _idListToStrings)
+      final List<String> safeForProfiles,
+      @JsonKey(name: 'unsafe_for_profiles', fromJson: _idListToStrings)
+      final List<String> unsafeForProfiles,
+      final double confidence,
+      @JsonKey(name: 'requires_review') final bool requiresReview,
+      @JsonKey(name: 'is_premium') final bool isPremium,
+      @JsonKey(name: 'prompt_version') final String promptVersion,
+      final String disclaimer,
+      @JsonKey(name: 'updated_at')
       final DateTime? analyzedAt}) = _$AllergenAnalysisImpl;
+  const _AllergenAnalysis._() : super._();
 
   factory _AllergenAnalysis.fromJson(Map<String, dynamic> json) =
       _$AllergenAnalysisImpl.fromJson;
 
   @override
+  @JsonKey(name: 'recipe_id', fromJson: _idToString)
   String get recipeId;
   @override
-  List<AllergenInfo> get detectedAllergens;
+  @JsonKey(name: 'ingredient_analyses')
+  List<IngredientAnalysis> get ingredientAnalyses;
   @override
-  List<AllergenInfo> get possibleAllergens;
+  @JsonKey(name: 'contains_nuts')
+  bool get containsNuts;
   @override
-  List<FamilySafetyCheck> get familySafetyChecks;
+  @JsonKey(name: 'contains_dairy')
+  bool get containsDairy;
   @override
-  bool get isSafeForAll;
+  @JsonKey(name: 'contains_gluten')
+  bool get containsGluten;
   @override
+  @JsonKey(name: 'contains_soy')
+  bool get containsSoy;
+  @override
+  @JsonKey(name: 'contains_seed_oils')
+  bool get containsSeedOils;
+  @override
+  @JsonKey(name: 'contains_shellfish')
+  bool get containsShellfish;
+  @override
+  @JsonKey(name: 'contains_eggs')
+  bool get containsEggs;
+  @override
+  @JsonKey(name: 'safe_for_profiles', fromJson: _idListToStrings)
+  List<String> get safeForProfiles;
+  @override
+  @JsonKey(name: 'unsafe_for_profiles', fromJson: _idListToStrings)
+  List<String> get unsafeForProfiles;
+  @override
+  double get confidence;
+  @override
+  @JsonKey(name: 'requires_review')
+  bool get requiresReview;
+  @override
+  @JsonKey(name: 'is_premium')
+  bool get isPremium;
+  @override
+  @JsonKey(name: 'prompt_version')
+  String get promptVersion;
+  @override
+  String get disclaimer;
+  @override
+  @JsonKey(name: 'updated_at')
   DateTime? get analyzedAt;
 
   /// Create a copy of AllergenAnalysis
@@ -312,240 +609,311 @@ abstract class _AllergenAnalysis implements AllergenAnalysis {
       throw _privateConstructorUsedError;
 }
 
-AllergenInfo _$AllergenInfoFromJson(Map<String, dynamic> json) {
-  return _AllergenInfo.fromJson(json);
+IngredientAnalysis _$IngredientAnalysisFromJson(Map<String, dynamic> json) {
+  return _IngredientAnalysis.fromJson(json);
 }
 
 /// @nodoc
-mixin _$AllergenInfo {
-  String get allergen => throw _privateConstructorUsedError;
-  String get severity => throw _privateConstructorUsedError;
-  String get source => throw _privateConstructorUsedError;
-  String? get ingredient => throw _privateConstructorUsedError;
-  String? get notes => throw _privateConstructorUsedError;
+mixin _$IngredientAnalysis {
+  @JsonKey(name: 'ingredient_name')
+  String get ingredientName => throw _privateConstructorUsedError;
+  @JsonKey(name: 'common_allergens')
+  List<String> get commonAllergens => throw _privateConstructorUsedError;
+  @JsonKey(name: 'possible_allergens')
+  List<String> get possibleAllergens => throw _privateConstructorUsedError;
+  @JsonKey(name: 'sub_ingredients')
+  List<String> get subIngredients => throw _privateConstructorUsedError;
+  @JsonKey(name: 'seed_oil_risk')
+  bool get seedOilRisk => throw _privateConstructorUsedError;
+  double get confidence => throw _privateConstructorUsedError;
 
-  /// Serializes this AllergenInfo to a JSON map.
+  /// Serializes this IngredientAnalysis to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
-  /// Create a copy of AllergenInfo
+  /// Create a copy of IngredientAnalysis
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $AllergenInfoCopyWith<AllergenInfo> get copyWith =>
+  $IngredientAnalysisCopyWith<IngredientAnalysis> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class $AllergenInfoCopyWith<$Res> {
-  factory $AllergenInfoCopyWith(
-          AllergenInfo value, $Res Function(AllergenInfo) then) =
-      _$AllergenInfoCopyWithImpl<$Res, AllergenInfo>;
+abstract class $IngredientAnalysisCopyWith<$Res> {
+  factory $IngredientAnalysisCopyWith(
+          IngredientAnalysis value, $Res Function(IngredientAnalysis) then) =
+      _$IngredientAnalysisCopyWithImpl<$Res, IngredientAnalysis>;
   @useResult
   $Res call(
-      {String allergen,
-      String severity,
-      String source,
-      String? ingredient,
-      String? notes});
+      {@JsonKey(name: 'ingredient_name') String ingredientName,
+      @JsonKey(name: 'common_allergens') List<String> commonAllergens,
+      @JsonKey(name: 'possible_allergens') List<String> possibleAllergens,
+      @JsonKey(name: 'sub_ingredients') List<String> subIngredients,
+      @JsonKey(name: 'seed_oil_risk') bool seedOilRisk,
+      double confidence});
 }
 
 /// @nodoc
-class _$AllergenInfoCopyWithImpl<$Res, $Val extends AllergenInfo>
-    implements $AllergenInfoCopyWith<$Res> {
-  _$AllergenInfoCopyWithImpl(this._value, this._then);
+class _$IngredientAnalysisCopyWithImpl<$Res, $Val extends IngredientAnalysis>
+    implements $IngredientAnalysisCopyWith<$Res> {
+  _$IngredientAnalysisCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
   final $Val _value;
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of AllergenInfo
+  /// Create a copy of IngredientAnalysis
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? allergen = null,
-    Object? severity = null,
-    Object? source = null,
-    Object? ingredient = freezed,
-    Object? notes = freezed,
+    Object? ingredientName = null,
+    Object? commonAllergens = null,
+    Object? possibleAllergens = null,
+    Object? subIngredients = null,
+    Object? seedOilRisk = null,
+    Object? confidence = null,
   }) {
     return _then(_value.copyWith(
-      allergen: null == allergen
-          ? _value.allergen
-          : allergen // ignore: cast_nullable_to_non_nullable
+      ingredientName: null == ingredientName
+          ? _value.ingredientName
+          : ingredientName // ignore: cast_nullable_to_non_nullable
               as String,
-      severity: null == severity
-          ? _value.severity
-          : severity // ignore: cast_nullable_to_non_nullable
-              as String,
-      source: null == source
-          ? _value.source
-          : source // ignore: cast_nullable_to_non_nullable
-              as String,
-      ingredient: freezed == ingredient
-          ? _value.ingredient
-          : ingredient // ignore: cast_nullable_to_non_nullable
-              as String?,
-      notes: freezed == notes
-          ? _value.notes
-          : notes // ignore: cast_nullable_to_non_nullable
-              as String?,
+      commonAllergens: null == commonAllergens
+          ? _value.commonAllergens
+          : commonAllergens // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      possibleAllergens: null == possibleAllergens
+          ? _value.possibleAllergens
+          : possibleAllergens // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      subIngredients: null == subIngredients
+          ? _value.subIngredients
+          : subIngredients // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      seedOilRisk: null == seedOilRisk
+          ? _value.seedOilRisk
+          : seedOilRisk // ignore: cast_nullable_to_non_nullable
+              as bool,
+      confidence: null == confidence
+          ? _value.confidence
+          : confidence // ignore: cast_nullable_to_non_nullable
+              as double,
     ) as $Val);
   }
 }
 
 /// @nodoc
-abstract class _$$AllergenInfoImplCopyWith<$Res>
-    implements $AllergenInfoCopyWith<$Res> {
-  factory _$$AllergenInfoImplCopyWith(
-          _$AllergenInfoImpl value, $Res Function(_$AllergenInfoImpl) then) =
-      __$$AllergenInfoImplCopyWithImpl<$Res>;
+abstract class _$$IngredientAnalysisImplCopyWith<$Res>
+    implements $IngredientAnalysisCopyWith<$Res> {
+  factory _$$IngredientAnalysisImplCopyWith(_$IngredientAnalysisImpl value,
+          $Res Function(_$IngredientAnalysisImpl) then) =
+      __$$IngredientAnalysisImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call(
-      {String allergen,
-      String severity,
-      String source,
-      String? ingredient,
-      String? notes});
+      {@JsonKey(name: 'ingredient_name') String ingredientName,
+      @JsonKey(name: 'common_allergens') List<String> commonAllergens,
+      @JsonKey(name: 'possible_allergens') List<String> possibleAllergens,
+      @JsonKey(name: 'sub_ingredients') List<String> subIngredients,
+      @JsonKey(name: 'seed_oil_risk') bool seedOilRisk,
+      double confidence});
 }
 
 /// @nodoc
-class __$$AllergenInfoImplCopyWithImpl<$Res>
-    extends _$AllergenInfoCopyWithImpl<$Res, _$AllergenInfoImpl>
-    implements _$$AllergenInfoImplCopyWith<$Res> {
-  __$$AllergenInfoImplCopyWithImpl(
-      _$AllergenInfoImpl _value, $Res Function(_$AllergenInfoImpl) _then)
+class __$$IngredientAnalysisImplCopyWithImpl<$Res>
+    extends _$IngredientAnalysisCopyWithImpl<$Res, _$IngredientAnalysisImpl>
+    implements _$$IngredientAnalysisImplCopyWith<$Res> {
+  __$$IngredientAnalysisImplCopyWithImpl(_$IngredientAnalysisImpl _value,
+      $Res Function(_$IngredientAnalysisImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of AllergenInfo
+  /// Create a copy of IngredientAnalysis
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? allergen = null,
-    Object? severity = null,
-    Object? source = null,
-    Object? ingredient = freezed,
-    Object? notes = freezed,
+    Object? ingredientName = null,
+    Object? commonAllergens = null,
+    Object? possibleAllergens = null,
+    Object? subIngredients = null,
+    Object? seedOilRisk = null,
+    Object? confidence = null,
   }) {
-    return _then(_$AllergenInfoImpl(
-      allergen: null == allergen
-          ? _value.allergen
-          : allergen // ignore: cast_nullable_to_non_nullable
+    return _then(_$IngredientAnalysisImpl(
+      ingredientName: null == ingredientName
+          ? _value.ingredientName
+          : ingredientName // ignore: cast_nullable_to_non_nullable
               as String,
-      severity: null == severity
-          ? _value.severity
-          : severity // ignore: cast_nullable_to_non_nullable
-              as String,
-      source: null == source
-          ? _value.source
-          : source // ignore: cast_nullable_to_non_nullable
-              as String,
-      ingredient: freezed == ingredient
-          ? _value.ingredient
-          : ingredient // ignore: cast_nullable_to_non_nullable
-              as String?,
-      notes: freezed == notes
-          ? _value.notes
-          : notes // ignore: cast_nullable_to_non_nullable
-              as String?,
+      commonAllergens: null == commonAllergens
+          ? _value._commonAllergens
+          : commonAllergens // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      possibleAllergens: null == possibleAllergens
+          ? _value._possibleAllergens
+          : possibleAllergens // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      subIngredients: null == subIngredients
+          ? _value._subIngredients
+          : subIngredients // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      seedOilRisk: null == seedOilRisk
+          ? _value.seedOilRisk
+          : seedOilRisk // ignore: cast_nullable_to_non_nullable
+              as bool,
+      confidence: null == confidence
+          ? _value.confidence
+          : confidence // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$AllergenInfoImpl implements _AllergenInfo {
-  const _$AllergenInfoImpl(
-      {required this.allergen,
-      required this.severity,
-      required this.source,
-      this.ingredient,
-      this.notes});
+class _$IngredientAnalysisImpl implements _IngredientAnalysis {
+  const _$IngredientAnalysisImpl(
+      {@JsonKey(name: 'ingredient_name') this.ingredientName = '',
+      @JsonKey(name: 'common_allergens')
+      final List<String> commonAllergens = const [],
+      @JsonKey(name: 'possible_allergens')
+      final List<String> possibleAllergens = const [],
+      @JsonKey(name: 'sub_ingredients')
+      final List<String> subIngredients = const [],
+      @JsonKey(name: 'seed_oil_risk') this.seedOilRisk = false,
+      this.confidence = 0.0})
+      : _commonAllergens = commonAllergens,
+        _possibleAllergens = possibleAllergens,
+        _subIngredients = subIngredients;
 
-  factory _$AllergenInfoImpl.fromJson(Map<String, dynamic> json) =>
-      _$$AllergenInfoImplFromJson(json);
+  factory _$IngredientAnalysisImpl.fromJson(Map<String, dynamic> json) =>
+      _$$IngredientAnalysisImplFromJson(json);
 
   @override
-  final String allergen;
+  @JsonKey(name: 'ingredient_name')
+  final String ingredientName;
+  final List<String> _commonAllergens;
   @override
-  final String severity;
+  @JsonKey(name: 'common_allergens')
+  List<String> get commonAllergens {
+    if (_commonAllergens is EqualUnmodifiableListView) return _commonAllergens;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_commonAllergens);
+  }
+
+  final List<String> _possibleAllergens;
   @override
-  final String source;
+  @JsonKey(name: 'possible_allergens')
+  List<String> get possibleAllergens {
+    if (_possibleAllergens is EqualUnmodifiableListView)
+      return _possibleAllergens;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_possibleAllergens);
+  }
+
+  final List<String> _subIngredients;
   @override
-  final String? ingredient;
+  @JsonKey(name: 'sub_ingredients')
+  List<String> get subIngredients {
+    if (_subIngredients is EqualUnmodifiableListView) return _subIngredients;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_subIngredients);
+  }
+
   @override
-  final String? notes;
+  @JsonKey(name: 'seed_oil_risk')
+  final bool seedOilRisk;
+  @override
+  @JsonKey()
+  final double confidence;
 
   @override
   String toString() {
-    return 'AllergenInfo(allergen: $allergen, severity: $severity, source: $source, ingredient: $ingredient, notes: $notes)';
+    return 'IngredientAnalysis(ingredientName: $ingredientName, commonAllergens: $commonAllergens, possibleAllergens: $possibleAllergens, subIngredients: $subIngredients, seedOilRisk: $seedOilRisk, confidence: $confidence)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$AllergenInfoImpl &&
-            (identical(other.allergen, allergen) ||
-                other.allergen == allergen) &&
-            (identical(other.severity, severity) ||
-                other.severity == severity) &&
-            (identical(other.source, source) || other.source == source) &&
-            (identical(other.ingredient, ingredient) ||
-                other.ingredient == ingredient) &&
-            (identical(other.notes, notes) || other.notes == notes));
+            other is _$IngredientAnalysisImpl &&
+            (identical(other.ingredientName, ingredientName) ||
+                other.ingredientName == ingredientName) &&
+            const DeepCollectionEquality()
+                .equals(other._commonAllergens, _commonAllergens) &&
+            const DeepCollectionEquality()
+                .equals(other._possibleAllergens, _possibleAllergens) &&
+            const DeepCollectionEquality()
+                .equals(other._subIngredients, _subIngredients) &&
+            (identical(other.seedOilRisk, seedOilRisk) ||
+                other.seedOilRisk == seedOilRisk) &&
+            (identical(other.confidence, confidence) ||
+                other.confidence == confidence));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, allergen, severity, source, ingredient, notes);
+  int get hashCode => Object.hash(
+      runtimeType,
+      ingredientName,
+      const DeepCollectionEquality().hash(_commonAllergens),
+      const DeepCollectionEquality().hash(_possibleAllergens),
+      const DeepCollectionEquality().hash(_subIngredients),
+      seedOilRisk,
+      confidence);
 
-  /// Create a copy of AllergenInfo
+  /// Create a copy of IngredientAnalysis
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
-  _$$AllergenInfoImplCopyWith<_$AllergenInfoImpl> get copyWith =>
-      __$$AllergenInfoImplCopyWithImpl<_$AllergenInfoImpl>(this, _$identity);
+  _$$IngredientAnalysisImplCopyWith<_$IngredientAnalysisImpl> get copyWith =>
+      __$$IngredientAnalysisImplCopyWithImpl<_$IngredientAnalysisImpl>(
+          this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$AllergenInfoImplToJson(
+    return _$$IngredientAnalysisImplToJson(
       this,
     );
   }
 }
 
-abstract class _AllergenInfo implements AllergenInfo {
-  const factory _AllergenInfo(
-      {required final String allergen,
-      required final String severity,
-      required final String source,
-      final String? ingredient,
-      final String? notes}) = _$AllergenInfoImpl;
+abstract class _IngredientAnalysis implements IngredientAnalysis {
+  const factory _IngredientAnalysis(
+      {@JsonKey(name: 'ingredient_name') final String ingredientName,
+      @JsonKey(name: 'common_allergens') final List<String> commonAllergens,
+      @JsonKey(name: 'possible_allergens') final List<String> possibleAllergens,
+      @JsonKey(name: 'sub_ingredients') final List<String> subIngredients,
+      @JsonKey(name: 'seed_oil_risk') final bool seedOilRisk,
+      final double confidence}) = _$IngredientAnalysisImpl;
 
-  factory _AllergenInfo.fromJson(Map<String, dynamic> json) =
-      _$AllergenInfoImpl.fromJson;
+  factory _IngredientAnalysis.fromJson(Map<String, dynamic> json) =
+      _$IngredientAnalysisImpl.fromJson;
 
   @override
-  String get allergen;
+  @JsonKey(name: 'ingredient_name')
+  String get ingredientName;
   @override
-  String get severity;
+  @JsonKey(name: 'common_allergens')
+  List<String> get commonAllergens;
   @override
-  String get source;
+  @JsonKey(name: 'possible_allergens')
+  List<String> get possibleAllergens;
   @override
-  String? get ingredient;
+  @JsonKey(name: 'sub_ingredients')
+  List<String> get subIngredients;
   @override
-  String? get notes;
+  @JsonKey(name: 'seed_oil_risk')
+  bool get seedOilRisk;
+  @override
+  double get confidence;
 
-  /// Create a copy of AllergenInfo
+  /// Create a copy of IngredientAnalysis
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$AllergenInfoImplCopyWith<_$AllergenInfoImpl> get copyWith =>
+  _$$IngredientAnalysisImplCopyWith<_$IngredientAnalysisImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
@@ -555,10 +923,11 @@ FamilySafetyCheck _$FamilySafetyCheckFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$FamilySafetyCheck {
+  @JsonKey(name: 'member_id', fromJson: _idToString)
   String get memberId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'member_name')
   String get memberName => throw _privateConstructorUsedError;
-  bool get isSafe => throw _privateConstructorUsedError;
-  List<String> get conflicts => throw _privateConstructorUsedError;
+  String get status => throw _privateConstructorUsedError;
   List<String> get warnings => throw _privateConstructorUsedError;
 
   /// Serializes this FamilySafetyCheck to a JSON map.
@@ -578,10 +947,9 @@ abstract class $FamilySafetyCheckCopyWith<$Res> {
       _$FamilySafetyCheckCopyWithImpl<$Res, FamilySafetyCheck>;
   @useResult
   $Res call(
-      {String memberId,
-      String memberName,
-      bool isSafe,
-      List<String> conflicts,
+      {@JsonKey(name: 'member_id', fromJson: _idToString) String memberId,
+      @JsonKey(name: 'member_name') String memberName,
+      String status,
       List<String> warnings});
 }
 
@@ -602,8 +970,7 @@ class _$FamilySafetyCheckCopyWithImpl<$Res, $Val extends FamilySafetyCheck>
   $Res call({
     Object? memberId = null,
     Object? memberName = null,
-    Object? isSafe = null,
-    Object? conflicts = null,
+    Object? status = null,
     Object? warnings = null,
   }) {
     return _then(_value.copyWith(
@@ -615,14 +982,10 @@ class _$FamilySafetyCheckCopyWithImpl<$Res, $Val extends FamilySafetyCheck>
           ? _value.memberName
           : memberName // ignore: cast_nullable_to_non_nullable
               as String,
-      isSafe: null == isSafe
-          ? _value.isSafe
-          : isSafe // ignore: cast_nullable_to_non_nullable
-              as bool,
-      conflicts: null == conflicts
-          ? _value.conflicts
-          : conflicts // ignore: cast_nullable_to_non_nullable
-              as List<String>,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String,
       warnings: null == warnings
           ? _value.warnings
           : warnings // ignore: cast_nullable_to_non_nullable
@@ -640,10 +1003,9 @@ abstract class _$$FamilySafetyCheckImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {String memberId,
-      String memberName,
-      bool isSafe,
-      List<String> conflicts,
+      {@JsonKey(name: 'member_id', fromJson: _idToString) String memberId,
+      @JsonKey(name: 'member_name') String memberName,
+      String status,
       List<String> warnings});
 }
 
@@ -662,8 +1024,7 @@ class __$$FamilySafetyCheckImplCopyWithImpl<$Res>
   $Res call({
     Object? memberId = null,
     Object? memberName = null,
-    Object? isSafe = null,
-    Object? conflicts = null,
+    Object? status = null,
     Object? warnings = null,
   }) {
     return _then(_$FamilySafetyCheckImpl(
@@ -675,14 +1036,10 @@ class __$$FamilySafetyCheckImplCopyWithImpl<$Res>
           ? _value.memberName
           : memberName // ignore: cast_nullable_to_non_nullable
               as String,
-      isSafe: null == isSafe
-          ? _value.isSafe
-          : isSafe // ignore: cast_nullable_to_non_nullable
-              as bool,
-      conflicts: null == conflicts
-          ? _value._conflicts
-          : conflicts // ignore: cast_nullable_to_non_nullable
-              as List<String>,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String,
       warnings: null == warnings
           ? _value._warnings
           : warnings // ignore: cast_nullable_to_non_nullable
@@ -693,34 +1050,27 @@ class __$$FamilySafetyCheckImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$FamilySafetyCheckImpl implements _FamilySafetyCheck {
+class _$FamilySafetyCheckImpl extends _FamilySafetyCheck {
   const _$FamilySafetyCheckImpl(
-      {required this.memberId,
-      required this.memberName,
-      required this.isSafe,
-      final List<String> conflicts = const [],
+      {@JsonKey(name: 'member_id', fromJson: _idToString) this.memberId = '',
+      @JsonKey(name: 'member_name') this.memberName = '',
+      this.status = 'safe',
       final List<String> warnings = const []})
-      : _conflicts = conflicts,
-        _warnings = warnings;
+      : _warnings = warnings,
+        super._();
 
   factory _$FamilySafetyCheckImpl.fromJson(Map<String, dynamic> json) =>
       _$$FamilySafetyCheckImplFromJson(json);
 
   @override
+  @JsonKey(name: 'member_id', fromJson: _idToString)
   final String memberId;
   @override
+  @JsonKey(name: 'member_name')
   final String memberName;
   @override
-  final bool isSafe;
-  final List<String> _conflicts;
-  @override
   @JsonKey()
-  List<String> get conflicts {
-    if (_conflicts is EqualUnmodifiableListView) return _conflicts;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_conflicts);
-  }
-
+  final String status;
   final List<String> _warnings;
   @override
   @JsonKey()
@@ -732,7 +1082,7 @@ class _$FamilySafetyCheckImpl implements _FamilySafetyCheck {
 
   @override
   String toString() {
-    return 'FamilySafetyCheck(memberId: $memberId, memberName: $memberName, isSafe: $isSafe, conflicts: $conflicts, warnings: $warnings)';
+    return 'FamilySafetyCheck(memberId: $memberId, memberName: $memberName, status: $status, warnings: $warnings)';
   }
 
   @override
@@ -744,20 +1094,13 @@ class _$FamilySafetyCheckImpl implements _FamilySafetyCheck {
                 other.memberId == memberId) &&
             (identical(other.memberName, memberName) ||
                 other.memberName == memberName) &&
-            (identical(other.isSafe, isSafe) || other.isSafe == isSafe) &&
-            const DeepCollectionEquality()
-                .equals(other._conflicts, _conflicts) &&
+            (identical(other.status, status) || other.status == status) &&
             const DeepCollectionEquality().equals(other._warnings, _warnings));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      memberId,
-      memberName,
-      isSafe,
-      const DeepCollectionEquality().hash(_conflicts),
+  int get hashCode => Object.hash(runtimeType, memberId, memberName, status,
       const DeepCollectionEquality().hash(_warnings));
 
   /// Create a copy of FamilySafetyCheck
@@ -777,25 +1120,25 @@ class _$FamilySafetyCheckImpl implements _FamilySafetyCheck {
   }
 }
 
-abstract class _FamilySafetyCheck implements FamilySafetyCheck {
+abstract class _FamilySafetyCheck extends FamilySafetyCheck {
   const factory _FamilySafetyCheck(
-      {required final String memberId,
-      required final String memberName,
-      required final bool isSafe,
-      final List<String> conflicts,
+      {@JsonKey(name: 'member_id', fromJson: _idToString) final String memberId,
+      @JsonKey(name: 'member_name') final String memberName,
+      final String status,
       final List<String> warnings}) = _$FamilySafetyCheckImpl;
+  const _FamilySafetyCheck._() : super._();
 
   factory _FamilySafetyCheck.fromJson(Map<String, dynamic> json) =
       _$FamilySafetyCheckImpl.fromJson;
 
   @override
+  @JsonKey(name: 'member_id', fromJson: _idToString)
   String get memberId;
   @override
+  @JsonKey(name: 'member_name')
   String get memberName;
   @override
-  bool get isSafe;
-  @override
-  List<String> get conflicts;
+  String get status;
   @override
   List<String> get warnings;
 
