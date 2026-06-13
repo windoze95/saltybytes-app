@@ -105,15 +105,96 @@ void main() {
 
       expect(find.byIcon(Icons.search), findsOneWidget);
     });
+
+    testWidgets('does not show the dead filter button stub', (tester) async {
+      await tester.pumpWidget(_buildHomeScreen(
+        recipeOverride: recipeListProvider.overrideWith(
+          () => _FakeRecipeListNotifier(const AsyncValue.data([])),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byIcon(Icons.filter_list), findsNothing);
+    });
+  });
+
+  group('HomeScreen search debounce', () {
+    late _FakeRecipeListNotifier fakeNotifier;
+
+    Future<void> openSearch(WidgetTester tester) async {
+      fakeNotifier = _FakeRecipeListNotifier(const AsyncValue.data([]));
+      await tester.pumpWidget(_buildHomeScreen(
+        recipeOverride: recipeListProvider.overrideWith(() => fakeNotifier),
+      ));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    testWidgets('debounces keystrokes by 350ms', (tester) async {
+      await openSearch(tester);
+
+      await tester.enterText(find.byType(TextField), 'pizza');
+      // Before the debounce window elapses: no API hit.
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(fakeNotifier.searchCalls, isEmpty);
+
+      // After the window: exactly one search.
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(fakeNotifier.searchCalls, ['pizza']);
+    });
+
+    testWidgets('rapid typing fires only the final query', (tester) async {
+      await openSearch(tester);
+
+      await tester.enterText(find.byType(TextField), 'pi');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.enterText(find.byType(TextField), 'piz');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.enterText(find.byType(TextField), 'pizza');
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(fakeNotifier.searchCalls, ['pizza']);
+    });
+
+    testWidgets('does not search for queries shorter than 2 chars',
+        (tester) async {
+      await openSearch(tester);
+
+      await tester.enterText(find.byType(TextField), 'p');
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(fakeNotifier.searchCalls, isEmpty);
+    });
+
+    testWidgets('clearing the query refreshes the full list immediately',
+        (tester) async {
+      await openSearch(tester);
+
+      await tester.enterText(find.byType(TextField), 'pizza');
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(fakeNotifier.searchCalls, ['pizza']);
+
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pump();
+
+      expect(fakeNotifier.refreshCalls, greaterThanOrEqualTo(1));
+      // No extra search fired for the empty query.
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(fakeNotifier.searchCalls, ['pizza']);
+    });
   });
 }
 
-/// A fake [RecipeListNotifier] that immediately returns the provided state.
+/// A fake [RecipeListNotifier] that immediately returns the provided state
+/// and records search/refresh calls for assertions.
 class _FakeRecipeListNotifier extends AsyncNotifier<List<Recipe>>
     implements RecipeListNotifier {
   _FakeRecipeListNotifier(this._initial);
 
   final AsyncValue<List<Recipe>> _initial;
+  final List<String> searchCalls = [];
+  int refreshCalls = 0;
 
   @override
   Future<List<Recipe>> build() async {
@@ -127,10 +208,14 @@ class _FakeRecipeListNotifier extends AsyncNotifier<List<Recipe>>
   }
 
   @override
-  Future<void> refresh() async {}
+  Future<void> refresh() async {
+    refreshCalls++;
+  }
 
   @override
-  Future<void> search(String query) async {}
+  Future<void> search(String query) async {
+    searchCalls.add(query);
+  }
 
   @override
   Future<void> deleteRecipe(String id) async {}

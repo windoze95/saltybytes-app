@@ -20,12 +20,15 @@ Family _$FamilyFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$Family {
+  @JsonKey(fromJson: _idToString)
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
+  @JsonKey(name: 'owner_id', fromJson: _idToString)
   String get ownerId => throw _privateConstructorUsedError;
-  String? get description => throw _privateConstructorUsedError;
   List<FamilyMember> get members => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
   /// Serializes this Family to a JSON map.
@@ -43,13 +46,12 @@ abstract class $FamilyCopyWith<$Res> {
       _$FamilyCopyWithImpl<$Res, Family>;
   @useResult
   $Res call(
-      {String id,
+      {@JsonKey(fromJson: _idToString) String id,
       String name,
-      String ownerId,
-      String? description,
+      @JsonKey(name: 'owner_id', fromJson: _idToString) String ownerId,
       List<FamilyMember> members,
-      DateTime? createdAt,
-      DateTime? updatedAt});
+      @JsonKey(name: 'created_at') DateTime? createdAt,
+      @JsonKey(name: 'updated_at') DateTime? updatedAt});
 }
 
 /// @nodoc
@@ -70,7 +72,6 @@ class _$FamilyCopyWithImpl<$Res, $Val extends Family>
     Object? id = null,
     Object? name = null,
     Object? ownerId = null,
-    Object? description = freezed,
     Object? members = null,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -88,10 +89,6 @@ class _$FamilyCopyWithImpl<$Res, $Val extends Family>
           ? _value.ownerId
           : ownerId // ignore: cast_nullable_to_non_nullable
               as String,
-      description: freezed == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String?,
       members: null == members
           ? _value.members
           : members // ignore: cast_nullable_to_non_nullable
@@ -116,13 +113,12 @@ abstract class _$$FamilyImplCopyWith<$Res> implements $FamilyCopyWith<$Res> {
   @override
   @useResult
   $Res call(
-      {String id,
+      {@JsonKey(fromJson: _idToString) String id,
       String name,
-      String ownerId,
-      String? description,
+      @JsonKey(name: 'owner_id', fromJson: _idToString) String ownerId,
       List<FamilyMember> members,
-      DateTime? createdAt,
-      DateTime? updatedAt});
+      @JsonKey(name: 'created_at') DateTime? createdAt,
+      @JsonKey(name: 'updated_at') DateTime? updatedAt});
 }
 
 /// @nodoc
@@ -141,7 +137,6 @@ class __$$FamilyImplCopyWithImpl<$Res>
     Object? id = null,
     Object? name = null,
     Object? ownerId = null,
-    Object? description = freezed,
     Object? members = null,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -159,10 +154,6 @@ class __$$FamilyImplCopyWithImpl<$Res>
           ? _value.ownerId
           : ownerId // ignore: cast_nullable_to_non_nullable
               as String,
-      description: freezed == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String?,
       members: null == members
           ? _value._members
           : members // ignore: cast_nullable_to_non_nullable
@@ -183,26 +174,25 @@ class __$$FamilyImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$FamilyImpl implements _Family {
   const _$FamilyImpl(
-      {required this.id,
+      {@JsonKey(fromJson: _idToString) required this.id,
       required this.name,
-      required this.ownerId,
-      this.description,
+      @JsonKey(name: 'owner_id', fromJson: _idToString) this.ownerId = '',
       final List<FamilyMember> members = const [],
-      this.createdAt,
-      this.updatedAt})
+      @JsonKey(name: 'created_at') this.createdAt,
+      @JsonKey(name: 'updated_at') this.updatedAt})
       : _members = members;
 
   factory _$FamilyImpl.fromJson(Map<String, dynamic> json) =>
       _$$FamilyImplFromJson(json);
 
   @override
+  @JsonKey(fromJson: _idToString)
   final String id;
   @override
   final String name;
   @override
+  @JsonKey(name: 'owner_id', fromJson: _idToString)
   final String ownerId;
-  @override
-  final String? description;
   final List<FamilyMember> _members;
   @override
   @JsonKey()
@@ -213,13 +203,15 @@ class _$FamilyImpl implements _Family {
   }
 
   @override
+  @JsonKey(name: 'created_at')
   final DateTime? createdAt;
   @override
+  @JsonKey(name: 'updated_at')
   final DateTime? updatedAt;
 
   @override
   String toString() {
-    return 'Family(id: $id, name: $name, ownerId: $ownerId, description: $description, members: $members, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Family(id: $id, name: $name, ownerId: $ownerId, members: $members, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -230,8 +222,6 @@ class _$FamilyImpl implements _Family {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.ownerId, ownerId) || other.ownerId == ownerId) &&
-            (identical(other.description, description) ||
-                other.description == description) &&
             const DeepCollectionEquality().equals(other._members, _members) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
@@ -241,7 +231,7 @@ class _$FamilyImpl implements _Family {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, ownerId, description,
+  int get hashCode => Object.hash(runtimeType, id, name, ownerId,
       const DeepCollectionEquality().hash(_members), createdAt, updatedAt);
 
   /// Create a copy of Family
@@ -262,29 +252,30 @@ class _$FamilyImpl implements _Family {
 
 abstract class _Family implements Family {
   const factory _Family(
-      {required final String id,
+      {@JsonKey(fromJson: _idToString) required final String id,
       required final String name,
-      required final String ownerId,
-      final String? description,
+      @JsonKey(name: 'owner_id', fromJson: _idToString) final String ownerId,
       final List<FamilyMember> members,
-      final DateTime? createdAt,
-      final DateTime? updatedAt}) = _$FamilyImpl;
+      @JsonKey(name: 'created_at') final DateTime? createdAt,
+      @JsonKey(name: 'updated_at') final DateTime? updatedAt}) = _$FamilyImpl;
 
   factory _Family.fromJson(Map<String, dynamic> json) = _$FamilyImpl.fromJson;
 
   @override
+  @JsonKey(fromJson: _idToString)
   String get id;
   @override
   String get name;
   @override
+  @JsonKey(name: 'owner_id', fromJson: _idToString)
   String get ownerId;
-  @override
-  String? get description;
   @override
   List<FamilyMember> get members;
   @override
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt;
   @override
+  @JsonKey(name: 'updated_at')
   DateTime? get updatedAt;
 
   /// Create a copy of Family
@@ -301,11 +292,17 @@ FamilyMember _$FamilyMemberFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$FamilyMember {
+  @JsonKey(fromJson: _idToString)
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
+  @JsonKey(name: 'family_id', fromJson: _idToStringOrNull)
+  String? get familyId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'user_id', fromJson: _idToStringOrNull)
   String? get userId => throw _privateConstructorUsedError;
-  String get role => throw _privateConstructorUsedError;
+  String get relationship => throw _privateConstructorUsedError;
+  @JsonKey(name: 'dietary_profile', fromJson: _profileFromJson)
   DietaryProfile get dietaryProfile => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this FamilyMember to a JSON map.
@@ -325,12 +322,14 @@ abstract class $FamilyMemberCopyWith<$Res> {
       _$FamilyMemberCopyWithImpl<$Res, FamilyMember>;
   @useResult
   $Res call(
-      {String id,
+      {@JsonKey(fromJson: _idToString) String id,
       String name,
-      String? userId,
-      String role,
+      @JsonKey(name: 'family_id', fromJson: _idToStringOrNull) String? familyId,
+      @JsonKey(name: 'user_id', fromJson: _idToStringOrNull) String? userId,
+      String relationship,
+      @JsonKey(name: 'dietary_profile', fromJson: _profileFromJson)
       DietaryProfile dietaryProfile,
-      DateTime? createdAt});
+      @JsonKey(name: 'created_at') DateTime? createdAt});
 
   $DietaryProfileCopyWith<$Res> get dietaryProfile;
 }
@@ -352,8 +351,9 @@ class _$FamilyMemberCopyWithImpl<$Res, $Val extends FamilyMember>
   $Res call({
     Object? id = null,
     Object? name = null,
+    Object? familyId = freezed,
     Object? userId = freezed,
-    Object? role = null,
+    Object? relationship = null,
     Object? dietaryProfile = null,
     Object? createdAt = freezed,
   }) {
@@ -366,13 +366,17 @@ class _$FamilyMemberCopyWithImpl<$Res, $Val extends FamilyMember>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
+      familyId: freezed == familyId
+          ? _value.familyId
+          : familyId // ignore: cast_nullable_to_non_nullable
+              as String?,
       userId: freezed == userId
           ? _value.userId
           : userId // ignore: cast_nullable_to_non_nullable
               as String?,
-      role: null == role
-          ? _value.role
-          : role // ignore: cast_nullable_to_non_nullable
+      relationship: null == relationship
+          ? _value.relationship
+          : relationship // ignore: cast_nullable_to_non_nullable
               as String,
       dietaryProfile: null == dietaryProfile
           ? _value.dietaryProfile
@@ -405,12 +409,14 @@ abstract class _$$FamilyMemberImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {String id,
+      {@JsonKey(fromJson: _idToString) String id,
       String name,
-      String? userId,
-      String role,
+      @JsonKey(name: 'family_id', fromJson: _idToStringOrNull) String? familyId,
+      @JsonKey(name: 'user_id', fromJson: _idToStringOrNull) String? userId,
+      String relationship,
+      @JsonKey(name: 'dietary_profile', fromJson: _profileFromJson)
       DietaryProfile dietaryProfile,
-      DateTime? createdAt});
+      @JsonKey(name: 'created_at') DateTime? createdAt});
 
   @override
   $DietaryProfileCopyWith<$Res> get dietaryProfile;
@@ -431,8 +437,9 @@ class __$$FamilyMemberImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? name = null,
+    Object? familyId = freezed,
     Object? userId = freezed,
-    Object? role = null,
+    Object? relationship = null,
     Object? dietaryProfile = null,
     Object? createdAt = freezed,
   }) {
@@ -445,13 +452,17 @@ class __$$FamilyMemberImplCopyWithImpl<$Res>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
+      familyId: freezed == familyId
+          ? _value.familyId
+          : familyId // ignore: cast_nullable_to_non_nullable
+              as String?,
       userId: freezed == userId
           ? _value.userId
           : userId // ignore: cast_nullable_to_non_nullable
               as String?,
-      role: null == role
-          ? _value.role
-          : role // ignore: cast_nullable_to_non_nullable
+      relationship: null == relationship
+          ? _value.relationship
+          : relationship // ignore: cast_nullable_to_non_nullable
               as String,
       dietaryProfile: null == dietaryProfile
           ? _value.dietaryProfile
@@ -469,34 +480,42 @@ class __$$FamilyMemberImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$FamilyMemberImpl implements _FamilyMember {
   const _$FamilyMemberImpl(
-      {required this.id,
+      {@JsonKey(fromJson: _idToString) required this.id,
       required this.name,
-      this.userId,
-      this.role = 'member',
+      @JsonKey(name: 'family_id', fromJson: _idToStringOrNull) this.familyId,
+      @JsonKey(name: 'user_id', fromJson: _idToStringOrNull) this.userId,
+      this.relationship = '',
+      @JsonKey(name: 'dietary_profile', fromJson: _profileFromJson)
       this.dietaryProfile = const DietaryProfile(),
-      this.createdAt});
+      @JsonKey(name: 'created_at') this.createdAt});
 
   factory _$FamilyMemberImpl.fromJson(Map<String, dynamic> json) =>
       _$$FamilyMemberImplFromJson(json);
 
   @override
+  @JsonKey(fromJson: _idToString)
   final String id;
   @override
   final String name;
   @override
+  @JsonKey(name: 'family_id', fromJson: _idToStringOrNull)
+  final String? familyId;
+  @override
+  @JsonKey(name: 'user_id', fromJson: _idToStringOrNull)
   final String? userId;
   @override
   @JsonKey()
-  final String role;
+  final String relationship;
   @override
-  @JsonKey()
+  @JsonKey(name: 'dietary_profile', fromJson: _profileFromJson)
   final DietaryProfile dietaryProfile;
   @override
+  @JsonKey(name: 'created_at')
   final DateTime? createdAt;
 
   @override
   String toString() {
-    return 'FamilyMember(id: $id, name: $name, userId: $userId, role: $role, dietaryProfile: $dietaryProfile, createdAt: $createdAt)';
+    return 'FamilyMember(id: $id, name: $name, familyId: $familyId, userId: $userId, relationship: $relationship, dietaryProfile: $dietaryProfile, createdAt: $createdAt)';
   }
 
   @override
@@ -506,8 +525,11 @@ class _$FamilyMemberImpl implements _FamilyMember {
             other is _$FamilyMemberImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
+            (identical(other.familyId, familyId) ||
+                other.familyId == familyId) &&
             (identical(other.userId, userId) || other.userId == userId) &&
-            (identical(other.role, role) || other.role == role) &&
+            (identical(other.relationship, relationship) ||
+                other.relationship == relationship) &&
             (identical(other.dietaryProfile, dietaryProfile) ||
                 other.dietaryProfile == dietaryProfile) &&
             (identical(other.createdAt, createdAt) ||
@@ -516,8 +538,8 @@ class _$FamilyMemberImpl implements _FamilyMember {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType, id, name, userId, role, dietaryProfile, createdAt);
+  int get hashCode => Object.hash(runtimeType, id, name, familyId, userId,
+      relationship, dietaryProfile, createdAt);
 
   /// Create a copy of FamilyMember
   /// with the given fields replaced by the non-null parameter values.
@@ -537,27 +559,39 @@ class _$FamilyMemberImpl implements _FamilyMember {
 
 abstract class _FamilyMember implements FamilyMember {
   const factory _FamilyMember(
-      {required final String id,
-      required final String name,
-      final String? userId,
-      final String role,
-      final DietaryProfile dietaryProfile,
-      final DateTime? createdAt}) = _$FamilyMemberImpl;
+          {@JsonKey(fromJson: _idToString) required final String id,
+          required final String name,
+          @JsonKey(name: 'family_id', fromJson: _idToStringOrNull)
+          final String? familyId,
+          @JsonKey(name: 'user_id', fromJson: _idToStringOrNull)
+          final String? userId,
+          final String relationship,
+          @JsonKey(name: 'dietary_profile', fromJson: _profileFromJson)
+          final DietaryProfile dietaryProfile,
+          @JsonKey(name: 'created_at') final DateTime? createdAt}) =
+      _$FamilyMemberImpl;
 
   factory _FamilyMember.fromJson(Map<String, dynamic> json) =
       _$FamilyMemberImpl.fromJson;
 
   @override
+  @JsonKey(fromJson: _idToString)
   String get id;
   @override
   String get name;
   @override
+  @JsonKey(name: 'family_id', fromJson: _idToStringOrNull)
+  String? get familyId;
+  @override
+  @JsonKey(name: 'user_id', fromJson: _idToStringOrNull)
   String? get userId;
   @override
-  String get role;
+  String get relationship;
   @override
+  @JsonKey(name: 'dietary_profile', fromJson: _profileFromJson)
   DietaryProfile get dietaryProfile;
   @override
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt;
 
   /// Create a copy of FamilyMember

@@ -1,8 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
+import 'package:saltybytes_app/core/network/api_client.dart';
+import 'package:saltybytes_app/core/network/api_endpoints.dart';
 import 'package:saltybytes_app/core/providers/search_provider.dart';
 
 import '../helpers/fixtures.dart';
+import '../helpers/test_helpers.dart';
 
 void main() {
   group('WebSearchResult', () {
@@ -36,6 +40,14 @@ void main() {
       expect(result.familySafetyChecks, isEmpty);
     });
 
+    test('fromJson coerces an empty image_url to null (Go serializes '
+        'image_url without omitempty)', () {
+      final result = WebSearchResult.fromJson(
+          testWebSearchResultJson()..['image_url'] = '');
+
+      expect(result.imageUrl, isNull);
+    });
+
     test('fromJson defaults title to Untitled when null', () {
       final json = <String, dynamic>{};
       final result = WebSearchResult.fromJson(json);
@@ -49,9 +61,8 @@ void main() {
           testFamilySafetyCheckJson(
             memberId: 'm-1',
             memberName: 'Kid',
-            isSafe: false,
-            conflicts: ['Contains nuts'],
-            warnings: [],
+            status: 'unsafe',
+            warnings: ['Contains nuts'],
           ),
         ],
       );
@@ -60,7 +71,7 @@ void main() {
       expect(result.familySafetyChecks, hasLength(1));
       expect(result.familySafetyChecks[0].memberName, 'Kid');
       expect(result.familySafetyChecks[0].isSafe, false);
-      expect(result.familySafetyChecks[0].conflicts, ['Contains nuts']);
+      expect(result.familySafetyChecks[0].warnings, ['Contains nuts']);
     });
 
     test('fromJson parses rating as double from int', () {
@@ -198,6 +209,88 @@ void main() {
       expect(json['portions'], 0);
       expect(json['portion_size'], '');
     });
+
+    test('toManualImportJson includes the detected unit_system', () {
+      final preview = RecipePreview.fromJson(
+          testRecipePreviewJson(unitSystem: 'metric'));
+      final json = preview.toManualImportJson();
+
+      expect(json['unit_system'], 'metric');
+    });
+
+    test('toManualImportJson omits unit_system when not detected', () {
+      final preview = RecipePreview.fromJson(testRecipePreviewJson());
+      final json = preview.toManualImportJson();
+
+      expect(json.containsKey('unit_system'), isFalse);
+    });
+
+    test('toManualImportJson threads metric fields and original_text through',
+        () {
+      final preview = RecipePreview.fromJson(testRecipePreviewJson(
+        unitSystem: 'us_customary',
+        ingredients: [
+          testPreviewIngredientJson(
+            name: 'flour',
+            unit: 'cups',
+            amount: 2.0,
+            metricUnit: 'g',
+            metricAmount: 250.0,
+            originalText: '2 cups (250 g) flour',
+          ),
+        ],
+      ));
+      final json = preview.toManualImportJson();
+
+      final ingredient =
+          (json['ingredients'] as List).first as Map<String, dynamic>;
+      expect(ingredient['name'], 'flour');
+      expect(ingredient['unit'], 'cups');
+      expect(ingredient['amount'], 2.0);
+      expect(ingredient['metric_unit'], 'g');
+      expect(ingredient['metric_amount'], 250.0);
+      expect(ingredient['original_text'], '2 cups (250 g) flour');
+    });
+
+    test('toManualImportJson omits metric keys when source has none', () {
+      final preview = RecipePreview.fromJson(testRecipePreviewJson(
+        ingredients: [
+          testPreviewIngredientJson(name: 'salt', unit: null, amount: null),
+        ],
+      ));
+      final json = preview.toManualImportJson();
+
+      final ingredient =
+          (json['ingredients'] as List).first as Map<String, dynamic>;
+      expect(ingredient.containsKey('metric_unit'), isFalse);
+      expect(ingredient.containsKey('metric_amount'), isFalse);
+      expect(ingredient.containsKey('original_text'), isFalse);
+    });
+
+    test('toManualImportJson includes image_url when provided', () {
+      final preview = RecipePreview.fromJson(testRecipePreviewJson());
+      final json = preview.toManualImportJson(
+          imageUrl: 'https://img.example.com/pizza.jpg');
+
+      expect(json['image_url'], 'https://img.example.com/pizza.jpg');
+    });
+
+    test('toManualImportJson omits image_url when absent or empty', () {
+      final preview = RecipePreview.fromJson(testRecipePreviewJson());
+
+      expect(preview.toManualImportJson().containsKey('image_url'), isFalse);
+      expect(
+        preview.toManualImportJson(imageUrl: '').containsKey('image_url'),
+        isFalse,
+      );
+    });
+
+    test('fromJson parses the detected unit_system', () {
+      final preview = RecipePreview.fromJson(
+          testRecipePreviewJson(unitSystem: 'metric'));
+
+      expect(preview.unitSystem, 'metric');
+    });
   });
 
   group('PreviewIngredient', () {
@@ -221,6 +314,25 @@ void main() {
       expect(ingredient.name, '');
       expect(ingredient.unit, isNull);
       expect(ingredient.amount, isNull);
+      expect(ingredient.metricUnit, isNull);
+      expect(ingredient.metricAmount, isNull);
+      expect(ingredient.originalText, isNull);
+    });
+
+    test('fromJson parses metric fields and original_text', () {
+      final json = testPreviewIngredientJson(
+        name: 'butter',
+        unit: 'tbsp',
+        amount: 3.0,
+        metricUnit: 'g',
+        metricAmount: 42.0,
+        originalText: '3 tbsp (42 g) butter',
+      );
+      final ingredient = PreviewIngredient.fromJson(json);
+
+      expect(ingredient.metricUnit, 'g');
+      expect(ingredient.metricAmount, 42.0);
+      expect(ingredient.originalText, '3 tbsp (42 g) butter');
     });
 
     test('displayText formats "amount unit name"', () {
@@ -316,6 +428,56 @@ void main() {
       final cleared = withError.copyWith(query: 'new query');
       // error parameter defaults to null in copyWith (it uses positional null)
       expect(cleared.error, isNull);
+    });
+  });
+
+  group('searchSuggestionsProvider (q >= 2 gate)', () {
+    test('short-circuits to [] without a network call when the query is '
+        'shorter than 2 chars', () async {
+      final apiClient = MockApiClient();
+      final container = createTestContainer(overrides: [
+        apiClientProvider.overrideWithValue(apiClient),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(searchSuggestionsProvider('p'), (_, __) {});
+      container.listen(searchSuggestionsProvider(''), (_, __) {});
+
+      expect(await container.read(searchSuggestionsProvider('p').future),
+          isEmpty);
+      expect(await container.read(searchSuggestionsProvider('').future),
+          isEmpty);
+      verifyNever(() => apiClient.get(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          ));
+    });
+
+    test('queries GET /v1/recipes/search with q when 2+ chars, parsing both '
+        'bare-list and {suggestions: [...]} payloads', () async {
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(
+            ApiEndpoints.search,
+            queryParameters: {'q': 'pi'},
+          )).thenAnswer(
+          (_) async => fakeResponse<dynamic>(['pizza', 'pie']));
+      when(() => apiClient.get(
+            ApiEndpoints.search,
+            queryParameters: {'q': 'pa'},
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'suggestions': ['pasta', 'paella'],
+          }));
+
+      final container = createTestContainer(overrides: [
+        apiClientProvider.overrideWithValue(apiClient),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(searchSuggestionsProvider('pi'), (_, __) {});
+      container.listen(searchSuggestionsProvider('pa'), (_, __) {});
+
+      expect(await container.read(searchSuggestionsProvider('pi').future),
+          ['pizza', 'pie']);
+      expect(await container.read(searchSuggestionsProvider('pa').future),
+          ['pasta', 'paella']);
     });
   });
 }

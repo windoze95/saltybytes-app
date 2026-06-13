@@ -54,11 +54,15 @@ class WebSearchResult {
   final List<FamilySafetyCheck> familySafetyChecks;
 
   factory WebSearchResult.fromJson(Map<String, dynamic> json) {
+    // The backend serializes image_url without omitempty, so hits with no
+    // thumbnail arrive as "" — coerce to null so render sites fall back to
+    // the placeholder instead of feeding an empty URL to the image widget.
+    final imageUrl = json['image_url'] as String?;
     return WebSearchResult(
       title: json['title'] as String? ?? 'Untitled',
       sourceUrl: json['source_url'] as String?,
       sourceDomain: json['source_domain'] as String?,
-      imageUrl: json['image_url'] as String?,
+      imageUrl: (imageUrl == null || imageUrl.isEmpty) ? null : imageUrl,
       description: json['description'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       cookTimeMinutes: json['cook_time_minutes'] as int?,
@@ -209,7 +213,10 @@ class RecipePreview {
     );
   }
 
-  Map<String, dynamic> toManualImportJson() {
+  /// Builds the snake_case manualImportRequest body for
+  /// POST /v1/recipes/import/manual, preserving the source's detected
+  /// unit system and metric measurements (contract C6).
+  Map<String, dynamic> toManualImportJson({String? imageUrl}) {
     return {
       'title': title,
       'ingredients': ingredients
@@ -217,6 +224,9 @@ class RecipePreview {
                 'name': i.name,
                 'unit': i.unit,
                 'amount': i.amount,
+                if (i.metricUnit != null) 'metric_unit': i.metricUnit,
+                if (i.metricAmount != null) 'metric_amount': i.metricAmount,
+                if (i.originalText != null) 'original_text': i.originalText,
               })
           .toList(),
       'instructions': instructions,
@@ -225,6 +235,9 @@ class RecipePreview {
       'portion_size': portionSize ?? '',
       'hashtags': hashtags,
       if (sourceUrl != null) 'source_url': sourceUrl,
+      if (unitSystem != null && unitSystem!.isNotEmpty)
+        'unit_system': unitSystem,
+      if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
     };
   }
 }
@@ -234,17 +247,26 @@ class PreviewIngredient {
     required this.name,
     this.unit,
     this.amount,
+    this.metricUnit,
+    this.metricAmount,
+    this.originalText,
   });
 
   final String name;
   final String? unit;
   final double? amount;
+  final String? metricUnit;
+  final double? metricAmount;
+  final String? originalText;
 
   factory PreviewIngredient.fromJson(Map<String, dynamic> json) {
     return PreviewIngredient(
       name: json['name'] as String? ?? '',
       unit: json['unit'] as String?,
       amount: (json['amount'] as num?)?.toDouble(),
+      metricUnit: json['metric_unit'] as String?,
+      metricAmount: (json['metric_amount'] as num?)?.toDouble(),
+      originalText: json['original_text'] as String?,
     );
   }
 
@@ -427,7 +449,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       final response = await _apiClient.post(
         ApiEndpoints.previewFromUrl,
         data: {'url': result.sourceUrl},
-        options: Options(receiveTimeout: const Duration(seconds: 45)),
+        options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
       );
       final data = response.data as Map<String, dynamic>;
 
@@ -475,10 +497,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
     }
   }
 
-  Future<Recipe> importPreview(RecipePreview preview) async {
+  Future<Recipe> importPreview(RecipePreview preview, {String? imageUrl}) async {
     final response = await _apiClient.post(
       ApiEndpoints.importManual,
-      data: preview.toManualImportJson(),
+      data: preview.toManualImportJson(imageUrl: imageUrl),
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
     );
     final data = response.data as Map<String, dynamic>;
     final recipe = data['recipe'] as Map<String, dynamic>;
@@ -489,7 +512,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
     final response = await _apiClient.post(
       ApiEndpoints.importFromUrl,
       data: {'url': result.sourceUrl},
-      options: Options(receiveTimeout: const Duration(seconds: 45)),
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
     );
     final data = response.data as Map<String, dynamic>;
     final recipe = data['recipe'] as Map<String, dynamic>;

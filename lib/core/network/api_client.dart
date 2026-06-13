@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../storage/secure_storage.dart';
@@ -8,14 +9,34 @@ import 'api_endpoints.dart';
 
 const _saltyId = String.fromEnvironment('SALTYBYTES_ID');
 
+/// Timeouts shared across the app.
+///
+/// The Dio client uses a 15s receive timeout globally, but import and
+/// AI-generation requests (Haiku extraction, Firecrawl fetches, full recipe
+/// generation) routinely take longer. Those calls must override the receive
+/// timeout per-request with [ApiTimeouts.aiGeneration] so the client does not
+/// give up (and the user retry, duplicating rows) while the server is still
+/// working.
+class ApiTimeouts {
+  ApiTimeouts._();
+
+  /// Per-request receive timeout for import / AI-generation endpoints.
+  static const Duration aiGeneration = Duration(seconds: 60);
+}
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
   return ApiClient(secureStorage: secureStorage);
 });
 
 class ApiClient {
-  ApiClient({required SecureStorage secureStorage})
-      : _secureStorage = secureStorage {
+  /// [refreshDio] lets tests inject the Dio used for the token-refresh call
+  /// (which deliberately bypasses this client's interceptors). When null, a
+  /// plain Dio pointed at [ApiEndpoints.baseUrl] is built on demand.
+  ApiClient({
+    required SecureStorage secureStorage,
+    @visibleForTesting Dio? refreshDio,
+  }) : _secureStorage = secureStorage {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiEndpoints.baseUrl,
@@ -34,6 +55,7 @@ class ApiClient {
         dio: _dio,
         secureStorage: _secureStorage,
         onAuthFailure: _onAuthFailure,
+        refreshDio: refreshDio,
       ),
       _LoggingInterceptor(),
       _ErrorInterceptor(),
@@ -135,13 +157,16 @@ class _AuthInterceptor extends Interceptor {
     required Dio dio,
     required SecureStorage secureStorage,
     required VoidCallback onAuthFailure,
+    Dio? refreshDio,
   })  : _dio = dio,
         _secureStorage = secureStorage,
-        _onAuthFailure = onAuthFailure;
+        _onAuthFailure = onAuthFailure,
+        _refreshDio = refreshDio;
 
   final Dio _dio;
   final SecureStorage _secureStorage;
   final VoidCallback _onAuthFailure;
+  final Dio? _refreshDio;
   bool _isRefreshing = false;
 
   @override
@@ -185,14 +210,15 @@ class _AuthInterceptor extends Interceptor {
         return;
       }
 
-      final refreshDio = Dio(BaseOptions(
-        baseUrl: ApiEndpoints.baseUrl,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (_saltyId.isNotEmpty) 'X-SaltyBytes-Identifier': _saltyId,
-        },
-      ));
+      final refreshDio = _refreshDio ??
+          Dio(BaseOptions(
+            baseUrl: ApiEndpoints.baseUrl,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              if (_saltyId.isNotEmpty) 'X-SaltyBytes-Identifier': _saltyId,
+            },
+          ));
 
       final response = await refreshDio.post(
         ApiEndpoints.refreshToken,
@@ -266,6 +292,15 @@ class _ErrorInterceptor extends Interceptor {
       ),
     );
   }
+}
+
+/// Extracts a user-facing message from a caught error for snackbars and
+/// inline error text: unwraps the [ApiError] that [_ErrorInterceptor] puts
+/// on every [DioException], falling back to [fallback] for anything else
+/// (so raw exception plumbing never reaches the UI).
+String userFacingErrorMessage(Object error, String fallback) {
+  final unwrapped = error is DioException ? error.error : error;
+  return unwrapped is ApiError ? unwrapped.message : fallback;
 }
 
 class ApiError {

@@ -7,10 +7,10 @@ part of 'recipe.dart';
 // **************************************************************************
 
 _$RecipeImpl _$$RecipeImplFromJson(Map<String, dynamic> json) => _$RecipeImpl(
-      id: json['id'] as String,
+      id: _idToString(json['id']),
       title: json['title'] as String,
-      ownerId: json['ownerId'] as String,
-      imageUrl: json['imageUrl'] as String?,
+      ownerId: _idToString(json['ownerId']),
+      imageUrl: _emptyStringToNull(json['imageUrl']),
       ingredients: (json['ingredients'] as List<dynamic>?)
               ?.map((e) => Ingredient.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -28,7 +28,7 @@ _$RecipeImpl _$$RecipeImplFromJson(Map<String, dynamic> json) => _$RecipeImpl(
       status: json['status'] as String? ?? 'ready',
       portions: (json['portions'] as num?)?.toInt(),
       portionSize: json['portionSize'] as String?,
-      parentRecipeId: json['parentRecipeId'] as String?,
+      parentRecipeId: _idToStringOrNull(json['parentRecipeId']),
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.parse(json['createdAt'] as String),

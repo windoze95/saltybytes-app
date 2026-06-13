@@ -2,10 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/providers/allergen_provider.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/unit_converter.dart';
 import '../../models/recipe.dart';
 import 'widgets/ingredient_list.dart';
 import 'widgets/instruction_list.dart';
@@ -35,6 +37,80 @@ class RecipeDetailScreen extends ConsumerWidget {
   }
 }
 
+/// Builds a plain-text rendition of a recipe for sharing.
+String buildRecipeShareText(Recipe recipe) {
+  final buffer = StringBuffer()..writeln(recipe.title);
+
+  if (recipe.cookTimeMinutes != null) {
+    buffer.writeln('Cook time: ${recipe.cookTimeMinutes} min');
+  }
+  if (recipe.portions != null) {
+    final size = recipe.portionSize;
+    buffer.writeln(
+      'Serves: ${recipe.portions}'
+      '${size != null && size.isNotEmpty ? ' $size' : ''}',
+    );
+  }
+
+  if (recipe.ingredients.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln('Ingredients:');
+    for (final ingredient in recipe.ingredients) {
+      buffer.writeln('- ${_formatIngredient(ingredient)}');
+    }
+  }
+
+  if (recipe.instructions.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln('Instructions:');
+    for (var i = 0; i < recipe.instructions.length; i++) {
+      buffer.writeln('${i + 1}. ${recipe.instructions[i]}');
+    }
+  }
+
+  if (recipe.sourceUrl != null && recipe.sourceUrl!.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln('Source: ${recipe.sourceUrl}');
+  }
+
+  buffer
+    ..writeln()
+    ..write('Shared from SaltyBytes');
+  return buffer.toString();
+}
+
+String _formatIngredient(Ingredient ingredient) {
+  final parts = <String>[];
+  final amount = ingredient.amount;
+  // amount == 0 means "no quantity" (e.g. salt to taste): the API serializes
+  // Amount as a plain float64, so unquantified ingredients arrive as 0.
+  // Format with cooking fractions so the share text matches the in-app
+  // ingredient list (see IngredientList's _formatQuantity).
+  if (amount != null && amount > 0) {
+    parts.add(formatAmountForUnit(amount, ingredient.unit));
+  }
+  final unit = ingredient.unit;
+  if (unit != null && unit.isNotEmpty) {
+    parts.add(unit);
+  }
+  parts.add(ingredient.name);
+  return parts.join(' ');
+}
+
+Future<void> _shareRecipe(BuildContext context, Recipe recipe) async {
+  // sharePositionOrigin is required for the iPad share popover.
+  final box = context.findRenderObject() as RenderBox?;
+  await Share.share(
+    buildRecipeShareText(recipe),
+    subject: recipe.title,
+    sharePositionOrigin:
+        box != null ? box.localToGlobal(Offset.zero) & box.size : null,
+  );
+}
+
 class _RecipeDetailBody extends ConsumerWidget {
   const _RecipeDetailBody({required this.recipe});
 
@@ -47,8 +123,9 @@ class _RecipeDetailBody extends ConsumerWidget {
     final allergenAsync = ref.watch(allergenAnalysisProvider(recipe.id));
 
     final hasAllergenWarning = allergenAsync.whenOrNull(
-      data: (analysis) => !analysis.isSafeForAll,
-    ) ?? false;
+          data: (analysis) => analysis.hasUnsafeMembers,
+        ) ??
+        false;
 
     return Scaffold(
       body: CustomScrollView(
@@ -58,7 +135,7 @@ class _RecipeDetailBody extends ConsumerWidget {
             expandedHeight: 280,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              background: recipe.imageUrl != null
+              background: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: recipe.imageUrl!,
                       fit: BoxFit.cover,
@@ -95,9 +172,12 @@ class _RecipeDetailBody extends ConsumerWidget {
                     ),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
-                onPressed: () {},
+              Builder(
+                builder: (buttonContext) => IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  tooltip: 'Share',
+                  onPressed: () => _shareRecipe(buttonContext, recipe),
+                ),
               ),
             ],
           ),
@@ -441,7 +521,7 @@ class _SimilarRecipeCard extends StatelessWidget {
                       top: Radius.circular(16),
                     ),
                   ),
-                  child: recipe.imageUrl != null
+                  child: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
                       ? ClipRRect(
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16),

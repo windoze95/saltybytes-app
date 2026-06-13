@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/family_provider.dart';
 import '../../models/family.dart';
 
@@ -48,7 +49,7 @@ class _FamilyMemberDetailScreenState
     setState(() {
       _isEditing = true;
       _nameController.text = member.name;
-      _roleController.text = member.role;
+      _roleController.text = member.relationship;
       _allergies = List<Allergy>.from(member.dietaryProfile.allergies);
       _intolerances = List<String>.from(member.dietaryProfile.intolerances);
       _restrictions = List<String>.from(member.dietaryProfile.restrictions);
@@ -62,22 +63,32 @@ class _FamilyMemberDetailScreenState
 
     final updated = member.copyWith(
       name: _nameController.text.trim(),
-      role: _roleController.text.trim(),
-      dietaryProfile: DietaryProfile(
-        allergies: _allergies,
-        intolerances: _intolerances,
-        restrictions: _restrictions,
-        preferences: _dislikes,
-      ),
+      relationship: _roleController.text.trim(),
+    );
+    final profile = member.dietaryProfile.copyWith(
+      allergies: _allergies,
+      intolerances: _intolerances,
+      restrictions: _restrictions,
+      preferences: _dislikes,
     );
 
     try {
+      // Name/relationship and the dietary profile persist through separate
+      // backend routes.
       await ref.read(familyProvider.notifier).updateMember(updated);
+      await ref
+          .read(familyProvider.notifier)
+          .updateMemberDietaryProfile(widget.memberId, profile);
       setState(() => _isEditing = false);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to save changes. Please try again.',
+            )),
+          ),
         );
       }
     }
@@ -222,8 +233,11 @@ class _FamilyMemberDetailScreenState
                       Text(member.name,
                           style: theme.textTheme.headlineSmall
                               ?.copyWith(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      Text(member.role, style: theme.textTheme.bodyMedium),
+                      if (member.relationship.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(member.relationship,
+                            style: theme.textTheme.bodyMedium),
+                      ],
                     ],
                   ),
                 ),

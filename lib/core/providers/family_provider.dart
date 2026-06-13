@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/family.dart' as models;
@@ -29,21 +30,13 @@ class FamilyNotifier extends AsyncNotifier<models.Family?> {
     final response = await _apiClient.get(ApiEndpoints.family);
     final data = response.data;
 
-    if (data is List && data.isNotEmpty) {
-      return models.Family.fromJson(data[0] as Map<String, dynamic>);
-    }
+    // Backend wraps the family in {"family": ...} and returns
+    // {"family": null} when no family exists.
     if (data is Map<String, dynamic>) {
-      // Backend returns {"family": null} when no family exists
-      if (data.containsKey('family') && data['family'] == null) {
-        return null;
+      final familyJson = data['family'];
+      if (familyJson is Map<String, dynamic>) {
+        return models.Family.fromJson(familyJson);
       }
-      if (data['families'] is List) {
-        final families = data['families'] as List;
-        if (families.isNotEmpty) {
-          return models.Family.fromJson(families[0] as Map<String, dynamic>);
-        }
-      }
-      return models.Family.fromJson(data);
     }
 
     return null;
@@ -54,19 +47,34 @@ class FamilyNotifier extends AsyncNotifier<models.Family?> {
     state = await AsyncValue.guard(() => _fetchFamily());
   }
 
+  /// Creates a new family for the current user (POST /v1/family).
+  Future<models.Family> createFamily(String name) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.family,
+      data: {'name': name},
+    );
+    final data = response.data as Map<String, dynamic>;
+    final family =
+        models.Family.fromJson(data['family'] as Map<String, dynamic>);
+
+    state = AsyncData(family);
+    return family;
+  }
+
   Future<FamilyMember> addMember({
     required String name,
-    String role = 'member',
+    String relationship = '',
   }) async {
     final family = state.valueOrNull;
     if (family == null) throw Exception('No family loaded');
 
     final response = await _apiClient.post(
       ApiEndpoints.familyMembers,
-      data: {'name': name, 'role': role},
+      data: {'name': name, 'relationship': relationship},
     );
+    final data = response.data as Map<String, dynamic>;
     final member =
-        FamilyMember.fromJson(response.data as Map<String, dynamic>);
+        FamilyMember.fromJson(data['member'] as Map<String, dynamic>);
 
     state = AsyncData(
       family.copyWith(members: [...family.members, member]),
@@ -96,37 +104,57 @@ class FamilyNotifier extends AsyncNotifier<models.Family?> {
     }
   }
 
+  /// Updates a member's name/relationship. The backend accepts only those
+  /// two fields on PUT /v1/family/members/:id; dietary profiles persist
+  /// through [updateMemberDietaryProfile].
   Future<FamilyMember> updateMember(FamilyMember member) async {
     final family = state.valueOrNull;
     if (family == null) throw Exception('No family loaded');
 
     final response = await _apiClient.put(
       ApiEndpoints.familyMember(member.id),
-      data: member.toJson(),
+      data: {
+        'name': member.name,
+        'relationship': member.relationship,
+      },
     );
+    final data = response.data as Map<String, dynamic>;
     final updated =
-        FamilyMember.fromJson(response.data as Map<String, dynamic>);
+        FamilyMember.fromJson(data['member'] as Map<String, dynamic>);
 
     state = AsyncData(
       family.copyWith(
-        members:
-            family.members.map((m) => m.id == updated.id ? updated : m).toList(),
+        members: family.members
+            .map((m) => m.id == updated.id ? updated : m)
+            .toList(),
       ),
     );
 
     return updated;
   }
 
+  /// Persists a dietary profile through the dedicated
+  /// PUT /v1/family/members/:id/dietary route.
   Future<void> updateMemberDietaryProfile(
     String memberId,
     DietaryProfile profile,
   ) async {
+    await _apiClient.put(
+      ApiEndpoints.familyMemberDietary(memberId),
+      data: profile.toJson(),
+    );
+
     final family = state.valueOrNull;
     if (family == null) return;
 
-    final member = family.members.firstWhere((m) => m.id == memberId);
-    final updated = member.copyWith(dietaryProfile: profile);
-    await updateMember(updated);
+    state = AsyncData(
+      family.copyWith(
+        members: family.members
+            .map((m) =>
+                m.id == memberId ? m.copyWith(dietaryProfile: profile) : m)
+            .toList(),
+      ),
+    );
   }
 }
 
@@ -155,6 +183,12 @@ class InterviewMessage {
   final String text;
   final bool isUser;
   final DateTime? timestamp;
+
+  /// Contract C5 wire format: {"role": "user"|"assistant", "content": "..."}.
+  Map<String, dynamic> toWireJson() => {
+        'role': isUser ? 'user' : 'assistant',
+        'content': text,
+      };
 }
 
 class InterviewState {
@@ -244,30 +278,33 @@ class DietaryInterviewNotifier extends StateNotifier<InterviewState> {
     );
 
     try {
+      // POST /v1/family/members/:member_id/dietary/interview with the full
+      // running conversation: {"messages": [{role, content}, ...]}.
+      // The interview runs a full LLM turn server-side (and the completion
+      // turn also extracts the structured profile), so it needs the longer
+      // AI receive timeout like the other AI endpoints.
       final response = await _apiClient.post(
-        '${ApiEndpoints.apiVersion}/ai/dietary-interview',
+        ApiEndpoints.familyMemberInterview(memberId),
         data: {
-          'member_id': memberId,
-          'message': text,
-          'history': state.messages
-              .map((m) => {'text': m.text, 'is_user': m.isUser})
-              .toList(),
+          'messages': state.messages.map((m) => m.toWireJson()).toList(),
         },
+        options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
       );
+      if (!mounted) return;
 
       final data = response.data as Map<String, dynamic>;
-      final reply = data['reply'] as String? ?? 'Could you tell me more?';
+      final reply = data['response'] as String? ?? 'Could you tell me more?';
       final isComplete = data['complete'] as bool? ?? false;
 
       DietaryProfile? extracted;
-      if (isComplete && data['profile'] != null) {
-        extracted = DietaryProfile.fromJson(
-          data['profile'] as Map<String, dynamic>,
-        );
+      final profileJson = data['profile'];
+      if (profileJson is Map<String, dynamic>) {
+        extracted = DietaryProfile.fromJson(profileJson);
       }
 
       state = state.copyWith(
-        status: isComplete ? InterviewStatus.complete : InterviewStatus.responding,
+        status:
+            isComplete ? InterviewStatus.complete : InterviewStatus.responding,
         messages: [
           ...state.messages,
           InterviewMessage(
@@ -279,6 +316,7 @@ class DietaryInterviewNotifier extends StateNotifier<InterviewState> {
         extractedProfile: extracted ?? state.extractedProfile,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(
         status: InterviewStatus.responding,
         messages: [

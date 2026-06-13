@@ -20,11 +20,19 @@ enum WebSocketConnectionState {
   reconnecting,
 }
 
+/// Creates the underlying channel; injectable so tests can supply a fake
+/// channel instead of opening a real socket.
+typedef WebSocketConnector = WebSocketChannel Function(Uri uri);
+
 class WebSocketClient {
-  WebSocketClient({required SecureStorage secureStorage})
-      : _secureStorage = secureStorage;
+  WebSocketClient({
+    required SecureStorage secureStorage,
+    WebSocketConnector? connector,
+  })  : _secureStorage = secureStorage,
+        _connector = connector ?? WebSocketChannel.connect;
 
   final SecureStorage _secureStorage;
+  final WebSocketConnector _connector;
 
   WebSocketChannel? _channel;
   Timer? _reconnectTimer;
@@ -32,6 +40,11 @@ class WebSocketClient {
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 5;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
+
+  /// If nothing (pong or otherwise) arrives within this window the
+  /// connection is considered dead and a reconnect is forced.
+  static const Duration _livenessTimeout = Duration(seconds: 75);
+  DateTime _lastMessageAt = DateTime.now();
 
   String? _currentRecipeId;
 
@@ -69,7 +82,7 @@ class WebSocketClient {
         ApiEndpoints.wsCookingSession(_currentRecipeId!),
       ).replace(queryParameters: {'token': token});
 
-      _channel = WebSocketChannel.connect(uri);
+      _channel = _connector(uri);
       await _channel!.ready;
 
       _updateState(WebSocketConnectionState.connected);
@@ -88,6 +101,8 @@ class WebSocketClient {
   }
 
   void _onMessage(dynamic data) {
+    // Any inbound message (including pong) counts as liveness.
+    _lastMessageAt = DateTime.now();
     try {
       final Map<String, dynamic> message;
       if (data is String) {
@@ -127,8 +142,15 @@ class WebSocketClient {
 
   void _startHeartbeat() {
     _stopHeartbeat();
+    _lastMessageAt = DateTime.now();
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-      send({'type': 'ping'});
+      if (DateTime.now().difference(_lastMessageAt) > _livenessTimeout) {
+        developer.log('Liveness timeout, forcing reconnect', name: 'WS');
+        // Closing the sink triggers _onDone, which schedules a reconnect.
+        _channel?.sink.close();
+        return;
+      }
+      send({'type': 'ping', 'payload': const <String, dynamic>{}});
     });
   }
 

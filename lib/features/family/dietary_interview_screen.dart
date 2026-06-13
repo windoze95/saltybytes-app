@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/family_provider.dart';
 
 class DietaryInterviewScreen extends ConsumerStatefulWidget {
@@ -73,7 +74,12 @@ class _DietaryInterviewScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to save the profile. Please try again.',
+            )),
+          ),
         );
       }
     }
@@ -97,7 +103,8 @@ class _DietaryInterviewScreenState
           'Dietary Interview${member != null ? ' - ${member.name}' : ''}',
         ),
         actions: [
-          if (interviewState.status == InterviewStatus.complete)
+          if (interviewState.status == InterviewStatus.complete &&
+              interviewState.extractedProfile != null)
             TextButton.icon(
               onPressed: _saveProfile,
               icon: const Icon(Icons.save),
@@ -157,7 +164,8 @@ class _DietaryInterviewScreenState
             ),
 
           // Completion banner
-          if (interviewState.status == InterviewStatus.complete)
+          if (interviewState.status == InterviewStatus.complete &&
+              interviewState.extractedProfile != null)
             Container(
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

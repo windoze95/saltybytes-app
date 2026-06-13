@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/network/api_client.dart';
-import '../../core/network/api_endpoints.dart';
+import '../../core/providers/recipe_provider.dart';
 import '../../models/recipe.dart';
 
 class ImportTextScreen extends ConsumerStatefulWidget {
@@ -26,6 +25,10 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
   }
 
   Future<void> _extractRecipe() async {
+    // The recipe row is created server-side on the first successful import;
+    // never re-import the same input.
+    if (_isLoading || _preview != null) return;
+
     final text = _textController.text.trim();
     if (text.isEmpty) {
       setState(() => _error = 'Please paste some recipe text.');
@@ -35,22 +38,23 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
-      _preview = null;
     });
 
-    try {
-      final apiClient = ref.read(apiClientProvider);
-      final response = await apiClient.post(
-        ApiEndpoints.importFromText,
-        data: {'text': text},
-      );
+    // The container stays usable after this screen is popped (a disposed
+    // widget's `ref` throws), so the list still refreshes if the user backs
+    // out during a slow import.
+    final container = ProviderScope.containerOf(context, listen: false);
 
-      final recipe = Recipe.fromJson(response.data as Map<String, dynamic>);
+    try {
+      final recipe = await ref.read(recipeCrudProvider).importFromText(text);
+      container.invalidate(recipeListProvider);
+      if (!mounted) return;
       setState(() {
         _preview = recipe;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Could not extract a recipe from this text. Try reformatting.';
         _isLoading = false;
@@ -58,12 +62,13 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
     }
   }
 
-  void _saveRecipe() {
-    if (_preview != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Recipe imported successfully!')),
-      );
-      context.go('/home');
+  void _viewRecipe() {
+    final recipe = _preview;
+    if (recipe != null) {
+      // pushReplacement keeps the underlying stack (import hub / home) so
+      // the detail screen still has a back route; go() would replace the
+      // whole stack and strand the user.
+      context.pushReplacement('/recipe/${recipe.id}');
     }
   }
 
@@ -106,14 +111,25 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
                 alignLabelWithHint: true,
               ),
               textInputAction: TextInputAction.newline,
+              onChanged: (_) {
+                // Different text may be imported; clear previous result.
+                if (_preview != null || _error != null) {
+                  setState(() {
+                    _preview = null;
+                    _error = null;
+                  });
+                }
+              },
             ),
             const SizedBox(height: 20),
 
-            // Extract button
+            // Extract button (disabled after a successful import — the recipe
+            // already exists server-side; re-tapping would create duplicates)
             SizedBox(
               height: 52,
               child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _extractRecipe,
+                onPressed:
+                    (_isLoading || _preview != null) ? null : _extractRecipe,
                 icon: _isLoading
                     ? SizedBox(
                         height: 20,
@@ -123,8 +139,12 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
                           color: theme.colorScheme.onPrimary,
                         ),
                       )
-                    : const Icon(Icons.auto_awesome),
-                label: Text(_isLoading ? 'Extracting...' : 'Extract Recipe'),
+                    : Icon(_preview != null
+                        ? Icons.check
+                        : Icons.auto_awesome),
+                label: Text(_isLoading
+                    ? 'Extracting...'
+                    : (_preview != null ? 'Imported' : 'Extract Recipe')),
               ),
             ),
 
@@ -155,7 +175,7 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
               ),
             ],
 
-            // Preview
+            // Imported recipe
             if (_preview != null) ...[
               const SizedBox(height: 32),
               const Divider(),
@@ -188,9 +208,9 @@ class _ImportTextScreenState extends ConsumerState<ImportTextScreen> {
               SizedBox(
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: _saveRecipe,
-                  icon: const Icon(Icons.check),
-                  label: const Text('Save Recipe'),
+                  onPressed: _viewRecipe,
+                  icon: const Icon(Icons.menu_book),
+                  label: const Text('View Recipe'),
                 ),
               ),
             ],

@@ -37,7 +37,8 @@ class RecipeCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     ),
-                    child: recipe.imageUrl != null
+                    child: recipe.imageUrl != null &&
+                            recipe.imageUrl!.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: recipe.imageUrl!,
                             fit: BoxFit.cover,

@@ -133,15 +133,17 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
     });
   }
 
-  void enterDemoMode() {
-    state = const AsyncData(AuthStatus.authenticated);
-  }
-
   Future<void> logout() async {
+    // Best-effort server-side logout: POST /v1/auth/logout (contract C11)
+    // revokes all of the user's refresh tokens by bumping the token version.
+    // Errors are swallowed deliberately — logout must always succeed locally,
+    // even when offline or the server is unreachable.
     try {
-      // No server-side logout endpoint; just clear local tokens
+      await _apiClient
+          .post(ApiEndpoints.logout)
+          .timeout(const Duration(seconds: 5));
     } catch (_) {
-      // Best-effort server logout
+      // Ignore network/server failures; local logout proceeds regardless.
     }
     await _secureStorage.clearTokens();
     state = const AsyncData(AuthStatus.unauthenticated);

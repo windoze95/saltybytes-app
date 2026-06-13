@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,14 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../models/recipe.dart';
 import 'widgets/recipe_card.dart';
+
+/// Debounce applied to the home search field so we don't fire a request per
+/// keystroke (which also caused out-of-order response races).
+const kHomeSearchDebounce = Duration(milliseconds: 350);
+
+/// Minimum query length before hitting the API (matches the backend's
+/// semantic-search threshold).
+const kHomeSearchMinChars = 2;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -17,9 +27,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _searchController = TextEditingController();
   bool _isSearching = false;
+  Timer? _searchDebounce;
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -29,11 +41,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _onSearch(String query) {
-    if (query.isEmpty) {
+    _searchDebounce?.cancel();
+    final trimmed = query.trim();
+
+    if (trimmed.isEmpty) {
+      // Cleared: restore the full list immediately.
       ref.read(recipeListProvider.notifier).refresh();
-    } else {
-      ref.read(recipeListProvider.notifier).search(query);
+      return;
     }
+
+    // Require a minimum length before hitting the API.
+    if (trimmed.length < kHomeSearchMinChars) return;
+
+    _searchDebounce = Timer(kHomeSearchDebounce, () {
+      if (!mounted) return;
+      ref.read(recipeListProvider.notifier).search(trimmed);
+    });
   }
 
   void _showCreateDialog() {
@@ -74,7 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    context.pushNamed('import');
+                    context.pushNamed('generate');
                   },
                 ),
                 const SizedBox(height: 4),
@@ -134,13 +157,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             IconButton(
               icon: const Icon(Icons.search),
               onPressed: () => setState(() => _isSearching = true),
-            ),
-          if (!_isSearching)
-            IconButton(
-              icon: const Icon(Icons.filter_list),
-              onPressed: () {
-                // Filter bottom sheet placeholder
-              },
             ),
         ],
       ),

@@ -8,6 +8,7 @@ class ApiEndpoints {
   static const String login = '$apiVersion/auth/login';
   static const String register = '$apiVersion/users';
   static const String refreshToken = '$apiVersion/auth/refresh';
+  static const String logout = '$apiVersion/auth/logout';
 
   // User
   static const String userProfile = '$apiVersion/users/me';
@@ -17,6 +18,7 @@ class ApiEndpoints {
 
   // Recipes
   static const String recipes = '$apiVersion/recipes';
+  static const String generateRecipe = '$apiVersion/recipes/chat';
   static String recipeById(String id) => '$apiVersion/recipes/$id';
   static String recipeChat(String id) => '$apiVersion/recipes/$id/chat';
   static String recipeFork(String id) => '$apiVersion/recipes/$id/fork';

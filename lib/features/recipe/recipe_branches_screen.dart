@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/branch_provider.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../models/recipe.dart';
@@ -66,7 +67,12 @@ class _RecipeBranchesScreenState extends ConsumerState<RecipeBranchesScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create branch: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to create branch. Please try again.',
+            )),
+          ),
         );
       }
     }
@@ -76,8 +82,11 @@ class _RecipeBranchesScreenState extends ConsumerState<RecipeBranchesScreen> {
     try {
       final ops = ref.read(branchOperationsProvider);
       await ops.setActiveNode(widget.recipeId, nodeId);
+      // Switching the active node rewrites the recipe's definition, so both
+      // the tree and the recipe detail (and list) must be refetched.
       ref.invalidate(recipeBranchesProvider(widget.recipeId));
       ref.invalidate(recipeDetailProvider(widget.recipeId));
+      ref.invalidate(recipeListProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Switched active node')),
@@ -86,7 +95,12 @@ class _RecipeBranchesScreenState extends ConsumerState<RecipeBranchesScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to switch node: $e')),
+          SnackBar(
+            content: Text(userFacingErrorMessage(
+              e,
+              'Failed to switch node. Please try again.',
+            )),
+          ),
         );
       }
     }
@@ -119,7 +133,8 @@ class _RecipeBranchesScreenState extends ConsumerState<RecipeBranchesScreen> {
             ],
           ),
         ),
-        data: (rootNode) {
+        data: (treeData) {
+          final rootNode = treeData?.root;
           if (rootNode == null) {
             return Center(
               child: Column(

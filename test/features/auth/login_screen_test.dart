@@ -43,12 +43,15 @@ void main() {
       expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
     });
 
-    testWidgets('renders Sign In and Browse Demo buttons', (tester) async {
+    testWidgets('renders Sign In button and no demo mode button',
+        (tester) async {
       await tester.pumpWidget(buildLoginScreen());
       await tester.pumpAndSettle();
 
       expect(find.text('Sign In'), findsOneWidget);
-      expect(find.text('Browse Demo'), findsOneWidget);
+      // Demo mode authenticated without tokens, causing a 401 force-logout
+      // loop; the button was removed.
+      expect(find.text('Browse Demo'), findsNothing);
     });
   });
 }
@@ -70,9 +73,6 @@ class _FakeAuthNotifier extends AsyncNotifier<AuthStatus>
     required String email,
     required String password,
   }) async {}
-
-  @override
-  void enterDemoMode() {}
 
   @override
   Future<void> logout() async {}

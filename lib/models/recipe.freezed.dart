@@ -20,9 +20,12 @@ Recipe _$RecipeFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$Recipe {
+  @JsonKey(fromJson: _idToString)
   String get id => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _idToString)
   String get ownerId => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _emptyStringToNull)
   String? get imageUrl => throw _privateConstructorUsedError;
   List<Ingredient> get ingredients => throw _privateConstructorUsedError;
   List<String> get instructions => throw _privateConstructorUsedError;
@@ -33,6 +36,7 @@ mixin _$Recipe {
   String get status => throw _privateConstructorUsedError;
   int? get portions => throw _privateConstructorUsedError;
   String? get portionSize => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _idToStringOrNull)
   String? get parentRecipeId => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
@@ -52,10 +56,10 @@ abstract class $RecipeCopyWith<$Res> {
       _$RecipeCopyWithImpl<$Res, Recipe>;
   @useResult
   $Res call(
-      {String id,
+      {@JsonKey(fromJson: _idToString) String id,
       String title,
-      String ownerId,
-      String? imageUrl,
+      @JsonKey(fromJson: _idToString) String ownerId,
+      @JsonKey(fromJson: _emptyStringToNull) String? imageUrl,
       List<Ingredient> ingredients,
       List<String> instructions,
       List<String> tags,
@@ -65,7 +69,7 @@ abstract class $RecipeCopyWith<$Res> {
       String status,
       int? portions,
       String? portionSize,
-      String? parentRecipeId,
+      @JsonKey(fromJson: _idToStringOrNull) String? parentRecipeId,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -179,10 +183,10 @@ abstract class _$$RecipeImplCopyWith<$Res> implements $RecipeCopyWith<$Res> {
   @override
   @useResult
   $Res call(
-      {String id,
+      {@JsonKey(fromJson: _idToString) String id,
       String title,
-      String ownerId,
-      String? imageUrl,
+      @JsonKey(fromJson: _idToString) String ownerId,
+      @JsonKey(fromJson: _emptyStringToNull) String? imageUrl,
       List<Ingredient> ingredients,
       List<String> instructions,
       List<String> tags,
@@ -192,7 +196,7 @@ abstract class _$$RecipeImplCopyWith<$Res> implements $RecipeCopyWith<$Res> {
       String status,
       int? portions,
       String? portionSize,
-      String? parentRecipeId,
+      @JsonKey(fromJson: _idToStringOrNull) String? parentRecipeId,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -300,10 +304,10 @@ class __$$RecipeImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$RecipeImpl implements _Recipe {
   const _$RecipeImpl(
-      {required this.id,
+      {@JsonKey(fromJson: _idToString) required this.id,
       required this.title,
-      required this.ownerId,
-      this.imageUrl,
+      @JsonKey(fromJson: _idToString) required this.ownerId,
+      @JsonKey(fromJson: _emptyStringToNull) this.imageUrl,
       final List<Ingredient> ingredients = const [],
       final List<String> instructions = const [],
       final List<String> tags = const [],
@@ -313,7 +317,7 @@ class _$RecipeImpl implements _Recipe {
       this.status = 'ready',
       this.portions,
       this.portionSize,
-      this.parentRecipeId,
+      @JsonKey(fromJson: _idToStringOrNull) this.parentRecipeId,
       this.createdAt,
       this.updatedAt})
       : _ingredients = ingredients,
@@ -324,12 +328,15 @@ class _$RecipeImpl implements _Recipe {
       _$$RecipeImplFromJson(json);
 
   @override
+  @JsonKey(fromJson: _idToString)
   final String id;
   @override
   final String title;
   @override
+  @JsonKey(fromJson: _idToString)
   final String ownerId;
   @override
+  @JsonKey(fromJson: _emptyStringToNull)
   final String? imageUrl;
   final List<Ingredient> _ingredients;
   @override
@@ -373,6 +380,7 @@ class _$RecipeImpl implements _Recipe {
   @override
   final String? portionSize;
   @override
+  @JsonKey(fromJson: _idToStringOrNull)
   final String? parentRecipeId;
   @override
   final DateTime? createdAt;
@@ -457,10 +465,10 @@ class _$RecipeImpl implements _Recipe {
 
 abstract class _Recipe implements Recipe {
   const factory _Recipe(
-      {required final String id,
+      {@JsonKey(fromJson: _idToString) required final String id,
       required final String title,
-      required final String ownerId,
-      final String? imageUrl,
+      @JsonKey(fromJson: _idToString) required final String ownerId,
+      @JsonKey(fromJson: _emptyStringToNull) final String? imageUrl,
       final List<Ingredient> ingredients,
       final List<String> instructions,
       final List<String> tags,
@@ -470,19 +478,22 @@ abstract class _Recipe implements Recipe {
       final String status,
       final int? portions,
       final String? portionSize,
-      final String? parentRecipeId,
+      @JsonKey(fromJson: _idToStringOrNull) final String? parentRecipeId,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$RecipeImpl;
 
   factory _Recipe.fromJson(Map<String, dynamic> json) = _$RecipeImpl.fromJson;
 
   @override
+  @JsonKey(fromJson: _idToString)
   String get id;
   @override
   String get title;
   @override
+  @JsonKey(fromJson: _idToString)
   String get ownerId;
   @override
+  @JsonKey(fromJson: _emptyStringToNull)
   String? get imageUrl;
   @override
   List<Ingredient> get ingredients;
@@ -503,6 +514,7 @@ abstract class _Recipe implements Recipe {
   @override
   String? get portionSize;
   @override
+  @JsonKey(fromJson: _idToStringOrNull)
   String? get parentRecipeId;
   @override
   DateTime? get createdAt;
