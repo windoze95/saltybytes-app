@@ -43,10 +43,24 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
 
-      - name: Select Xcode 16 (iOS 18 SDK)
+      - name: Select Xcode 26 (iOS 26 SDK)
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "16"
+          xcode-version: "26"
+
+      - name: Verify Apple SDK requirement
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          IOS_SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "Selected iOS SDK: $IOS_SDK_VERSION"
+          IOS_SDK_MAJOR="${IOS_SDK_VERSION%%.*}"
+          if [ "$IOS_SDK_MAJOR" -ge 26 ]; then
+            echo "iOS SDK requirement satisfied."
+          else
+            echo "iOS SDK 26.0 or later is required for App Store Connect uploads." >&2
+            exit 1
+          fi
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2

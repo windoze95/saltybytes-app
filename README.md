@@ -41,7 +41,7 @@ Riverpod Providers → Services → Dio (API Client) → SaltyBytes API
 ### Prerequisites
 
 - Flutter SDK (stable channel)
-- Xcode 16+ (for iOS builds)
+- Xcode 26+ (for App Store Connect/TestFlight uploads)
 - A running instance of [saltybytes-api](https://github.com/windoze95/saltybytes-api)
 
 ### Setup
