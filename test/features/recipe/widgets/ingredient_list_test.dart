@@ -71,8 +71,7 @@ void main() {
   });
 
   group('IngredientList us_customary -> metric conversion', () {
-    testWidgets('converts volume and weight for a metric user',
-        (tester) async {
+    testWidgets('adds metric alternates for a metric user', (tester) async {
       await tester.pumpWidget(_build(
         [
           _ing('flour', 2.0, 'cups'),
@@ -83,8 +82,8 @@ void main() {
       ));
       await _settle(tester);
 
-      expect(find.text('480 mL'), findsOneWidget); // 2 cups
-      expect(find.text('450 g'), findsOneWidget); // 1 lb, rounded to 10 g
+      expect(find.text('2 cups (480 mL)'), findsOneWidget);
+      expect(find.text('1 lb (450 g)'), findsOneWidget);
       expect(find.text('flour'), findsOneWidget);
       expect(find.text('ground beef'), findsOneWidget);
     });
@@ -102,8 +101,7 @@ void main() {
 
       // 8 oz * 28 would be 225 anyway via fallback, but the AI value wins:
       // the displayed pair comes straight from metric_amount/metric_unit.
-      expect(find.text('225 g'), findsOneWidget);
-      expect(find.text('8 oz'), findsNothing);
+      expect(find.text('8 oz (225 g)'), findsOneWidget);
     });
 
     testWidgets('identity units pass through unconverted', (tester) async {
@@ -119,7 +117,8 @@ void main() {
   });
 
   group('IngredientList metric -> us_customary conversion', () {
-    testWidgets('converts weight and volume for a US user (signed out '
+    testWidgets(
+        'adds US alternates for a US user (signed out '
         'defaults to us_customary)', (tester) async {
       await tester.pumpWidget(_build(
         [
@@ -130,11 +129,11 @@ void main() {
       ));
       await _settle(tester);
 
-      expect(find.text('3 oz'), findsOneWidget); // 84 g / 28
-      expect(find.text('2 tsp'), findsOneWidget); // 10 mL / 5
+      expect(find.text('84 g (3 oz)'), findsOneWidget);
+      expect(find.text('10 mL (2 tsp)'), findsOneWidget);
     });
 
-    testWidgets('keeps the metric unit when the US amount would be ugly',
+    testWidgets('omits the alternate when the US amount would be ugly',
         (tester) async {
       await tester.pumpWidget(_build(
         // 100 g -> 3.571 oz: no clean fraction, so the original stays.
@@ -177,8 +176,7 @@ void main() {
       expect(find.text('250 mL'), findsOneWidget);
     });
 
-    testWidgets('amountless ingredients render just the name',
-        (tester) async {
+    testWidgets('amountless ingredients render just the name', (tester) async {
       await tester.pumpWidget(_build(
         [_ing('salt to taste', null, null)],
         recipeUnitSystem: 'us_customary',

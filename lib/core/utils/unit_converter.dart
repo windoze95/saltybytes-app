@@ -6,10 +6,30 @@ import '../../models/recipe.dart';
 /// smart rounding. All conversions are deterministic (no AI involved).
 
 const _identityUnits = {
-  'pieces', 'piece', 'pinch', 'dash', 'drop', 'clove', 'cloves',
-  'slice', 'slices', 'bunch', 'sprig', 'sprigs', 'can', 'cans',
-  'head', 'heads', 'stalk', 'stalks', 'leaf', 'leaves',
-  'whole', 'to taste', 'as needed', '',
+  'pieces',
+  'piece',
+  'pinch',
+  'dash',
+  'drop',
+  'clove',
+  'cloves',
+  'slice',
+  'slices',
+  'bunch',
+  'sprig',
+  'sprigs',
+  'can',
+  'cans',
+  'head',
+  'heads',
+  'stalk',
+  'stalks',
+  'leaf',
+  'leaves',
+  'whole',
+  'to taste',
+  'as needed',
+  '',
 };
 
 // US → Metric conversion table: (factor, metricUnit, roundTo)
@@ -42,35 +62,13 @@ const _usToMetric = <String, (double, String, double)>{
   'pounds': (454.0, 'g', 10.0),
 };
 
-// Metric → US conversion table: (factor, usUnit, common fractions to snap to)
-const _metricToUs = <String, (double, String)>{
-  'ml': (1 / 5, 'tsp'),
-  'mL': (1 / 5, 'tsp'),
-  'milliliter': (1 / 5, 'tsp'),
-  'milliliters': (1 / 5, 'tsp'),
-  'millilitre': (1 / 5, 'tsp'),
-  'millilitres': (1 / 5, 'tsp'),
-  'l': (1 / 0.95, 'qt'),
-  'L': (1 / 0.95, 'qt'),
-  'liter': (1 / 0.95, 'qt'),
-  'liters': (1 / 0.95, 'qt'),
-  'litre': (1 / 0.95, 'qt'),
-  'litres': (1 / 0.95, 'qt'),
-  'g': (1 / 28, 'oz'),
-  'gram': (1 / 28, 'oz'),
-  'grams': (1 / 28, 'oz'),
-  'kg': (1000 / 454, 'lb'),
-  'kilogram': (1000 / 454, 'lb'),
-  'kilograms': (1000 / 454, 'lb'),
-};
-
 // Common cooking fractions for US unit snapping
 const _commonFractions = [
-  (1, 4),  // 0.25
-  (1, 3),  // 0.333
-  (1, 2),  // 0.5
-  (2, 3),  // 0.667
-  (3, 4),  // 0.75
+  (1, 4), // 0.25
+  (1, 3), // 0.333
+  (1, 2), // 0.5
+  (2, 3), // 0.667
+  (3, 4), // 0.75
 ];
 
 bool needsConversion(String recipeSystem, String userSystem) {
@@ -93,8 +91,10 @@ Ingredient convertIngredient(
 
   // Converting TO metric: use AI-provided metric data if available
   if (toSystem == 'metric' &&
-      ing.metricUnit != null && ing.metricUnit!.isNotEmpty &&
-      ing.metricAmount != null && ing.metricAmount! > 0) {
+      ing.metricUnit != null &&
+      ing.metricUnit!.isNotEmpty &&
+      ing.metricAmount != null &&
+      ing.metricAmount! > 0) {
     return ing.copyWith(amount: ing.metricAmount, unit: ing.metricUnit);
   }
 
@@ -130,20 +130,66 @@ Ingredient _convertUsToMetric(Ingredient ing, String unit) {
 }
 
 Ingredient _convertMetricToUs(Ingredient ing, String unit) {
-  final entry = _metricToUs[unit] ?? _metricToUs[unit.toLowerCase()];
-  if (entry == null) return ing;
+  final normalized = unit.toLowerCase();
 
-  final (factor, usUnit) = entry;
-  final converted = ing.amount! * factor;
-
-  // Try to snap to a clean fraction
-  final snapped = _snapToFraction(converted);
-  if (snapped != null) {
-    return ing.copyWith(amount: snapped, unit: usUnit);
+  final volumeMl = switch (normalized) {
+    'ml' ||
+    'milliliter' ||
+    'milliliters' ||
+    'millilitre' ||
+    'millilitres' =>
+      ing.amount!,
+    'l' || 'liter' || 'liters' || 'litre' || 'litres' => ing.amount! * 1000,
+    _ => null,
+  };
+  if (volumeMl != null) {
+    final converted = _convertMetricVolumeToUs(volumeMl);
+    if (converted != null) {
+      final (amount, usUnit) = converted;
+      return ing.copyWith(amount: amount, unit: usUnit);
+    }
+    return ing;
   }
 
-  // If the result is ugly, keep it in the original metric unit
+  final weightG = switch (normalized) {
+    'g' || 'gram' || 'grams' => ing.amount!,
+    'kg' || 'kilogram' || 'kilograms' => ing.amount! * 1000,
+    _ => null,
+  };
+  if (weightG != null) {
+    final converted = _convertMetricWeightToUs(weightG);
+    if (converted != null) {
+      final (amount, usUnit) = converted;
+      return ing.copyWith(amount: amount, unit: usUnit);
+    }
+  }
+
   return ing;
+}
+
+({double divisor, String unit})? _volumeCandidate(double ml) {
+  if (ml >= 3800) return (divisor: 3800, unit: 'gal');
+  if (ml >= 950) return (divisor: 950, unit: 'qt');
+  if (ml >= 60) return (divisor: 240, unit: 'cup');
+  if (ml >= 15) return (divisor: 15, unit: 'tbsp');
+  return (divisor: 5, unit: 'tsp');
+}
+
+(double, String)? _convertMetricVolumeToUs(double ml) {
+  final candidate = _volumeCandidate(ml);
+  if (candidate == null) return null;
+
+  final amount = _snapToFraction(ml / candidate.divisor);
+  if (amount == null || amount <= 0) return null;
+  return (amount, candidate.unit);
+}
+
+(double, String)? _convertMetricWeightToUs(double grams) {
+  final divisor = grams >= 454 ? 454.0 : 28.0;
+  final unit = grams >= 454 ? 'lb' : 'oz';
+  final amount = _snapToFraction(grams / divisor);
+  if (amount == null || amount <= 0) return null;
+  return (amount, unit);
 }
 
 double? _snapToFraction(double value) {
@@ -183,12 +229,18 @@ String formatAmount(double amount, String unit) {
   if (amount == 0) return '';
 
   final unitLower = unit.toLowerCase();
-  final isMetric = unitLower == 'ml' || unitLower == 'l' ||
-      unitLower == 'g' || unitLower == 'kg' ||
-      unitLower == 'milliliter' || unitLower == 'milliliters' ||
-      unitLower == 'liter' || unitLower == 'liters' ||
-      unitLower == 'gram' || unitLower == 'grams' ||
-      unitLower == 'kilogram' || unitLower == 'kilograms';
+  final isMetric = unitLower == 'ml' ||
+      unitLower == 'l' ||
+      unitLower == 'g' ||
+      unitLower == 'kg' ||
+      unitLower == 'milliliter' ||
+      unitLower == 'milliliters' ||
+      unitLower == 'liter' ||
+      unitLower == 'liters' ||
+      unitLower == 'gram' ||
+      unitLower == 'grams' ||
+      unitLower == 'kilogram' ||
+      unitLower == 'kilograms';
 
   if (isMetric) {
     return _formatMetricAmount(amount);
@@ -242,6 +294,43 @@ String formatAmountForUnit(double? amount, String? unit) {
   return formatAmount(amount, unit ?? '');
 }
 
+/// Format an ingredient quantity without the ingredient name.
+String formatIngredientQuantity(Ingredient ingredient) {
+  final parts = <String>[];
+  if (ingredient.amount != null && ingredient.amount! > 0) {
+    parts.add(formatAmountForUnit(ingredient.amount, ingredient.unit));
+  }
+  if (ingredient.unit != null && ingredient.unit!.isNotEmpty) {
+    parts.add(ingredient.unit!);
+  }
+  return parts.join(' ');
+}
+
+/// Format the stored quantity first, with the viewer's preferred-unit
+/// equivalent in parentheses when a clean deterministic conversion exists.
+String formatIngredientQuantityWithAlternate(
+  Ingredient ingredient, {
+  required String recipeUnitSystem,
+  required String userUnitSystem,
+}) {
+  final primary = formatIngredientQuantity(ingredient);
+  if (primary.isEmpty || !needsConversion(recipeUnitSystem, userUnitSystem)) {
+    return primary;
+  }
+
+  final alternateIngredient = convertIngredient(
+    ingredient,
+    recipeUnitSystem,
+    userUnitSystem,
+  );
+  final alternate = formatIngredientQuantity(alternateIngredient);
+  if (alternate.isEmpty || alternate == primary) {
+    return primary;
+  }
+
+  return '$primary ($alternate)';
+}
+
 /// Parse a fractional string like "1/2", "1 1/2", or a plain number.
 ///
 /// Returns null if the input cannot be parsed.
@@ -263,8 +352,7 @@ double? parseFractionalAmount(String input) {
   }
 
   // Try "whole a/b" (mixed fraction)
-  final mixedMatch =
-      RegExp(r'^(\d+)\s+(\d+)\s*/\s*(\d+)$').firstMatch(s);
+  final mixedMatch = RegExp(r'^(\d+)\s+(\d+)\s*/\s*(\d+)$').firstMatch(s);
   if (mixedMatch != null) {
     final whole = int.parse(mixedMatch.group(1)!);
     final num = int.parse(mixedMatch.group(2)!);
