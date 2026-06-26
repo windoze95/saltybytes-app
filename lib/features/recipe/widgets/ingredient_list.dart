@@ -23,33 +23,36 @@ class IngredientList extends ConsumerWidget {
     final userUnitSystem =
         userAsync.valueOrNull?.personalization.unitSystem ?? 'us_customary';
 
-    final displayIngredients = ingredients.map((ing) {
-      return convertIngredient(ing, recipeUnitSystem, userUnitSystem);
-    }).toList();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: displayIngredients
-          .map((ing) => _IngredientRow(ingredient: ing))
+      children: ingredients
+          .map((ing) => _IngredientRow(
+                ingredient: ing,
+                recipeUnitSystem: recipeUnitSystem,
+                userUnitSystem: userUnitSystem,
+              ))
           .toList(),
     );
   }
 }
 
 class _IngredientRow extends StatelessWidget {
-  const _IngredientRow({required this.ingredient});
+  const _IngredientRow({
+    required this.ingredient,
+    required this.recipeUnitSystem,
+    required this.userUnitSystem,
+  });
 
   final Ingredient ingredient;
+  final String recipeUnitSystem;
+  final String userUnitSystem;
 
   String _formatQuantity() {
-    final parts = <String>[];
-    if (ingredient.amount != null && ingredient.amount! > 0) {
-      parts.add(formatAmountForUnit(ingredient.amount, ingredient.unit));
-    }
-    if (ingredient.unit != null && ingredient.unit!.isNotEmpty) {
-      parts.add(ingredient.unit!);
-    }
-    return parts.join(' ');
+    return formatIngredientQuantityWithAlternate(
+      ingredient,
+      recipeUnitSystem: recipeUnitSystem,
+      userUnitSystem: userUnitSystem,
+    );
   }
 
   @override

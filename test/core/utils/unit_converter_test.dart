@@ -112,11 +112,10 @@ void main() {
       expect(result.unit, 'tsp');
     });
 
-    test('240 mL converts to tsp (whole number)', () {
+    test('240 mL converts to cup', () {
       final result = convert(240, 'mL');
-      // 240 / 5 = 48 tsp — whole number, should snap
-      expect(result.amount, 48.0);
-      expect(result.unit, 'tsp');
+      expect(result.amount, 1.0);
+      expect(result.unit, 'cup');
     });
 
     test('grams to oz', () {
@@ -132,12 +131,11 @@ void main() {
       expect(result.unit, 'lb');
     });
 
-    test('keeps metric when fraction is ugly', () {
-      // 73 mL / 5 = 14.6 tsp — not a clean fraction
-      final result = convert(73, 'mL');
-      // 14.6 doesn't snap to a common fraction, so stays metric
+    test('keeps metric when the US conversion is not a clean cooking amount',
+        () {
+      final result = convert(100, 'mL');
       expect(result.unit, 'mL');
-      expect(result.amount, 73.0);
+      expect(result.amount, 100.0);
     });
   });
 
@@ -260,6 +258,53 @@ void main() {
 
     test('null unit defaults to fraction style', () {
       expect(formatAmountForUnit(1.5, null), '1 1/2');
+    });
+  });
+
+  group('formatIngredientQuantityWithAlternate', () {
+    test('keeps primary US measurement and adds metric alternate', () {
+      final ing = Ingredient(
+        name: 'flour',
+        amount: 2,
+        unit: 'cups',
+        metricAmount: 240,
+        metricUnit: 'g',
+      );
+
+      expect(
+        formatIngredientQuantityWithAlternate(
+          ing,
+          recipeUnitSystem: 'us_customary',
+          userUnitSystem: 'metric',
+        ),
+        '2 cups (240 g)',
+      );
+    });
+
+    test('keeps primary metric measurement and adds clean US alternate', () {
+      final ing = Ingredient(name: 'milk', amount: 240, unit: 'mL');
+
+      expect(
+        formatIngredientQuantityWithAlternate(
+          ing,
+          recipeUnitSystem: 'metric',
+          userUnitSystem: 'us_customary',
+        ),
+        '240 mL (1 cup)',
+      );
+    });
+
+    test('omits alternate when conversion is not useful', () {
+      final ing = Ingredient(name: 'water', amount: 100, unit: 'mL');
+
+      expect(
+        formatIngredientQuantityWithAlternate(
+          ing,
+          recipeUnitSystem: 'metric',
+          userUnitSystem: 'us_customary',
+        ),
+        '100 mL',
+      );
     });
   });
 

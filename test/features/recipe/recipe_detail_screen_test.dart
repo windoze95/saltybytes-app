@@ -136,7 +136,8 @@ void main() {
       expect(find.byTooltip('Share'), findsOneWidget);
     });
 
-    test('buildRecipeShareText includes title, ingredients, instructions, '
+    test(
+        'buildRecipeShareText includes title, ingredients, instructions, '
         'and source', () {
       final recipe = Recipe.fromJson(testRecipeJson(
         sourceUrl: 'https://example.com/pizza',
@@ -152,9 +153,9 @@ void main() {
       expect(text, endsWith('Shared from SaltyBytes'));
     });
 
-    test('buildRecipeShareText matches the in-app ingredient formatting: '
-        'no "0" for unquantified amounts, cooking fractions for partials',
-        () {
+    test(
+        'buildRecipeShareText matches the in-app ingredient formatting: '
+        'no "0" for unquantified amounts, cooking fractions for partials', () {
       final recipe = Recipe.fromJson(testRecipeJson(
         ingredients: [
           // Go serializes Amount without omitempty: "to taste" arrives as 0.
@@ -174,7 +175,7 @@ void main() {
 
   group('RecipeDetailScreen unit conversion', () {
     testWidgets(
-        'metric user viewing a us_customary recipe sees converted amounts',
+        'metric user viewing a us_customary recipe sees metric alternates',
         (tester) async {
       _useTallViewport(tester);
 
@@ -205,10 +206,8 @@ void main() {
       await _settle(tester);
 
       // 2 cups -> 480 mL, 1 lb -> 450 g (cooking-friendly rounding).
-      expect(find.text('480 mL'), findsOneWidget);
-      expect(find.text('450 g'), findsOneWidget);
-      expect(find.text('2 cups'), findsNothing);
-      expect(find.text('1 lb'), findsNothing);
+      expect(find.text('2 cups (480 mL)'), findsOneWidget);
+      expect(find.text('1 lb (450 g)'), findsOneWidget);
     });
 
     testWidgets('us_customary user sees the recipe amounts unchanged',
