@@ -174,8 +174,8 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                           ? (cookState.currentStep + 1) / cookState.totalSteps
                           : 0,
                       backgroundColor: Colors.white12,
-                      valueColor: AlwaysStoppedAnimation(
-                          theme.colorScheme.primary),
+                      valueColor:
+                          AlwaysStoppedAnimation(theme.colorScheme.primary),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -229,17 +229,23 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                     ),
                   ),
 
-                  // Live voice transcript while listening
-                  if (cookState.isListening)
+                  // Hands-free status line: prompt for the wake word while
+                  // passive, show the live transcript while actively listening.
+                  if (cookState.handsFreePhase != HandsFreePhase.off)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 32, vertical: 4),
                       child: Text(
-                        cookState.voiceTranscript.isEmpty
-                            ? 'Listening…'
-                            : cookState.voiceTranscript,
+                        cookState.handsFreePhase == HandsFreePhase.active
+                            ? (cookState.voiceTranscript.isEmpty
+                                ? 'Listening…'
+                                : cookState.voiceTranscript)
+                            : 'Say "Hey Salty"',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.white54,
+                          color:
+                              cookState.handsFreePhase == HandsFreePhase.active
+                                  ? theme.colorScheme.primary
+                                  : Colors.white54,
                           fontStyle: FontStyle.italic,
                         ),
                         textAlign: TextAlign.center,
@@ -276,8 +282,7 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                             (i) => Container(
                               width: i == cookState.currentStep ? 10 : 6,
                               height: i == cookState.currentStep ? 10 : 6,
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 3),
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: i == cookState.currentStep
@@ -312,9 +317,8 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         TextButton.icon(
-                          onPressed: () => ref
-                              .read(cookingProvider.notifier)
-                              .toggleChat(),
+                          onPressed: () =>
+                              ref.read(cookingProvider.notifier).toggleChat(),
                           icon: const Icon(Icons.chat_bubble_outline,
                               size: 18, color: Colors.white54),
                           label: Text(
@@ -342,33 +346,43 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
             top: MediaQuery.of(context).padding.top + 12,
             right: 16,
             child: Tooltip(
-              message: cookState.voiceAvailable
-                  ? 'Voice commands'
-                  : 'Voice input unavailable',
+              message: !cookState.voiceAvailable
+                  ? 'Voice input unavailable'
+                  : switch (cookState.handsFreePhase) {
+                      HandsFreePhase.off => 'Tap to enable hands-free',
+                      HandsFreePhase.passive =>
+                        'Listening for "Hey Salty" — tap to mute',
+                      HandsFreePhase.active => 'Listening…',
+                    },
               child: GestureDetector(
                 onTap: () =>
-                    ref.read(cookingProvider.notifier).toggleListening(),
+                    ref.read(cookingProvider.notifier).toggleHandsFree(),
                 child: AnimatedContainer(
                   duration: 300.ms,
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: cookState.isListening
-                        ? theme.colorScheme.primary
-                        : Colors.white12,
+                    color: switch (cookState.handsFreePhase) {
+                      HandsFreePhase.active => theme.colorScheme.primary,
+                      HandsFreePhase.passive =>
+                        theme.colorScheme.primary.withValues(alpha: 0.25),
+                      HandsFreePhase.off => Colors.white12,
+                    },
                   ),
                   child: Icon(
                     !cookState.voiceAvailable
                         ? Icons.mic_off
-                        : cookState.isListening
-                            ? Icons.mic
-                            : Icons.mic_none,
+                        : switch (cookState.handsFreePhase) {
+                            HandsFreePhase.active => Icons.mic,
+                            HandsFreePhase.passive => Icons.hearing,
+                            HandsFreePhase.off => Icons.mic_none,
+                          },
                     color: !cookState.voiceAvailable
                         ? Colors.white24
-                        : cookState.isListening
-                            ? Colors.white
-                            : Colors.white54,
+                        : cookState.handsFreePhase == HandsFreePhase.off
+                            ? Colors.white54
+                            : Colors.white,
                     size: 20,
                   ),
                 ),
@@ -382,8 +396,7 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
               chatMessages: cookState.chatMessages,
               chatController: _chatController,
               onSend: _sendChat,
-              onClose: () =>
-                  ref.read(cookingProvider.notifier).toggleChat(),
+              onClose: () => ref.read(cookingProvider.notifier).toggleChat(),
             ),
         ],
       ),
@@ -416,8 +429,7 @@ class _ChatOverlay extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: const Color(0xFF2D2220),
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -512,8 +524,8 @@ class _ChatOverlay extends StatelessWidget {
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: 'Ask a question...',
-                            hintStyle:
-                                TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                            hintStyle: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.3)),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
@@ -524,8 +536,8 @@ class _ChatOverlay extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.send,
-                            color: theme.colorScheme.primary),
+                        icon:
+                            Icon(Icons.send, color: theme.colorScheme.primary),
                         onPressed: onSend,
                       ),
                     ],
