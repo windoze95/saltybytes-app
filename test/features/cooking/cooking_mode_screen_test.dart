@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:saltybytes_app/core/network/websocket_client.dart';
 import 'package:saltybytes_app/core/providers/recipe_provider.dart';
 import 'package:saltybytes_app/core/voice/speech_service.dart';
+import 'package:saltybytes_app/core/voice/wake_word_service.dart';
 import 'package:saltybytes_app/features/cooking/cooking_mode_screen.dart';
 import 'package:saltybytes_app/models/recipe.dart';
 
@@ -35,13 +36,15 @@ final _recipe = Recipe.fromJson(testRecipeJson(
   ],
 ));
 
-Widget _buildScreen(FakeWebSocketClient ws, FakeSpeechService speech) {
+Widget _buildScreen(FakeWebSocketClient ws, FakeSpeechService speech,
+    FakeWakeWordService wake) {
   return testAppScaffold(
     const CookingModeScreen(recipeId: 'r-1'),
     overrides: [
       recipeDetailProvider.overrideWith((ref, id) async => _recipe),
       websocketClientProvider.overrideWithValue(ws),
       speechServiceProvider.overrideWithValue(speech),
+      wakeWordServiceProvider.overrideWithValue(wake),
     ],
   );
 }
@@ -61,17 +64,19 @@ void main() {
 
   late FakeWebSocketClient ws;
   late FakeSpeechService speech;
+  late FakeWakeWordService wake;
 
   setUp(() {
     ws = FakeWebSocketClient();
     speech = FakeSpeechService();
+    wake = FakeWakeWordService();
   });
 
   group('CookingModeScreen steps', () {
     testWidgets('renders the first step and the progress counter',
         (tester) async {
       _mockWakelockChannel(tester);
-      await tester.pumpWidget(_buildScreen(ws, speech));
+      await tester.pumpWidget(_buildScreen(ws, speech, wake));
       await _settle(tester);
 
       expect(ws.connectedRecipeId, 'r-1');
@@ -82,7 +87,7 @@ void main() {
     testWidgets('next/prev arrows move between steps and notify the server',
         (tester) async {
       _mockWakelockChannel(tester);
-      await tester.pumpWidget(_buildScreen(ws, speech));
+      await tester.pumpWidget(_buildScreen(ws, speech, wake));
       await _settle(tester);
 
       await tester.tap(find.byIcon(Icons.arrow_forward_ios));
@@ -111,7 +116,7 @@ void main() {
     testWidgets('opens via Ask Salty and sends a chat_message envelope',
         (tester) async {
       _mockWakelockChannel(tester);
-      await tester.pumpWidget(_buildScreen(ws, speech));
+      await tester.pumpWidget(_buildScreen(ws, speech, wake));
       await _settle(tester);
 
       expect(find.text('Ask a question...'), findsNothing);
@@ -137,7 +142,7 @@ void main() {
     testWidgets('renders an incoming chat_response as an assistant bubble',
         (tester) async {
       _mockWakelockChannel(tester);
-      await tester.pumpWidget(_buildScreen(ws, speech));
+      await tester.pumpWidget(_buildScreen(ws, speech, wake));
       await _settle(tester);
 
       await tester.tap(find.text('Ask Salty'));
@@ -158,22 +163,24 @@ void main() {
 
   group('CookingModeScreen mic button', () {
     testWidgets(
-        'auto-listens for the wake word, then a wake word activates '
+        'auto-starts the wake engine, then a wake word activates '
         'command capture', (tester) async {
       _mockWakelockChannel(tester);
-      await tester.pumpWidget(_buildScreen(ws, speech));
+      await tester.pumpWidget(_buildScreen(ws, speech, wake));
       await _settle(tester);
 
-      // Cook mode auto-starts hands-free in the passive (wake-word) phase.
+      // Passive: the wake engine is listening; the command recognizer is idle.
       expect(speech.initializeCalled, isTrue);
-      expect(speech.listenCalled, isTrue);
+      expect(wake.startCount, 1);
+      expect(speech.listenCalled, isFalse);
       expect(find.byIcon(Icons.hearing), findsOneWidget);
       expect(find.text('Say "Hey Salty"'), findsOneWidget);
       expect(find.byIcon(Icons.mic), findsNothing);
 
-      // The wake word switches to the active command phase.
-      speech.resultListener!('hey salty', true);
+      // The wake word hands off to the command recognizer.
+      wake.onWake!();
       await _settle(tester);
+      expect(speech.listenCalled, isTrue);
       expect(find.byIcon(Icons.mic), findsOneWidget);
       expect(find.byIcon(Icons.hearing), findsNothing);
       expect(find.text('Listening…'), findsOneWidget);
@@ -198,7 +205,7 @@ void main() {
       _mockWakelockChannel(tester);
       speech.available = false;
 
-      await tester.pumpWidget(_buildScreen(ws, speech));
+      await tester.pumpWidget(_buildScreen(ws, speech, wake));
       await _settle(tester);
 
       // Auto-enable fails silently — no error nag, just a muted mic.

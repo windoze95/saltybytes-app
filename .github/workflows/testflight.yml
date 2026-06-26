@@ -143,6 +143,7 @@ jobs:
             --build-name="$VERSION" \
             --build-number="$BUILD_NUMBER" \
             --dart-define=SALTYBYTES_ID=${{ secrets.SALTYBYTES_ID_HEADER }} \
+            --dart-define=PICOVOICE_ACCESS_KEY=${{ secrets.PICOVOICE_ACCESS_KEY }} \
             --export-options-plist=ios/ExportOptions.plist
           cd ios
           fastlane beta

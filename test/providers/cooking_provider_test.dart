@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:saltybytes_app/core/network/websocket_client.dart';
 import 'package:saltybytes_app/core/providers/cooking_provider.dart';
 import 'package:saltybytes_app/core/voice/speech_service.dart';
+import 'package:saltybytes_app/core/voice/wake_word_service.dart';
 import 'package:saltybytes_app/models/recipe.dart';
 
 import '../helpers/fixtures.dart';
@@ -100,9 +101,38 @@ class _FakeSpeechService implements SpeechService {
   bool get isListening => _listening;
 }
 
+/// Fake wake-word engine. [onWake] is exposed so tests fire a detection;
+/// set [configured] false to simulate no wake engine (tap-to-talk fallback).
+class _FakeWakeWordService implements WakeWordService {
+  bool configured = true;
+  int startCount = 0;
+  bool stopCalled = false;
+  void Function()? onWake;
+
+  @override
+  bool get isConfigured => configured;
+
+  @override
+  Future<bool> start({
+    required void Function() onWake,
+    required void Function(String error) onError,
+  }) async {
+    if (!configured) return false;
+    startCount++;
+    this.onWake = onWake;
+    return true;
+  }
+
+  @override
+  Future<void> stop() async {
+    stopCalled = true;
+  }
+}
+
 void main() {
   late _FakeWebSocketClient ws;
   late _FakeSpeechService speech;
+  late _FakeWakeWordService wake;
   late ProviderContainer container;
   late CookingNotifier notifier;
   late int wakeSignals;
@@ -114,15 +144,18 @@ void main() {
   setUp(() async {
     ws = _FakeWebSocketClient();
     speech = _FakeSpeechService();
+    wake = _FakeWakeWordService();
     wakeSignals = 0;
     container = ProviderContainer(overrides: [
       websocketClientProvider.overrideWithValue(ws),
       speechServiceProvider.overrideWithValue(speech),
+      wakeWordServiceProvider.overrideWithValue(wake),
       // Inject a no-op wake cue (no platform haptics in unit tests) and a
-      // zero restart delay so the always-listening loop is deterministic.
+      // zero restart delay so the active capture loop is deterministic.
       cookingProvider.overrideWith((ref) => CookingNotifier(
             wsClient: ws,
             speechService: speech,
+            wakeWord: wake,
             restartDelay: Duration.zero,
             onWakeSignal: () => wakeSignals++,
           )),
@@ -202,46 +235,57 @@ void main() {
   });
 
   group('hands-free voice', () {
-    test('session auto-enables passive wake-word listening', () {
+    ProviderContainer buildContainer({
+      _FakeWebSocketClient? wsOverride,
+      _FakeSpeechService? speechOverride,
+      _FakeWakeWordService? wakeOverride,
+      Duration wakeWindow = const Duration(seconds: 15),
+    }) {
+      final c = ProviderContainer(overrides: [
+        websocketClientProvider.overrideWithValue(wsOverride ?? ws),
+        speechServiceProvider.overrideWithValue(speechOverride ?? speech),
+        wakeWordServiceProvider.overrideWithValue(wakeOverride ?? wake),
+        cookingProvider.overrideWith((ref) => CookingNotifier(
+              wsClient: wsOverride ?? ws,
+              speechService: speechOverride ?? speech,
+              wakeWord: wakeOverride ?? wake,
+              restartDelay: Duration.zero,
+              wakeWindow: wakeWindow,
+              onWakeSignal: () {},
+            )),
+      ]);
+      addTearDown(c.dispose);
+      c.listen(cookingProvider, (_, __) {});
+      return c;
+    }
+
+    test('session auto-starts the wake engine in passive', () {
       final state = readState();
       expect(state.handsFreePhase, HandsFreePhase.passive);
-      expect(state.isListening, true);
       expect(speech.initializeCalled, true);
+      expect(wake.startCount, 1);
+      // The command recognizer stays idle until a wake word fires.
+      expect(speech.listenCount, 0);
+      expect(state.isListening, false);
+      expect(ws.sent, isEmpty);
+    });
+
+    test('wake word hands off to active command capture and fires the cue',
+        () async {
+      wake.onWake!();
+      await pumpEventQueue();
+
+      final state = readState();
+      expect(state.handsFreePhase, HandsFreePhase.active);
+      expect(wake.stopCalled, true);
       expect(speech.listenCount, 1);
-      // Passive listening never sends anything to the server.
-      expect(ws.sent, isEmpty);
-    });
-
-    test('passive ignores speech without the wake word', () {
-      speech.resultListener!('add two cups of flour', true);
-      expect(readState().handsFreePhase, HandsFreePhase.passive);
-      expect(ws.sent, isEmpty);
-      expect(wakeSignals, 0);
-    });
-
-    test('passive does not surface partial transcripts', () {
-      speech.resultListener!('hey s', false);
-      expect(readState().voiceTranscript, '');
-    });
-
-    test('wake word switches to active and fires the cue', () {
-      speech.resultListener!('hey salty', true);
-      expect(readState().handsFreePhase, HandsFreePhase.active);
       expect(wakeSignals, 1);
-      expect(ws.sent, isEmpty); // no command after the wake word yet
     });
 
-    test('wake word with a trailing command sends it immediately', () {
-      speech.resultListener!('hey salty next step', true);
-      expect(readState().handsFreePhase, HandsFreePhase.active);
-      expect(ws.sent.single, {
-        'type': 'voice_transcript',
-        'payload': {'transcript': 'next step'},
-      });
-    });
+    test('active utterances are sent as commands; partials stream', () async {
+      wake.onWake!();
+      await pumpEventQueue();
 
-    test('active utterances are sent as commands; partials stream', () {
-      speech.resultListener!('hey salty', true); // -> active
       speech.resultListener!('how long do I kne', false);
       expect(readState().voiceTranscript, 'how long do I kne');
 
@@ -252,8 +296,10 @@ void main() {
       });
     });
 
-    test('two ignored intents relax back to passive', () async {
-      speech.resultListener!('hey salty', true);
+    test('two ignored intents relax back to passive (re-arm the wake engine)',
+        () async {
+      wake.onWake!();
+      await pumpEventQueue();
       expect(readState().handsFreePhase, HandsFreePhase.active);
 
       ws.emit({
@@ -268,12 +314,13 @@ void main() {
         'payload': {'type': 'ignore'}
       });
       await pumpEventQueue();
-      expect(
-          readState().handsFreePhase, HandsFreePhase.passive); // 2nd -> revert
+      expect(readState().handsFreePhase, HandsFreePhase.passive); // 2nd
+      expect(wake.startCount, 2); // wake engine re-armed on relax
     });
 
     test('a relevant intent resets the ignore tally', () async {
-      speech.resultListener!('hey salty', true);
+      wake.onWake!();
+      await pumpEventQueue();
 
       ws.emit({
         'type': 'voice_intent',
@@ -295,70 +342,89 @@ void main() {
       expect(readState().handsFreePhase, HandsFreePhase.active);
     });
 
-    test('the recognizer re-arms after it ends (always-listening loop)',
+    test('the command recognizer re-arms between captures while active',
         () async {
+      wake.onWake!();
+      await pumpEventQueue();
       expect(speech.listenCount, 1);
+
       speech.statusListener!('done');
       await pumpEventQueue();
       expect(speech.listenCount, 2);
-      expect(readState().handsFreePhase, HandsFreePhase.passive);
+      expect(readState().handsFreePhase, HandsFreePhase.active);
     });
 
-    test('muting via the mic button stops everything', () async {
+    test('muting via the mic button stops both engines', () async {
       await notifier.toggleHandsFree();
+      expect(wake.stopCalled, true);
       expect(speech.stopCalled, true);
       expect(readState().handsFreePhase, HandsFreePhase.off);
       expect(readState().isListening, false);
     });
 
     test('the active window relaxes to passive after the timeout', () async {
-      final ws2 = _FakeWebSocketClient();
-      final speech2 = _FakeSpeechService();
-      final c2 = ProviderContainer(overrides: [
-        websocketClientProvider.overrideWithValue(ws2),
-        speechServiceProvider.overrideWithValue(speech2),
-        cookingProvider.overrideWith((ref) => CookingNotifier(
-              wsClient: ws2,
-              speechService: speech2,
-              restartDelay: Duration.zero,
-              wakeWindow: const Duration(milliseconds: 50),
-              onWakeSignal: () {},
-            )),
-      ]);
-      addTearDown(c2.dispose);
-      c2.listen(cookingProvider, (_, __) {});
+      final wake2 = _FakeWakeWordService();
+      final c2 = buildContainer(
+        wsOverride: _FakeWebSocketClient(),
+        speechOverride: _FakeSpeechService(),
+        wakeOverride: wake2,
+        wakeWindow: const Duration(milliseconds: 50),
+      );
       await c2.read(cookingProvider.notifier).startSession(recipe);
 
-      speech2.resultListener!('hey salty', true);
+      wake2.onWake!();
+      await pumpEventQueue();
       expect(c2.read(cookingProvider).handsFreePhase, HandsFreePhase.active);
 
       await Future<void>.delayed(const Duration(milliseconds: 80));
       expect(c2.read(cookingProvider).handsFreePhase, HandsFreePhase.passive);
     });
 
-    test('unavailable mic leaves hands-free off and flags voiceAvailable',
+    test(
+        'without a wake engine, auto-start stays idle and the mic taps to talk',
         () async {
       final ws2 = _FakeWebSocketClient();
-      final speech2 = _FakeSpeechService()..available = false;
-      final c2 = ProviderContainer(overrides: [
-        websocketClientProvider.overrideWithValue(ws2),
-        speechServiceProvider.overrideWithValue(speech2),
-        cookingProvider.overrideWith((ref) => CookingNotifier(
-              wsClient: ws2,
-              speechService: speech2,
-              restartDelay: Duration.zero,
-              onWakeSignal: () {},
-            )),
-      ]);
-      addTearDown(c2.dispose);
-      c2.listen(cookingProvider, (_, __) {});
+      final speech2 = _FakeSpeechService();
+      final c2 = buildContainer(
+        wsOverride: ws2,
+        speechOverride: speech2,
+        wakeOverride: _FakeWakeWordService()..configured = false,
+      );
+      final n2 = c2.read(cookingProvider.notifier);
+      await n2.startSession(recipe);
+
+      // Auto-start stayed idle (no recording) but voice is still available.
+      expect(c2.read(cookingProvider).handsFreePhase, HandsFreePhase.off);
+      expect(c2.read(cookingProvider).voiceAvailable, true);
+      expect(speech2.listenCount, 0);
+
+      // Tapping the mic starts a manual command capture.
+      await n2.toggleHandsFree();
+      expect(c2.read(cookingProvider).handsFreePhase, HandsFreePhase.active);
+      expect(speech2.listenCount, 1);
+
+      speech2.resultListener!('next step', true);
+      expect(ws2.sent.single, {
+        'type': 'voice_transcript',
+        'payload': {'transcript': 'next step'},
+      });
+    });
+
+    test('unavailable mic leaves hands-free off and flags voiceAvailable',
+        () async {
+      final wake2 = _FakeWakeWordService();
+      final c2 = buildContainer(
+        wsOverride: _FakeWebSocketClient(),
+        speechOverride: _FakeSpeechService()..available = false,
+        wakeOverride: wake2,
+      );
       await c2.read(cookingProvider.notifier).startSession(recipe);
 
       final state = c2.read(cookingProvider);
       expect(state.handsFreePhase, HandsFreePhase.off);
       expect(state.voiceAvailable, false);
-      // Auto-enable is silent (no error nag) when the mic just isn't granted.
-      expect(state.error, isNull);
+      expect(state.error, isNull); // silent on the automatic start
+      expect(wake2.startCount, 0); // speech failed first; wake never attempted
     });
   });
 

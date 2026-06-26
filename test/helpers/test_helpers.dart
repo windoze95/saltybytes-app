@@ -11,6 +11,7 @@ import 'package:saltybytes_app/core/network/websocket_client.dart';
 import 'package:saltybytes_app/core/providers/auth_provider.dart';
 import 'package:saltybytes_app/core/storage/secure_storage.dart';
 import 'package:saltybytes_app/core/voice/speech_service.dart';
+import 'package:saltybytes_app/core/voice/wake_word_service.dart';
 
 class MockDio extends Mock implements Dio {}
 
@@ -54,8 +55,7 @@ class FakeAuthNotifier extends AsyncNotifier<AuthStatus>
 class FakeWebSocketClient implements WebSocketClient {
   final _stateController =
       StreamController<WebSocketConnectionState>.broadcast();
-  final _messageController =
-      StreamController<Map<String, dynamic>>.broadcast();
+  final _messageController = StreamController<Map<String, dynamic>>.broadcast();
 
   /// Every envelope sent through [send], in order.
   final List<Map<String, dynamic>> sent = [];
@@ -95,8 +95,7 @@ class FakeWebSocketClient implements WebSocketClient {
   /// Simulates a message arriving from the server.
   void emit(Map<String, dynamic> message) => _messageController.add(message);
 
-  void emitState(WebSocketConnectionState state) =>
-      _stateController.add(state);
+  void emitState(WebSocketConnectionState state) => _stateController.add(state);
 }
 
 /// Fake speech service exposing the registered callbacks so tests can
@@ -138,6 +137,34 @@ class FakeSpeechService implements SpeechService {
 
   @override
   bool get isListening => _listening;
+}
+
+/// Fake wake-word engine. Exposes the registered [onWake] so tests can fire a
+/// detection; set [configured] false to simulate an unconfigured engine.
+class FakeWakeWordService implements WakeWordService {
+  bool configured = true;
+  int startCount = 0;
+  bool stopCalled = false;
+  void Function()? onWake;
+
+  @override
+  bool get isConfigured => configured;
+
+  @override
+  Future<bool> start({
+    required void Function() onWake,
+    required void Function(String error) onError,
+  }) async {
+    if (!configured) return false;
+    startCount++;
+    this.onWake = onWake;
+    return true;
+  }
+
+  @override
+  Future<void> stop() async {
+    stopCalled = true;
+  }
 }
 
 /// Creates a [ProviderContainer] with common overrides for testing.
