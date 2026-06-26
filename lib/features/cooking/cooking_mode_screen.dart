@@ -240,7 +240,7 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                             ? (cookState.voiceTranscript.isEmpty
                                 ? 'Listening…'
                                 : cookState.voiceTranscript)
-                            : 'Say "Hey Salty"',
+                            : 'Say "Gordon"',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color:
                               cookState.handsFreePhase == HandsFreePhase.active
@@ -322,7 +322,7 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                           icon: const Icon(Icons.chat_bubble_outline,
                               size: 18, color: Colors.white54),
                           label: Text(
-                            'Ask Salty',
+                            'Ask Gordon',
                             style: theme.textTheme.bodySmall
                                 ?.copyWith(color: Colors.white54),
                           ),
@@ -351,7 +351,7 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                   : switch (cookState.handsFreePhase) {
                       HandsFreePhase.off => 'Tap to enable hands-free',
                       HandsFreePhase.passive =>
-                        'Listening for "Hey Salty" — tap to mute',
+                        'Listening for "Gordon" — tap to mute',
                       HandsFreePhase.active => 'Listening…',
                     },
               child: GestureDetector(
@@ -461,7 +461,7 @@ class _ChatOverlay extends StatelessWidget {
                         color: theme.colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      'Ask Salty',
+                      'Ask Gordon',
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,

@@ -20,6 +20,7 @@ dependencies:
   image_cropper: ^8.0.2
   flutter_image_compress: ^2.3.0
   speech_to_text: ^7.0.0
+  vosk_flutter_2: ^1.0.5
   wakelock_plus: ^1.2.8
   json_annotation: ^4.9.0
   freezed_annotation: ^2.4.4
