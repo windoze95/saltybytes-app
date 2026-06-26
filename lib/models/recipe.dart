@@ -42,8 +42,7 @@ class Recipe with _$Recipe {
     DateTime? updatedAt,
   }) = _Recipe;
 
-  factory Recipe.fromJson(Map<String, dynamic> json) =>
-      _$RecipeFromJson(json);
+  factory Recipe.fromJson(Map<String, dynamic> json) => _$RecipeFromJson(json);
 }
 
 @freezed
@@ -55,6 +54,9 @@ class Ingredient with _$Ingredient {
     @JsonKey(name: 'metric_unit') String? metricUnit,
     @JsonKey(name: 'metric_amount') double? metricAmount,
     @JsonKey(name: 'original_text') String? originalText,
+    @JsonKey(name: 'measure_kind') String? measureKind,
+    @JsonKey(name: 'base_amount') double? baseAmount,
+    @JsonKey(name: 'amount_high') double? amountHigh,
   }) = _Ingredient;
 
   factory Ingredient.fromJson(Map<String, dynamic> json) =>

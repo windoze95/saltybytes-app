@@ -5,6 +5,7 @@ import '../../models/allergen.dart';
 import '../../models/recipe.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
+import '../utils/unit_converter.dart';
 
 class PreviewException implements Exception {
   const PreviewException({required this.message, this.code});
@@ -192,18 +193,15 @@ class RecipePreview {
               )
               .toList() ??
           [],
-      instructions: (json['instructions'] as List?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
+      instructions:
+          (json['instructions'] as List?)?.map((e) => e as String).toList() ??
+              [],
       cookTime: json['cook_time'] as int?,
       portions: json['portions'] as int?,
       portionSize: json['portion_size'] as String?,
       sourceUrl: json['source_url'] as String?,
-      hashtags: (json['hashtags'] as List?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
+      hashtags:
+          (json['hashtags'] as List?)?.map((e) => e as String).toList() ?? [],
       imagePrompt: json['image_prompt'] as String?,
       linkedSuggestions: (json['linked_recipe_suggestions'] as List?)
               ?.map((e) => e as String)
@@ -271,18 +269,18 @@ class PreviewIngredient {
   }
 
   String get displayText {
-    final parts = <String>[];
-    if (amount != null && amount! > 0) {
-      // Format as integer if whole number
-      parts.add(amount! == amount!.roundToDouble()
-          ? amount!.toInt().toString()
-          : amount.toString());
-    }
-    if (unit != null && unit!.isNotEmpty) {
-      parts.add(unit!);
-    }
-    parts.add(name);
-    return parts.join(' ');
+    // Pre-import preview shows the source measurement, formatted consistently
+    // with the recipe screen (cooking fractions for US volume, clean decimals
+    // for metric). No viewer-system alternate yet — that resolves after import.
+    final qty = formatIngredientQuantity(Ingredient(
+      name: name,
+      amount: amount,
+      unit: unit,
+      metricUnit: metricUnit,
+      metricAmount: metricAmount,
+      originalText: originalText,
+    ));
+    return qty.isEmpty ? name : '$qty $name';
   }
 }
 
@@ -497,7 +495,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
     }
   }
 
-  Future<Recipe> importPreview(RecipePreview preview, {String? imageUrl}) async {
+  Future<Recipe> importPreview(RecipePreview preview,
+      {String? imageUrl}) async {
     final response = await _apiClient.post(
       ApiEndpoints.importManual,
       data: preview.toManualImportJson(imageUrl: imageUrl),
@@ -525,8 +524,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       WebSearchResult original, MultiRecipeResolution resolution) {
     if (resolution.recipes.isEmpty) return null;
 
-    final newCards =
-        resolution.recipes.map((c) => c.toSearchResult()).toList();
+    final newCards = resolution.recipes.map((c) => c.toSearchResult()).toList();
 
     final updatedResults = <WebSearchResult>[];
     int insertedAt = 0;

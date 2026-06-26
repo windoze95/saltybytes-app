@@ -1,0 +1,37 @@
+name: flutter-test
+
+# Establishes the Flutter test gate for the app. The unit-conversion engine in
+# lib/core/utils/unit_converter.dart is a port of the Go reference in
+# saltybytes-api/internal/units; the golden-vector tests here are what keep the
+# two ports in sync, so they must run on every change.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
