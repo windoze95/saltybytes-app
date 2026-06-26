@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/allergen_provider.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -28,7 +29,7 @@ class RecipeDetailScreen extends ConsumerWidget {
       error: (error, _) => Scaffold(
         appBar: AppBar(),
         body: _ErrorBody(
-          error: error.toString(),
+          error: userFacingErrorMessage(error, 'Could not load this recipe.'),
           onRetry: () => ref.invalidate(recipeDetailProvider(recipeId)),
         ),
       ),
