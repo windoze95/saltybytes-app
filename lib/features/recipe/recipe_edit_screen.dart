@@ -59,8 +59,10 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
       // and the current updatedAt so a background poll can refresh the
       // providers once the regenerated recipe actually lands.
       final container = ProviderScope.containerOf(context, listen: false);
-      final regeneratingSince =
-          ref.read(recipeDetailProvider(widget.recipeId)).valueOrNull?.updatedAt;
+      final regeneratingSince = ref
+          .read(recipeDetailProvider(widget.recipeId))
+          .valueOrNull
+          ?.updatedAt;
 
       await crud.regenerate(
         widget.recipeId,
@@ -134,7 +136,9 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
       ),
       body: recipeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(
+            child:
+                Text(userFacingErrorMessage(e, 'Could not load this recipe.'))),
         data: (recipe) => SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -280,10 +284,10 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ||
-                          _promptController.text.trim().isEmpty
-                      ? null
-                      : _handleRegenerate,
+                  onPressed:
+                      _isSubmitting || _promptController.text.trim().isEmpty
+                          ? null
+                          : _handleRegenerate,
                   icon: _isSubmitting
                       ? SizedBox(
                           width: 20,

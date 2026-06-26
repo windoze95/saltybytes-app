@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/recipe_provider.dart';
 
 class RecipeForkScreen extends ConsumerStatefulWidget {
@@ -121,7 +122,9 @@ class _RecipeForkScreenState extends ConsumerState<RecipeForkScreen> {
       ),
       body: recipeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(
+            child:
+                Text(userFacingErrorMessage(e, 'Could not load this recipe.'))),
         data: (recipe) => SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(

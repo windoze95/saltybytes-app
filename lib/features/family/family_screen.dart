@@ -22,7 +22,7 @@ class FamilyScreen extends ConsumerWidget {
       body: familyAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _ErrorState(
-          error: error.toString(),
+          error: userFacingErrorMessage(error, 'Could not load your family.'),
           onRetry: () => ref.invalidate(familyProvider),
         ),
         data: (family) {
@@ -274,7 +274,11 @@ class _MemberList extends ConsumerWidget {
           child: _MemberCard(member: member)
               .animate()
               .fadeIn(duration: 300.ms, delay: (50 * index).ms)
-              .slideX(begin: 0.05, end: 0, duration: 300.ms, delay: (50 * index).ms),
+              .slideX(
+                  begin: 0.05,
+                  end: 0,
+                  duration: 300.ms,
+                  delay: (50 * index).ms),
         );
       },
     );
@@ -447,13 +451,14 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off, size: 64,
+            Icon(Icons.cloud_off,
+                size: 64,
                 color: theme.colorScheme.error.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text('Something went wrong', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
-            Text(error, textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium),
+            Text(error,
+                textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: onRetry,

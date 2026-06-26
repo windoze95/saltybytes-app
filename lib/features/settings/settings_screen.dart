@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/user_provider.dart';
 import '../../models/user.dart';
@@ -18,7 +19,9 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Settings')),
       body: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(
+            child: Text(
+                userFacingErrorMessage(e, 'Could not load your settings.'))),
         data: (user) {
           if (user == null) {
             return const Center(child: Text('Not signed in'));
@@ -119,14 +122,14 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                   backgroundColor:
                       theme.colorScheme.primary.withValues(alpha: 0.12),
                   child: Text(
-                          widget.user.username.isNotEmpty
-                              ? widget.user.username[0].toUpperCase()
-                              : '?',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                    widget.user.username.isNotEmpty
+                        ? widget.user.username[0].toUpperCase()
+                        : '?',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -167,10 +170,8 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                 ),
                 trailing: SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(
-                        value: 'us_customary', label: Text('US')),
-                    ButtonSegment(
-                        value: 'metric', label: Text('Metric')),
+                    ButtonSegment(value: 'us_customary', label: Text('US')),
+                    ButtonSegment(value: 'metric', label: Text('Metric')),
                   ],
                   selected: {_unitSystem},
                   onSelectionChanged: (v) => _changeUnitSystem(v.first),
@@ -234,8 +235,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
             children: [
               SwitchListTile(
                 title: const Text('Keep Screen Awake'),
-                subtitle:
-                    const Text('During cooking mode'),
+                subtitle: const Text('During cooking mode'),
                 value: _wakelockEnabled,
                 onChanged: _toggleWakelock,
                 secondary: const Icon(Icons.screen_lock_portrait),
@@ -304,10 +304,8 @@ class _SectionHeader extends StatelessWidget {
     return Text(
       title,
       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),

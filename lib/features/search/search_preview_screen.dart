@@ -188,7 +188,8 @@ class _ErrorState extends StatelessWidget {
     } else {
       icon = Icons.error_outline;
       title = 'Failed to load preview';
-      detail = error.toString();
+      detail = userFacingErrorMessage(
+          error, 'Could not load the preview. Please try again.');
     }
 
     return Center(
@@ -204,8 +205,7 @@ class _ErrorState extends StatelessWidget {
             Text(title, style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(detail,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall),
+                textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
             const SizedBox(height: 16),
             OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
           ],
@@ -304,8 +304,8 @@ class _PreviewBody extends StatelessWidget {
                                   width: 6,
                                   height: 6,
                                   decoration: BoxDecoration(
-                                    color: colors.primary
-                                        .withValues(alpha: 0.6),
+                                    color:
+                                        colors.primary.withValues(alpha: 0.6),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -352,8 +352,7 @@ class _PreviewBody extends StatelessWidget {
                                   alignment: Alignment.center,
                                   child: Text(
                                     '${i + 1}',
-                                    style:
-                                        theme.textTheme.bodySmall?.copyWith(
+                                    style: theme.textTheme.bodySmall?.copyWith(
                                       color: colors.primary,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -385,8 +384,7 @@ class _PreviewBody extends StatelessWidget {
                                 (tag) => Chip(
                                   label: Text(
                                     '#$tag',
-                                    style:
-                                        theme.textTheme.labelSmall?.copyWith(
+                                    style: theme.textTheme.labelSmall?.copyWith(
                                       color: colors.onSurfaceVariant,
                                     ),
                                   ),

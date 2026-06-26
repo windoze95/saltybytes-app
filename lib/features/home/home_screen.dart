@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../models/recipe.dart';
 import 'widgets/recipe_card.dart';
@@ -166,7 +167,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: recipesAsync.when(
           loading: () => const _LoadingGrid(),
           error: (error, _) => _ErrorState(
-            error: error.toString(),
+            error:
+                userFacingErrorMessage(error, 'Could not load your recipes.'),
             onRetry: _onRefresh,
           ),
           data: (recipes) {
@@ -369,9 +371,9 @@ class _LoadingGrid extends StatelessWidget {
               ),
             ],
           ),
-        )
-            .animate(onPlay: (c) => c.repeat())
-            .shimmer(duration: 1200.ms, color: theme.colorScheme.onSurface.withValues(alpha: 0.05));
+        ).animate(onPlay: (c) => c.repeat()).shimmer(
+            duration: 1200.ms,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.05));
       },
     );
   }
