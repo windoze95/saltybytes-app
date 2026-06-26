@@ -92,12 +92,6 @@ const _aliases = <String, String>{
   'millilitre': 'mL',
   'millilitres': 'mL',
   'cc': 'mL',
-  'cl': 'cl',
-  'centiliter': 'cl',
-  'centilitre': 'cl',
-  'dl': 'dl',
-  'deciliter': 'dl',
-  'decilitre': 'dl',
   'l': 'L',
   'liter': 'L',
   'liters': 'L',
@@ -154,8 +148,6 @@ const _aliases = <String, String>{
   'fillet': 'pieces',
   'fillets': 'pieces',
 };
-
-const _inputOnlyFactor = <String, double>{'cl': 10, 'dl': 100};
 
 const _liquidNames = [
   'water',
@@ -225,8 +217,6 @@ double baseAmount(double amount, String? unit, String kind) {
   if (kind == kindCount) return amount;
   if (kind == kindImprecise) return 0;
   if (u == 'oz' && kind == kindVolume) return amount * _meta['fl oz']!.factor;
-  final inputOnly = _inputOnlyFactor[(unit ?? '').toLowerCase()];
-  if (inputOnly != null) return amount * inputOnly;
   final m = _meta[u];
   if (m != null) return amount * m.factor;
   return 0;
@@ -281,25 +271,6 @@ double _ingredientBase(Ingredient ing) {
     return system == sysMetric ? _metricVolume(base) : _usVolume(base);
   }
   return null;
-}
-
-/// Scale a quantity by [factor] and re-express it in its own system, rounding
-/// once. Count/imprecise units scale their amount but keep their unit.
-({double amount, String unit}) scaleQuantity(Ingredient ing, double factor) {
-  final amount = ing.amount ?? 0;
-  final unit = ing.unit ?? '';
-  if (factor <= 0) return (amount: amount, unit: unit);
-  final kind = _ingredientKind(ing);
-  final src = systemOf(unit);
-  if (kind == kindCount ||
-      kind == kindImprecise ||
-      kind.isEmpty ||
-      src.isEmpty) {
-    return (amount: _roundCount(amount * factor), unit: unit);
-  }
-  final base = _ingredientBase(ing);
-  return expressInSystem(base * factor, kind, src) ??
-      (amount: amount * factor, unit: unit);
 }
 
 // --- system-specific unit selection (mirrors Go) ---------------------------
@@ -383,11 +354,6 @@ double _snapCookingFraction(double x) {
 double _round1(double x) => (x * 10).round() / 10;
 double _round2(double x) => (x * 100).round() / 100;
 
-double _roundCount(double x) {
-  if (x < 4) return (x * 2).round() / 2;
-  return x.roundToDouble();
-}
-
 double _roundMetricSmall(double x) {
   if (x >= 100) return (x / 5).round() * 5;
   if (x >= 10) return x.roundToDouble();
@@ -395,18 +361,6 @@ double _roundMetricSmall(double x) {
 }
 
 // --- formatting -------------------------------------------------------------
-
-bool needsConversion(String recipeSystem, String userSystem) =>
-    recipeSystem != userSystem;
-
-/// Back-compat wrapper: returns the ingredient converted into [toSystem], or
-/// the original when no conversion applies.
-Ingredient convertIngredient(
-    Ingredient ing, String fromSystem, String toSystem) {
-  final alt = convertToViewer(ing, toSystem);
-  if (alt == null) return ing;
-  return ing.copyWith(amount: alt.amount, unit: alt.unit);
-}
 
 /// Format a numeric amount: cooking fractions for US volume units, plain
 /// decimals for metric and weights.
@@ -502,38 +456,6 @@ String formatIngredientQuantityWithAlternate(
   if (alternate.isEmpty || alternate == primary) return primary;
 
   return '$primary ($alternate)';
-}
-
-/// Render an ingredient quantity, optionally scaled, with the viewer's
-/// equivalent in parentheses. The single entry point for display surfaces.
-String renderQuantity(
-  Ingredient ingredient, {
-  required String userUnitSystem,
-  double scale = 1.0,
-  bool withAlternate = true,
-}) {
-  var ing = ingredient;
-  if (scale != 1.0 && scale > 0) {
-    final scaled = scaleQuantity(ingredient, scale);
-    final scaledHigh =
-        (ingredient.amountHigh != null && ingredient.amountHigh! > 0)
-            ? scaleQuantity(
-                    ingredient.copyWith(amount: ingredient.amountHigh), scale)
-                .amount
-            : null;
-    ing = ingredient.copyWith(
-      amount: scaled.amount,
-      unit: scaled.unit,
-      amountHigh: scaledHigh,
-      baseAmount: null, // recomputed from the scaled amount/unit
-    );
-  }
-  if (!withAlternate) return formatIngredientQuantity(ing);
-  return formatIngredientQuantityWithAlternate(
-    ing,
-    recipeUnitSystem: systemOf(ing.unit),
-    userUnitSystem: userUnitSystem,
-  );
 }
 
 /// Parse a fractional string like "1/2", "1 1/2", "1,5" (European decimal), or

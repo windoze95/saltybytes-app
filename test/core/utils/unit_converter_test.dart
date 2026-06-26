@@ -3,13 +3,6 @@ import 'package:saltybytes_app/core/utils/unit_converter.dart';
 import 'package:saltybytes_app/models/recipe.dart';
 
 void main() {
-  group('needsConversion', () {
-    test('reflects whether systems differ', () {
-      expect(needsConversion('us_customary', 'us_customary'), isFalse);
-      expect(needsConversion('us_customary', 'metric'), isTrue);
-    });
-  });
-
   group('measureKind', () {
     test('classifies volume, mass, count, imprecise', () {
       expect(measureKind('cup', 'flour', 'g'), kindVolume);
@@ -34,7 +27,6 @@ void main() {
       expect(baseAmount(200, 'g', kindMass), 200);
       expect(baseAmount(8, 'oz', kindMass), closeTo(226.8, 0.1));
       expect(baseAmount(8, 'oz', kindVolume), closeTo(236.6, 0.1)); // fluid oz
-      expect(baseAmount(5, 'dl', kindVolume), 500); // input-only unit
       expect(baseAmount(3, 'pieces', kindCount), 3);
       expect(baseAmount(1, 'pinch', kindImprecise), 0);
     });
@@ -112,29 +104,6 @@ void main() {
     });
   });
 
-  group('scaleQuantity', () {
-    test('8 tbsp doubled becomes 1 cup', () {
-      final r =
-          scaleQuantity(Ingredient(name: 'oil', amount: 8, unit: 'tbsp'), 2);
-      expect(r.amount, 1.0);
-      expect(r.unit, 'cup');
-    });
-
-    test('3 eggs halved becomes 1.5 pieces', () {
-      final r = scaleQuantity(
-          Ingredient(name: 'egg', amount: 3, unit: 'pieces'), 0.5);
-      expect(r.amount, 1.5);
-      expect(r.unit, 'pieces');
-    });
-
-    test('200 g doubled becomes 400 g', () {
-      final r =
-          scaleQuantity(Ingredient(name: 'flour', amount: 200, unit: 'g'), 2);
-      expect(r.amount, 400);
-      expect(r.unit, 'g');
-    });
-  });
-
   group('formatAmount', () {
     test('US volume uses cooking fractions', () {
       expect(formatAmount(1.5, 'cup'), '1 1/2');
@@ -206,6 +175,48 @@ void main() {
     test('omits the alternate when already in the viewer system', () {
       final ing = Ingredient(name: 'flour', amount: 2, unit: 'cups');
       expect(render(ing, 'us_customary', 'us_customary'), '2 cups');
+    });
+  });
+
+  // The viewer only ever sees a parenthetical when an ingredient's OWN source
+  // unit differs from their setting, and the parens hold THEIR system. A US
+  // user never sees metric on a US measurement; they see it only on genuinely
+  // metric measurements, converted to US. Gating is per-ingredient, not
+  // per-recipe — so a mixed recipe converts only its off-system rows.
+  group('parenthetical appears only for off-system ingredients', () {
+    String render(Ingredient ing, String user) =>
+        formatIngredientQuantityWithAlternate(ing,
+            recipeUnitSystem: 'us_customary', userUnitSystem: user);
+
+    test('US user, US measurement -> no parens', () {
+      expect(
+          render(Ingredient(name: 'flour', amount: 2, unit: 'cups'),
+              'us_customary'),
+          '2 cups');
+    });
+
+    test('US user, metric measurement -> parens contain US', () {
+      expect(
+          render(Ingredient(name: 'sugar', amount: 200, unit: 'g'),
+              'us_customary'),
+          '200 g (7.1 oz)');
+    });
+
+    test('metric user, metric measurement -> no parens', () {
+      expect(
+          render(Ingredient(name: 'sugar', amount: 200, unit: 'g'), 'metric'),
+          '200 g');
+    });
+
+    test('mixed recipe, US user -> parens only on the metric row', () {
+      expect(
+          render(Ingredient(name: 'flour', amount: 2, unit: 'cups'),
+              'us_customary'),
+          '2 cups'); // US row: untouched
+      expect(
+          render(Ingredient(name: 'butter', amount: 113, unit: 'g'),
+              'us_customary'),
+          '113 g (4 oz)'); // metric row: converted to US
     });
   });
 
