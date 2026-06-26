@@ -157,25 +157,25 @@ void main() {
   });
 
   group('CookingModeScreen mic button', () {
-    testWidgets('reflects the listening state of the speech service',
-        (tester) async {
+    testWidgets(
+        'auto-listens for the wake word, then a wake word activates '
+        'command capture', (tester) async {
       _mockWakelockChannel(tester);
       await tester.pumpWidget(_buildScreen(ws, speech));
       await _settle(tester);
 
-      // Idle: outline mic, no live transcript.
-      expect(find.byIcon(Icons.mic_none), findsOneWidget);
-      expect(find.byIcon(Icons.mic), findsNothing);
-      expect(find.text('Listening…'), findsNothing);
-
-      await tester.tap(find.byIcon(Icons.mic_none));
-      await _settle(tester);
-
-      // Listening: filled mic + live transcript line.
+      // Cook mode auto-starts hands-free in the passive (wake-word) phase.
       expect(speech.initializeCalled, isTrue);
       expect(speech.listenCalled, isTrue);
+      expect(find.byIcon(Icons.hearing), findsOneWidget);
+      expect(find.text('Say "Hey Salty"'), findsOneWidget);
+      expect(find.byIcon(Icons.mic), findsNothing);
+
+      // The wake word switches to the active command phase.
+      speech.resultListener!('hey salty', true);
+      await _settle(tester);
       expect(find.byIcon(Icons.mic), findsOneWidget);
-      expect(find.byIcon(Icons.mic_none), findsNothing);
+      expect(find.byIcon(Icons.hearing), findsNothing);
       expect(find.text('Listening…'), findsOneWidget);
 
       // Partial transcripts stream into the live caption.
@@ -183,18 +183,17 @@ void main() {
       await _settle(tester);
       expect(find.text('set a timer for ten'), findsOneWidget);
 
-      // The final result stops listening and sends the transcript envelope.
+      // A final command is sent over the socket; capture stays active.
       speech.resultListener!('set a timer for ten minutes', true);
       await _settle(tester);
-      expect(find.byIcon(Icons.mic_none), findsOneWidget);
-      expect(find.byIcon(Icons.mic), findsNothing);
       expect(ws.sent.last, {
         'type': 'voice_transcript',
         'payload': {'transcript': 'set a timer for ten minutes'},
       });
+      expect(find.byIcon(Icons.mic), findsOneWidget);
     });
 
-    testWidgets('shows mic_off when speech recognition is unavailable',
+    testWidgets('stays muted (mic_off) and silent when the mic is unavailable',
         (tester) async {
       _mockWakelockChannel(tester);
       speech.available = false;
@@ -202,10 +201,16 @@ void main() {
       await tester.pumpWidget(_buildScreen(ws, speech));
       await _settle(tester);
 
-      await tester.tap(find.byIcon(Icons.mic_none));
-      await _settle(tester);
-
+      // Auto-enable fails silently — no error nag, just a muted mic.
       expect(find.byIcon(Icons.mic_off), findsOneWidget);
+      expect(
+        find.text('Voice input is unavailable. Check microphone permissions.'),
+        findsNothing,
+      );
+
+      // Tapping the muted mic surfaces the explicit permission error.
+      await tester.tap(find.byIcon(Icons.mic_off));
+      await _settle(tester);
       expect(
         find.text('Voice input is unavailable. Check microphone permissions.'),
         findsOneWidget,
