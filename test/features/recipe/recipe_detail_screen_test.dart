@@ -205,9 +205,10 @@ void main() {
       ));
       await _settle(tester);
 
-      // 2 cups -> 480 mL, 1 lb -> 450 g (cooking-friendly rounding).
-      expect(find.text('2 cups (480 mL)'), findsOneWidget);
-      expect(find.text('1 lb (450 g)'), findsOneWidget);
+      // No AI metric pair on these fixtures, so exact same-dimension
+      // equivalents: 2 cups -> 475 mL, 1 lb -> 455 g.
+      expect(find.text('2 cups (475 mL)'), findsOneWidget);
+      expect(find.text('1 lb (455 g)'), findsOneWidget);
     });
 
     testWidgets('us_customary user sees the recipe amounts unchanged',

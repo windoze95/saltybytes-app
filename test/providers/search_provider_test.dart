@@ -352,7 +352,8 @@ void main() {
         amount: 2.5,
       );
 
-      expect(ingredient.displayText, '2.5 tbsp sugar');
+      // Preview now formats with cooking fractions, matching the recipe screen.
+      expect(ingredient.displayText, '2 1/2 tbsp sugar');
     });
 
     test('displayText shows only name when no amount/unit', () {

@@ -82,8 +82,9 @@ void main() {
       ));
       await _settle(tester);
 
-      expect(find.text('2 cups (480 mL)'), findsOneWidget);
-      expect(find.text('1 lb (450 g)'), findsOneWidget);
+      // No AI metric pair, so an exact same-dimension volume/mass equivalent.
+      expect(find.text('2 cups (475 mL)'), findsOneWidget);
+      expect(find.text('1 lb (455 g)'), findsOneWidget);
       expect(find.text('flour'), findsOneWidget);
       expect(find.text('ground beef'), findsOneWidget);
     });
@@ -133,16 +134,15 @@ void main() {
       expect(find.text('10 mL (2 tsp)'), findsOneWidget);
     });
 
-    testWidgets('omits the alternate when the US amount would be ugly',
-        (tester) async {
+    testWidgets('shows an exact same-dimension weight alternate', (tester) async {
       await tester.pumpWidget(_build(
-        // 100 g -> 3.571 oz: no clean fraction, so the original stays.
+        // 100 g -> 3.5 oz exactly (same-dimension mass), no density guessing.
         [_ing('chocolate', 100.0, 'g')],
         recipeUnitSystem: 'metric',
       ));
       await _settle(tester);
 
-      expect(find.text('100 g'), findsOneWidget);
+      expect(find.text('100 g (3.5 oz)'), findsOneWidget);
     });
   });
 

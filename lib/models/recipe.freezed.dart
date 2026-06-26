@@ -545,6 +545,12 @@ mixin _$Ingredient {
   double? get metricAmount => throw _privateConstructorUsedError;
   @JsonKey(name: 'original_text')
   String? get originalText => throw _privateConstructorUsedError;
+  @JsonKey(name: 'measure_kind')
+  String? get measureKind => throw _privateConstructorUsedError;
+  @JsonKey(name: 'base_amount')
+  double? get baseAmount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'amount_high')
+  double? get amountHigh => throw _privateConstructorUsedError;
 
   /// Serializes this Ingredient to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -568,7 +574,10 @@ abstract class $IngredientCopyWith<$Res> {
       String? unit,
       @JsonKey(name: 'metric_unit') String? metricUnit,
       @JsonKey(name: 'metric_amount') double? metricAmount,
-      @JsonKey(name: 'original_text') String? originalText});
+      @JsonKey(name: 'original_text') String? originalText,
+      @JsonKey(name: 'measure_kind') String? measureKind,
+      @JsonKey(name: 'base_amount') double? baseAmount,
+      @JsonKey(name: 'amount_high') double? amountHigh});
 }
 
 /// @nodoc
@@ -592,6 +601,9 @@ class _$IngredientCopyWithImpl<$Res, $Val extends Ingredient>
     Object? metricUnit = freezed,
     Object? metricAmount = freezed,
     Object? originalText = freezed,
+    Object? measureKind = freezed,
+    Object? baseAmount = freezed,
+    Object? amountHigh = freezed,
   }) {
     return _then(_value.copyWith(
       name: null == name
@@ -618,6 +630,18 @@ class _$IngredientCopyWithImpl<$Res, $Val extends Ingredient>
           ? _value.originalText
           : originalText // ignore: cast_nullable_to_non_nullable
               as String?,
+      measureKind: freezed == measureKind
+          ? _value.measureKind
+          : measureKind // ignore: cast_nullable_to_non_nullable
+              as String?,
+      baseAmount: freezed == baseAmount
+          ? _value.baseAmount
+          : baseAmount // ignore: cast_nullable_to_non_nullable
+              as double?,
+      amountHigh: freezed == amountHigh
+          ? _value.amountHigh
+          : amountHigh // ignore: cast_nullable_to_non_nullable
+              as double?,
     ) as $Val);
   }
 }
@@ -636,7 +660,10 @@ abstract class _$$IngredientImplCopyWith<$Res>
       String? unit,
       @JsonKey(name: 'metric_unit') String? metricUnit,
       @JsonKey(name: 'metric_amount') double? metricAmount,
-      @JsonKey(name: 'original_text') String? originalText});
+      @JsonKey(name: 'original_text') String? originalText,
+      @JsonKey(name: 'measure_kind') String? measureKind,
+      @JsonKey(name: 'base_amount') double? baseAmount,
+      @JsonKey(name: 'amount_high') double? amountHigh});
 }
 
 /// @nodoc
@@ -658,6 +685,9 @@ class __$$IngredientImplCopyWithImpl<$Res>
     Object? metricUnit = freezed,
     Object? metricAmount = freezed,
     Object? originalText = freezed,
+    Object? measureKind = freezed,
+    Object? baseAmount = freezed,
+    Object? amountHigh = freezed,
   }) {
     return _then(_$IngredientImpl(
       name: null == name
@@ -684,6 +714,18 @@ class __$$IngredientImplCopyWithImpl<$Res>
           ? _value.originalText
           : originalText // ignore: cast_nullable_to_non_nullable
               as String?,
+      measureKind: freezed == measureKind
+          ? _value.measureKind
+          : measureKind // ignore: cast_nullable_to_non_nullable
+              as String?,
+      baseAmount: freezed == baseAmount
+          ? _value.baseAmount
+          : baseAmount // ignore: cast_nullable_to_non_nullable
+              as double?,
+      amountHigh: freezed == amountHigh
+          ? _value.amountHigh
+          : amountHigh // ignore: cast_nullable_to_non_nullable
+              as double?,
     ));
   }
 }
@@ -697,7 +739,10 @@ class _$IngredientImpl implements _Ingredient {
       this.unit,
       @JsonKey(name: 'metric_unit') this.metricUnit,
       @JsonKey(name: 'metric_amount') this.metricAmount,
-      @JsonKey(name: 'original_text') this.originalText});
+      @JsonKey(name: 'original_text') this.originalText,
+      @JsonKey(name: 'measure_kind') this.measureKind,
+      @JsonKey(name: 'base_amount') this.baseAmount,
+      @JsonKey(name: 'amount_high') this.amountHigh});
 
   factory _$IngredientImpl.fromJson(Map<String, dynamic> json) =>
       _$$IngredientImplFromJson(json);
@@ -718,10 +763,19 @@ class _$IngredientImpl implements _Ingredient {
   @override
   @JsonKey(name: 'original_text')
   final String? originalText;
+  @override
+  @JsonKey(name: 'measure_kind')
+  final String? measureKind;
+  @override
+  @JsonKey(name: 'base_amount')
+  final double? baseAmount;
+  @override
+  @JsonKey(name: 'amount_high')
+  final double? amountHigh;
 
   @override
   String toString() {
-    return 'Ingredient(name: $name, amount: $amount, unit: $unit, metricUnit: $metricUnit, metricAmount: $metricAmount, originalText: $originalText)';
+    return 'Ingredient(name: $name, amount: $amount, unit: $unit, metricUnit: $metricUnit, metricAmount: $metricAmount, originalText: $originalText, measureKind: $measureKind, baseAmount: $baseAmount, amountHigh: $amountHigh)';
   }
 
   @override
@@ -737,13 +791,19 @@ class _$IngredientImpl implements _Ingredient {
             (identical(other.metricAmount, metricAmount) ||
                 other.metricAmount == metricAmount) &&
             (identical(other.originalText, originalText) ||
-                other.originalText == originalText));
+                other.originalText == originalText) &&
+            (identical(other.measureKind, measureKind) ||
+                other.measureKind == measureKind) &&
+            (identical(other.baseAmount, baseAmount) ||
+                other.baseAmount == baseAmount) &&
+            (identical(other.amountHigh, amountHigh) ||
+                other.amountHigh == amountHigh));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType, name, amount, unit, metricUnit, metricAmount, originalText);
+  int get hashCode => Object.hash(runtimeType, name, amount, unit, metricUnit,
+      metricAmount, originalText, measureKind, baseAmount, amountHigh);
 
   /// Create a copy of Ingredient
   /// with the given fields replaced by the non-null parameter values.
@@ -768,7 +828,10 @@ abstract class _Ingredient implements Ingredient {
           final String? unit,
           @JsonKey(name: 'metric_unit') final String? metricUnit,
           @JsonKey(name: 'metric_amount') final double? metricAmount,
-          @JsonKey(name: 'original_text') final String? originalText}) =
+          @JsonKey(name: 'original_text') final String? originalText,
+          @JsonKey(name: 'measure_kind') final String? measureKind,
+          @JsonKey(name: 'base_amount') final double? baseAmount,
+          @JsonKey(name: 'amount_high') final double? amountHigh}) =
       _$IngredientImpl;
 
   factory _Ingredient.fromJson(Map<String, dynamic> json) =
@@ -790,6 +853,15 @@ abstract class _Ingredient implements Ingredient {
   @override
   @JsonKey(name: 'original_text')
   String? get originalText;
+  @override
+  @JsonKey(name: 'measure_kind')
+  String? get measureKind;
+  @override
+  @JsonKey(name: 'base_amount')
+  double? get baseAmount;
+  @override
+  @JsonKey(name: 'amount_high')
+  double? get amountHigh;
 
   /// Create a copy of Ingredient
   /// with the given fields replaced by the non-null parameter values.

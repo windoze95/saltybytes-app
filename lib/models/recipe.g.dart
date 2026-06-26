@@ -65,6 +65,9 @@ _$IngredientImpl _$$IngredientImplFromJson(Map<String, dynamic> json) =>
       metricUnit: json['metric_unit'] as String?,
       metricAmount: (json['metric_amount'] as num?)?.toDouble(),
       originalText: json['original_text'] as String?,
+      measureKind: json['measure_kind'] as String?,
+      baseAmount: (json['base_amount'] as num?)?.toDouble(),
+      amountHigh: (json['amount_high'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$$IngredientImplToJson(_$IngredientImpl instance) =>
@@ -75,6 +78,9 @@ Map<String, dynamic> _$$IngredientImplToJson(_$IngredientImpl instance) =>
       'metric_unit': instance.metricUnit,
       'metric_amount': instance.metricAmount,
       'original_text': instance.originalText,
+      'measure_kind': instance.measureKind,
+      'base_amount': instance.baseAmount,
+      'amount_high': instance.amountHigh,
     };
 
 _$RecipeNodeImpl _$$RecipeNodeImplFromJson(Map<String, dynamic> json) =>
