@@ -609,6 +609,10 @@ class SearchNotifier extends StateNotifier<SearchState> {
       case 'cached':
       case 'multi':
         return 'done';
+      case 'failed':
+        // Couldn't pre-warm (e.g. a blocked page). Clear the spinner so it
+        // looks like a normal, tappable result rather than stuck "Extracting".
+        return 'done';
       default:
         return null;
     }

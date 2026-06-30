@@ -662,5 +662,39 @@ void main() {
         expect(warmCalls, 1);
       });
     });
+
+    test('a failed warm clears the spinner instead of staying Extracting', () {
+      fakeAsync((async) {
+        final apiClient = MockApiClient();
+        when(() => apiClient.get(
+              ApiEndpoints.search,
+              queryParameters: {'q': 'beef'},
+            )).thenAnswer((_) async => fakeResponse<dynamic>({
+              'results': [
+                {'title': 'A', 'source_url': 'https://x.com/a'},
+              ],
+              'has_more': false,
+            }));
+        when(() => apiClient.post(
+              ApiEndpoints.warmUrls,
+              data: any(named: 'data'),
+            )).thenAnswer((_) async => fakeResponse<dynamic>({
+              'statuses': {'https://x.com/a': 'failed'},
+            }));
+
+        final container = createTestContainer(overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+        ]);
+        addTearDown(container.dispose);
+        container.read(searchProvider.notifier).search('beef');
+        async.flushMicrotasks();
+
+        // 'failed' clears to a no-badge state — not a stuck "extracting".
+        expect(container.read(searchProvider).results.single.extractionStatus,
+            'done');
+        // And no poll loop is left running (nothing is extracting).
+        async.elapse(const Duration(seconds: 5));
+      });
+    });
   });
 }
