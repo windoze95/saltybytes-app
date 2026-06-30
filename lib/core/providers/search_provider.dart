@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -43,6 +45,7 @@ class WebSearchResult {
     this.rating,
     this.cookTimeMinutes,
     this.familySafetyChecks = const [],
+    this.extractionStatus,
   });
 
   final String title;
@@ -53,6 +56,24 @@ class WebSearchResult {
   final double? rating;
   final int? cookTimeMinutes;
   final List<FamilySafetyCheck> familySafetyChecks;
+
+  /// For cards expanded from a multi-recipe page: the per-card extraction
+  /// status ("pending"/"extracting"/"done"/"failed"). null for normal results.
+  final String? extractionStatus;
+
+  WebSearchResult copyWith({String? extractionStatus}) {
+    return WebSearchResult(
+      title: title,
+      sourceUrl: sourceUrl,
+      sourceDomain: sourceDomain,
+      imageUrl: imageUrl,
+      description: description,
+      rating: rating,
+      cookTimeMinutes: cookTimeMinutes,
+      familySafetyChecks: familySafetyChecks,
+      extractionStatus: extractionStatus ?? this.extractionStatus,
+    );
+  }
 
   factory WebSearchResult.fromJson(Map<String, dynamic> json) {
     // The backend serializes image_url without omitempty, so hits with no
@@ -117,6 +138,7 @@ class MultiRecipeCard {
       sourceDomain: domain,
       imageUrl: imageUrl,
       description: description,
+      extractionStatus: extractionStatus,
     );
   }
 }
@@ -546,7 +568,62 @@ class SearchNotifier extends StateNotifier<SearchState> {
     }
 
     state = state.copyWith(results: updatedResults);
+
+    // If the page is still resolving, poll so the cards flip from "Extracting"
+    // to ready (or "couldn't extract") in place.
+    if (resolution.status != 'resolved' && resolution.status != 'failed') {
+      unawaited(_pollMultiStatuses(resolution.multiId));
+    }
     return insertedAt;
+  }
+
+  /// Polls the resolve endpoint and updates each expanded card's extraction
+  /// status in place until the page finishes resolving (or a timeout).
+  Future<void> _pollMultiStatuses(String multiId) async {
+    final deadline = DateTime.now().add(const Duration(minutes: 2));
+    while (mounted && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+      final resolution = await _fetchResolution(multiId);
+      if (resolution == null) continue;
+      _applyCardStatuses(resolution);
+      if (resolution.status == 'resolved' || resolution.status == 'failed') {
+        break;
+      }
+    }
+  }
+
+  Future<MultiRecipeResolution?> _fetchResolution(String multiId) async {
+    try {
+      final response =
+          await _apiClient.get(ApiEndpoints.resolveMultiRecipe(multiId));
+      return MultiRecipeResolution.fromJson(
+          response.data as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Updates the extraction status of any expanded card (matched by title)
+  /// from a fresh resolution snapshot. Plain search results (no status) are
+  /// left untouched.
+  void _applyCardStatuses(MultiRecipeResolution resolution) {
+    final statusByTitle = <String, String>{
+      for (final c in resolution.recipes) c.title: c.extractionStatus,
+    };
+    var changed = false;
+    final updated = state.results.map((r) {
+      if (r.extractionStatus == null) return r;
+      final status = statusByTitle[r.title];
+      if (status != null && status != r.extractionStatus) {
+        changed = true;
+        return r.copyWith(extractionStatus: status);
+      }
+      return r;
+    }).toList();
+    if (changed) {
+      state = state.copyWith(results: updated);
+    }
   }
 
   void clear() {
