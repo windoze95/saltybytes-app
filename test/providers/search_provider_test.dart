@@ -561,4 +561,106 @@ void main() {
       });
     });
   });
+
+  group('scroll-ahead cache warming', () {
+    test('search warms ahead and applies statuses, then polling flips '
+        'Extracting→done', () {
+      fakeAsync((async) {
+        final apiClient = MockApiClient();
+        when(() => apiClient.get(
+              ApiEndpoints.search,
+              queryParameters: {'q': 'beef'},
+            )).thenAnswer((_) async => fakeResponse<dynamic>({
+              'results': [
+                {'title': 'A', 'source_url': 'https://x.com/a'},
+                {'title': 'B', 'source_url': 'https://x.com/b'},
+                {'title': 'C', 'source_url': 'https://x.com/c'},
+              ],
+              'has_more': false,
+            }));
+
+        // First warm: a/c still extracting, b already cached. Later polls: all
+        // cached.
+        var warmCalls = 0;
+        when(() => apiClient.post(
+              ApiEndpoints.warmUrls,
+              data: any(named: 'data'),
+            )).thenAnswer((_) async {
+          warmCalls++;
+          final done = warmCalls >= 2;
+          return fakeResponse<dynamic>({
+            'statuses': {
+              'https://x.com/a': done ? 'cached' : 'extracting',
+              'https://x.com/b': 'cached',
+              'https://x.com/c': done ? 'cached' : 'extracting',
+            },
+          });
+        });
+
+        final container = createTestContainer(overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+        ]);
+        addTearDown(container.dispose);
+        final notifier = container.read(searchProvider.notifier);
+
+        notifier.search('beef');
+        async.flushMicrotasks();
+
+        // Warmed on search: a/c show as extracting, b as ready (cached → done).
+        final warmed = container.read(searchProvider).results;
+        expect(warmed[0].extractionStatus, 'extracting');
+        expect(warmed[1].extractionStatus, 'done');
+        expect(warmed[2].extractionStatus, 'extracting');
+
+        // Poll interval is 2s — advance; the now-cached a/c flip to done.
+        async.elapse(const Duration(seconds: 3));
+        final after = container.read(searchProvider).results;
+        expect(after[0].extractionStatus, 'done');
+        expect(after[2].extractionStatus, 'done');
+
+        // Drain the poll loop (it sees nothing extracting and exits).
+        async.elapse(const Duration(seconds: 3));
+      });
+    });
+
+    test('warmAhead does not re-request URLs already warmed this search', () {
+      fakeAsync((async) {
+        final apiClient = MockApiClient();
+        when(() => apiClient.get(
+              ApiEndpoints.search,
+              queryParameters: {'q': 'beef'},
+            )).thenAnswer((_) async => fakeResponse<dynamic>({
+              'results': [
+                {'title': 'A', 'source_url': 'https://x.com/a'},
+              ],
+              'has_more': false,
+            }));
+        var warmCalls = 0;
+        when(() => apiClient.post(
+              ApiEndpoints.warmUrls,
+              data: any(named: 'data'),
+            )).thenAnswer((_) async {
+          warmCalls++;
+          return fakeResponse<dynamic>({
+            'statuses': {'https://x.com/a': 'cached'},
+          });
+        });
+
+        final container = createTestContainer(overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+        ]);
+        addTearDown(container.dispose);
+        final notifier = container.read(searchProvider.notifier);
+
+        notifier.search('beef'); // triggers warmAhead(0)
+        async.flushMicrotasks();
+        expect(warmCalls, 1);
+
+        // Re-scrolling to the same window must not re-warm the same URL.
+        notifier.warmAhead(0);
+        async.flushMicrotasks();
+        expect(warmCalls, 1);
+      });
+    });
+  });
 }

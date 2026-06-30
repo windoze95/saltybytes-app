@@ -68,6 +68,7 @@ class ApiEndpoints {
   static String resolveMultiRecipe(String multiId) =>
       '$apiVersion/recipes/search/resolve/$multiId';
   static const String checkMultiRecipe = '$apiVersion/recipes/search/check-multi';
+  static const String warmUrls = '$apiVersion/recipes/search/warm';
 
   // Subscription
   static const String subscription = '$apiVersion/subscription';
