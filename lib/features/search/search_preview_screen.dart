@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -124,8 +126,43 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
   }
 }
 
-class _LoadingState extends StatelessWidget {
+class _LoadingState extends StatefulWidget {
   const _LoadingState();
+
+  @override
+  State<_LoadingState> createState() => _LoadingStateState();
+}
+
+class _LoadingStateState extends State<_LoadingState> {
+  // The phases the backend actually moves through for a fresh extraction:
+  // fetch the page, pull out the recipe, assemble it. (A cache hit returns
+  // before any of this shows; a multi-recipe page swaps to the card view as
+  // soon as detection finishes.)
+  static const _phases = [
+    'Reading the page…',
+    'Extracting the recipe…',
+    'Putting it together…',
+  ];
+
+  int _phase = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 3500), (_) {
+      if (!mounted) return;
+      if (_phase < _phases.length - 1) {
+        setState(() => _phase++);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,10 +173,14 @@ class _LoadingState extends StatelessWidget {
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 24),
-          Text(
-            'Extracting recipe...',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              _phases[_phase],
+              key: ValueKey<int>(_phase),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -242,6 +283,25 @@ class _PreviewBody extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Cache-hit badge — honest about an instant saved load.
+                      if (preview.fromCache) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.bookmark_rounded,
+                                size: 14, color: theme.colorScheme.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Loaded from your saved recipes',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                       // Title
                       Text(
                         preview.title,

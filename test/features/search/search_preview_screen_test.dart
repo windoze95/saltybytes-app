@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -130,6 +132,47 @@ void main() {
             options: any(named: 'options'),
           )).captured.single as Map<String, dynamic>;
       expect(captured['url'], sourceUrl);
+    });
+
+    testWidgets('shows a saved-recipe badge on a cache hit', (tester) async {
+      when(() => apiClient.post(
+            ApiEndpoints.previewFromUrl,
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'recipe': testRecipePreviewJson(title: 'Cached Pizza'),
+            'from_cache': true,
+          }));
+
+      await pumpScreen(tester);
+
+      expect(find.text('Cached Pizza'), findsOneWidget);
+      expect(find.text('Loaded from your saved recipes'), findsOneWidget);
+    });
+
+    testWidgets('shows progressive loading phases while extracting',
+        (tester) async {
+      final completer = Completer<Response<dynamic>>();
+      when(() => apiClient.post(
+            ApiEndpoints.previewFromUrl,
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+          )).thenAnswer((_) => completer.future);
+
+      await pumpScreen(tester);
+      // First honest phase.
+      expect(find.text('Reading the page…'), findsOneWidget);
+
+      // Advance the phase timer — it should move to the next phase.
+      await tester.pump(const Duration(milliseconds: 3600));
+      expect(find.text('Extracting the recipe…'), findsOneWidget);
+
+      // Complete the request so the loading widget (and its timer) tears down.
+      completer.complete(fakeResponse<dynamic>(
+          {'recipe': testRecipePreviewJson(title: 'Done')}));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Done'), findsOneWidget);
     });
 
     testWidgets(
