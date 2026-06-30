@@ -41,6 +41,7 @@ class RecipeCard extends StatelessWidget {
                             recipe.imageUrl!.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: recipe.imageUrl!,
+                            memCacheWidth: 600, // grid thumbnail; cap decode memory
                             fit: BoxFit.cover,
                             placeholder: (_, __) => _ImagePlaceholder(
                               theme: theme,

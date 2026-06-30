@@ -306,6 +306,9 @@ class _FullScreenResultPage extends StatelessWidget {
           if (result.imageUrl != null)
             CachedNetworkImage(
               imageUrl: result.imageUrl!,
+              // Cap the decoded bitmap so large source photos don't blow up
+              // memory (iOS jetsam) — full-screen hero, decode near screen width.
+              memCacheWidth: 1080,
               fit: BoxFit.cover,
               placeholder: (_, __) => _FullScreenPlaceholder(theme: theme),
               errorWidget: (_, __, ___) =>
@@ -568,6 +571,7 @@ class _GridResultCard extends StatelessWidget {
                     child: result.imageUrl != null
                         ? CachedNetworkImage(
                             imageUrl: result.imageUrl!,
+                            memCacheWidth: 600, // card-sized; cap decode memory
                             fit: BoxFit.cover,
                             placeholder: (_, __) => Center(
                               child: Icon(Icons.restaurant,

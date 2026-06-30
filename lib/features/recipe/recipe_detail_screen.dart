@@ -139,6 +139,7 @@ class _RecipeDetailBody extends ConsumerWidget {
               background: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: recipe.imageUrl!,
+                      memCacheWidth: 1080, // detail hero; cap decode memory
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(
                         color: colors.primary.withValues(alpha: 0.1),
@@ -529,6 +530,7 @@ class _SimilarRecipeCard extends StatelessWidget {
                           ),
                           child: CachedNetworkImage(
                             imageUrl: recipe.imageUrl!,
+                            memCacheWidth: 600, // cap decode memory
                             fit: BoxFit.cover,
                             errorWidget: (_, __, ___) => Center(
                               child: Icon(
