@@ -161,6 +161,7 @@ class RecipePreview {
     this.imagePrompt,
     this.linkedSuggestions = const [],
     this.unitSystem,
+    this.fromCache = false,
   });
 
   final String title;
@@ -175,6 +176,10 @@ class RecipePreview {
   final List<String> linkedSuggestions;
   final String? unitSystem;
 
+  /// True when the backend served this from its saved-recipe cache (an instant
+  /// load) rather than freshly extracting it.
+  final bool fromCache;
+
   String? get sourceDomain {
     if (sourceUrl == null) return null;
     try {
@@ -184,8 +189,10 @@ class RecipePreview {
     }
   }
 
-  factory RecipePreview.fromJson(Map<String, dynamic> json) {
+  factory RecipePreview.fromJson(Map<String, dynamic> json,
+      {bool fromCache = false}) {
     return RecipePreview(
+      fromCache: fromCache,
       title: json['title'] as String? ?? 'Untitled',
       ingredients: (json['ingredients'] as List?)
               ?.map(
@@ -461,7 +468,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
       }
 
       final recipe = data['recipe'] as Map<String, dynamic>;
-      return RecipePreview.fromJson(recipe);
+      final fromCache = data['from_cache'] as bool? ?? false;
+      return RecipePreview.fromJson(recipe, fromCache: fromCache);
     } on MultiRecipeException {
       rethrow;
     } on DioException catch (e) {
