@@ -50,6 +50,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _onPageChanged(int index) {
     _currentPage = index;
     final searchState = ref.read(searchProvider);
+    // Warm the cache a few cards ahead of where the user is.
+    ref.read(searchProvider.notifier).warmAhead(index);
     final threshold = searchState.results.length - 3;
     if (index >= threshold && searchState.hasMore && !searchState.isLoadingMore) {
       ref.read(searchProvider.notifier).loadMore();
@@ -58,8 +60,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _onGridScroll() {
     final pos = _gridScrollController.position;
+    final searchState = ref.read(searchProvider);
+    // Estimate the top-of-fold index from the scroll fraction and warm ahead.
+    if (pos.maxScrollExtent > 0 && searchState.results.isNotEmpty) {
+      final frac = (pos.pixels / pos.maxScrollExtent).clamp(0.0, 1.0);
+      final visibleIndex = (frac * searchState.results.length).floor();
+      ref.read(searchProvider.notifier).warmAhead(visibleIndex);
+    }
     if (pos.pixels >= pos.maxScrollExtent - 200) {
-      final searchState = ref.read(searchProvider);
       if (searchState.hasMore && !searchState.isLoadingMore) {
         ref.read(searchProvider.notifier).loadMore();
       }

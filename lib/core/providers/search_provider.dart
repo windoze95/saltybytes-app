@@ -370,8 +370,14 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
   final ApiClient _apiClient;
 
+  // Cache warming: source URLs already sent to /warm during this search, and
+  // whether a status-poll loop is currently running.
+  final Set<String> _warmRequested = {};
+  bool _warmPolling = false;
+
   Future<void> search(String query) async {
     if (query.trim().isEmpty) return;
+    _warmRequested.clear();
 
     state = state.copyWith(
       query: query,
@@ -412,6 +418,9 @@ class SearchNotifier extends StateNotifier<SearchState> {
         nextOffset: results.length,
         hasMore: hasMore,
       );
+
+      // Pre-warm the first few results so early taps are instant.
+      warmAhead(0);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -546,6 +555,109 @@ class SearchNotifier extends StateNotifier<SearchState> {
     final data = response.data as Map<String, dynamic>;
     final recipe = data['recipe'] as Map<String, dynamic>;
     return Recipe.fromJson(recipe);
+  }
+
+  /// Warm the cache for the results around [visibleIndex] (a few ahead of what
+  /// the user is looking at) so taps land on already-extracted recipes, and the
+  /// shared cache pays off for the next searcher.
+  void warmAhead(int visibleIndex) {
+    unawaited(_warmAhead(visibleIndex));
+  }
+
+  Future<void> _warmAhead(int visibleIndex) async {
+    const lookahead = 4;
+    final results = state.results;
+    if (results.isEmpty) return;
+    final end = (visibleIndex + lookahead + 1).clamp(0, results.length);
+
+    final urls = <String>[];
+    for (var i = 0; i < end; i++) {
+      final r = results[i];
+      final url = r.sourceUrl;
+      if (url == null || url.isEmpty) continue;
+      if (r.extractionStatus == 'done') continue; // already ready
+      if (!_warmRequested.add(url)) continue; // already requested this search
+      urls.add(url);
+    }
+
+    if (urls.isNotEmpty) {
+      final statuses = await _warmUrls(urls);
+      if (statuses != null) _applyWarmStatuses(statuses);
+    }
+    _maybeStartWarmPoll();
+  }
+
+  Future<Map<String, String>?> _warmUrls(List<String> urls) async {
+    try {
+      final response =
+          await _apiClient.post(ApiEndpoints.warmUrls, data: {'urls': urls});
+      final data = response.data as Map<String, dynamic>;
+      final statuses = (data['statuses'] as Map?)?.cast<String, dynamic>();
+      if (statuses == null) return null;
+      return statuses.map((k, v) => MapEntry(k, v.toString()));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Maps a backend warm status onto the badge's extractionStatus. Returns null
+  // to leave a result untouched (e.g. "uncached").
+  String? _mapWarmStatus(String warm) {
+    switch (warm) {
+      case 'extracting':
+        return 'extracting';
+      case 'cached':
+      case 'multi':
+        return 'done';
+      default:
+        return null;
+    }
+  }
+
+  void _applyWarmStatuses(Map<String, String> statuses) {
+    var changed = false;
+    final updated = state.results.map((r) {
+      final url = r.sourceUrl;
+      if (url == null) return r;
+      final warm = statuses[url];
+      if (warm == null) return r;
+      final mapped = _mapWarmStatus(warm);
+      if (mapped != null && mapped != r.extractionStatus) {
+        changed = true;
+        return r.copyWith(extractionStatus: mapped);
+      }
+      return r;
+    }).toList();
+    if (changed) state = state.copyWith(results: updated);
+  }
+
+  void _maybeStartWarmPoll() {
+    if (_warmPolling) return;
+    if (!state.results.any((r) => r.extractionStatus == 'extracting')) return;
+    _warmPolling = true;
+    unawaited(_pollWarmStatuses());
+  }
+
+  /// Polls /warm for the still-extracting results until they're all ready (or a
+  /// timeout), flipping their badges in place.
+  Future<void> _pollWarmStatuses() async {
+    try {
+      final deadline = DateTime.now().add(const Duration(minutes: 3));
+      while (mounted && DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        final extracting = <String>[
+          for (final r in state.results)
+            if (r.extractionStatus == 'extracting' && r.sourceUrl != null)
+              r.sourceUrl!,
+        ];
+        if (extracting.isEmpty) return;
+        final statuses = await _warmUrls(extracting);
+        if (statuses != null) _applyWarmStatuses(statuses);
+      }
+    } finally {
+      _warmPolling = false;
+    }
   }
 
   /// Replace a multi-recipe card with its individual recipe cards.
