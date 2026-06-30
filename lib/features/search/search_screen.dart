@@ -348,6 +348,12 @@ class _FullScreenResultPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Extraction status for a multi-recipe card still resolving
+                  if (_isPendingExtraction(result.extractionStatus) ||
+                      result.extractionStatus == 'failed') ...[
+                    _ExtractionStatusBadge(status: result.extractionStatus!),
+                    const SizedBox(height: 10),
+                  ],
                   // Rating
                   if (result.rating != null) ...[
                     Row(
@@ -618,6 +624,15 @@ class _GridResultCard extends StatelessWidget {
                         }).toList(),
                       ),
                     ),
+                  // Extraction status (top-left) for multi-recipe cards
+                  if (_isPendingExtraction(result.extractionStatus) ||
+                      result.extractionStatus == 'failed')
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: _ExtractionStatusBadge(
+                          status: result.extractionStatus!),
+                    ),
                 ],
               ),
             ),
@@ -695,6 +710,57 @@ class _GridResultCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Shared widgets
 // ---------------------------------------------------------------------------
+
+bool _isPendingExtraction(String? status) =>
+    status == 'extracting' || status == 'pending';
+
+/// A small pill shown on a multi-recipe card while its recipe is still being
+/// extracted in the background (spinner + "Extracting…"), or muted if that
+/// card's extraction failed.
+class _ExtractionStatusBadge extends StatelessWidget {
+  const _ExtractionStatusBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final failed = status == 'failed';
+    final bg = failed ? theme.colorScheme.error : Colors.black87;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (failed)
+            const Icon(Icons.error_outline, size: 12, color: Colors.white)
+          else
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.6,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          const SizedBox(width: 5),
+          Text(
+            failed ? "Couldn't extract" : 'Extracting…',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _SafetyBadge extends StatelessWidget {
   const _SafetyBadge({required this.check});

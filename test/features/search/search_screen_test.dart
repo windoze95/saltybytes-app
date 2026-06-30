@@ -155,6 +155,35 @@ void main() {
       expect(find.text('Best Margherita Pizza Recipe'), findsNothing);
     });
 
+    testWidgets('a still-extracting expanded card shows the Extracting badge',
+        (tester) async {
+      await pumpScreen(tester);
+      await performSearch(tester);
+
+      final notifier = container.read(searchProvider.notifier);
+      final original = container.read(searchProvider).results.first;
+      // status 'resolved' keeps the test from starting the background poll
+      // (no pending timer); the first card is still mid-extraction so its
+      // per-card badge should render.
+      final resolution = MultiRecipeResolution.fromJson(
+        testMultiRecipeResolutionJson(
+          sourceUrl: original.sourceUrl!,
+          recipes: [
+            testMultiRecipeCardJson(
+              title: 'Weeknight Pad Thai',
+              sourceUrl: 'https://example.com/roundup/pad-thai',
+              extractionStatus: 'extracting',
+            ),
+          ],
+        ),
+      );
+
+      notifier.replaceWithExpanded(original, resolution);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Extracting…'), findsOneWidget);
+    });
+
     testWidgets('tapping Preview Recipe pushes the preview with the result',
         (tester) async {
       await pumpScreen(tester);

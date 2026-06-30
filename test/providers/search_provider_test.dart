@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -479,6 +480,85 @@ void main() {
           ['pizza', 'pie']);
       expect(await container.read(searchSuggestionsProvider('pa').future),
           ['pasta', 'paella']);
+    });
+  });
+
+  group('multi-recipe card live status', () {
+    test('toSearchResult preserves the per-card extraction status', () {
+      const card = MultiRecipeCard(
+        title: 'Beef Stew',
+        sourceUrl: 'https://x.com/recipes/beef-stew',
+        extractionStatus: 'extracting',
+      );
+      expect(card.toSearchResult().extractionStatus, 'extracting');
+    });
+
+    test('expanding carries card statuses, then polling flips Extracting→done',
+        () {
+      fakeAsync((async) {
+        final apiClient = MockApiClient();
+        when(() => apiClient.get(
+              ApiEndpoints.search,
+              queryParameters: {'q': 'beef'},
+            )).thenAnswer((_) async => fakeResponse<dynamic>({
+              'results': [
+                {
+                  'title': 'Beef Collection',
+                  'source_url': 'https://x.com/collection',
+                },
+              ],
+              'has_more': false,
+            }));
+        // The background resolve poll reports the card finished extracting.
+        when(() => apiClient.get(ApiEndpoints.resolveMultiRecipe('m1')))
+            .thenAnswer((_) async => fakeResponse<dynamic>({
+                  'multi_id': 'm1',
+                  'source_url': 'https://x.com/collection',
+                  'status': 'resolved',
+                  'recipes': [
+                    {
+                      'title': 'Beef Stew',
+                      'source_url': 'https://x.com/recipes/beef-stew',
+                      'extraction_status': 'done',
+                    },
+                  ],
+                }));
+
+        final container = createTestContainer(overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+        ]);
+        addTearDown(container.dispose);
+        final notifier = container.read(searchProvider.notifier);
+
+        notifier.search('beef');
+        async.flushMicrotasks();
+
+        final original = container.read(searchProvider).results.single;
+        notifier.replaceWithExpanded(
+          original,
+          const MultiRecipeResolution(
+            multiId: 'm1',
+            sourceUrl: 'https://x.com/collection',
+            status: 'resolving',
+            recipes: [
+              MultiRecipeCard(
+                title: 'Beef Stew',
+                sourceUrl: 'https://x.com/recipes/beef-stew',
+                extractionStatus: 'extracting',
+              ),
+            ],
+          ),
+        );
+
+        // Right after expansion the card carries its in-progress status.
+        expect(container.read(searchProvider).results.single.extractionStatus,
+            'extracting');
+
+        // Poll interval is 2s — advance past it; the card flips to done.
+        async.elapse(const Duration(seconds: 3));
+        expect(container.read(searchProvider).results.single.extractionStatus,
+            'done');
+      });
     });
   });
 }
