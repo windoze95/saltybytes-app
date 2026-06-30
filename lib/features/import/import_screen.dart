@@ -52,6 +52,13 @@ class ImportScreen extends StatelessWidget {
                     onTap: () => context.push('/import/photo'),
                   ),
                   _ImportOptionCard(
+                    icon: Icons.play_circle_outline,
+                    title: 'From Video',
+                    subtitle: 'TikTok or Instagram',
+                    color: theme.colorScheme.error,
+                    onTap: () => context.push('/import/video'),
+                  ),
+                  _ImportOptionCard(
                     icon: Icons.text_snippet,
                     title: 'From Text',
                     subtitle: 'Paste recipe text',

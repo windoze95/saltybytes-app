@@ -533,6 +533,104 @@ void main() {
     });
   });
 
+  group('RecipeCrud video import (async job)', () {
+    late MockApiClient apiClient;
+    late RecipeCrud crud;
+
+    setUp(() {
+      apiClient = MockApiClient();
+      crud = RecipeCrud(apiClient: apiClient);
+    });
+
+    void stubPost(String path, Map<String, dynamic> data) {
+      when(() => apiClient.post(
+            path,
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+          )).thenAnswer(
+          (_) async => fakeResponse<dynamic>(data, statusCode: 202));
+    }
+
+    void stubGet(String path, Map<String, dynamic> data) {
+      when(() => apiClient.get(path))
+          .thenAnswer((_) async => fakeResponse<dynamic>(data));
+    }
+
+    test('importFromVideo starts a job, polls to done, returns the recipe',
+        () async {
+      stubPost(ApiEndpoints.importFromVideo, {
+        'job': {
+          'id': 5,
+          'status': 'queued',
+          'platform': 'tiktok',
+          'cache_hit': false,
+        }
+      });
+      stubGet(ApiEndpoints.importVideoStatus(5), {
+        'job': {'id': 5, 'status': 'done', 'recipe_id': 42, 'cache_hit': false}
+      });
+      stubGet(ApiEndpoints.recipeById('42'),
+          {'recipe': testRecipeJson(id: '42', title: 'Cajun Pasta')});
+
+      final recipe = await crud.importFromVideo(
+        'https://www.tiktok.com/@x/video/1',
+        pollInterval: Duration.zero,
+      );
+
+      expect(recipe.id, '42');
+      expect(recipe.title, 'Cajun Pasta');
+
+      final posted = verify(() => apiClient.post(
+            ApiEndpoints.importFromVideo,
+            data: captureAny(named: 'data'),
+            options: captureAny(named: 'options'),
+          )).captured;
+      expect(posted[0], {'url': 'https://www.tiktok.com/@x/video/1'});
+      expect((posted[1] as Options).receiveTimeout, ApiTimeouts.aiGeneration);
+    });
+
+    test('importFromVideo surfaces the job error as a VideoImportException',
+        () async {
+      stubPost(ApiEndpoints.importFromVideo, {
+        'job': {'id': 7, 'status': 'queued'}
+      });
+      stubGet(ApiEndpoints.importVideoStatus(7), {
+        'job': {
+          'id': 7,
+          'status': 'failed',
+          'error': 'could not find a recipe in this video',
+        }
+      });
+
+      await expectLater(
+        crud.importFromVideo('https://www.tiktok.com/@x/video/2',
+            pollInterval: Duration.zero),
+        throwsA(isA<VideoImportException>().having(
+          (e) => e.message,
+          'message',
+          contains('could not find a recipe'),
+        )),
+      );
+    });
+
+    test('importFromVideo handles a cache hit (done on first poll)', () async {
+      stubPost(ApiEndpoints.importFromVideo, {
+        'job': {'id': 9, 'status': 'queued', 'cache_hit': false}
+      });
+      stubGet(ApiEndpoints.importVideoStatus(9), {
+        'job': {'id': 9, 'status': 'done', 'recipe_id': 99, 'cache_hit': true}
+      });
+      stubGet(ApiEndpoints.recipeById('99'),
+          {'recipe': testRecipeJson(id: '99', title: 'Cached')});
+
+      final recipe = await crud.importFromVideo(
+        'https://www.instagram.com/reel/x/',
+        pollInterval: Duration.zero,
+      );
+      expect(recipe.id, '99');
+    });
+  });
+
   group('RecipeCrud generate / regenerate / fork request shapes', () {
     late MockApiClient apiClient;
     late RecipeCrud crud;

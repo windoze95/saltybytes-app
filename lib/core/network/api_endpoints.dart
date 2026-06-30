@@ -34,6 +34,9 @@ class ApiEndpoints {
   static const String importFromPhoto = '$apiVersion/recipes/import/photo';
   static const String importFromText = '$apiVersion/recipes/import/text';
   static const String importManual = '$apiVersion/recipes/import/manual';
+  static const String importFromVideo = '$apiVersion/recipes/import/video';
+  static String importVideoStatus(int jobId) =>
+      '$apiVersion/recipes/import/video/$jobId';
 
   // Recipe Preview
   static const String previewFromUrl = '$apiVersion/recipes/preview/url';

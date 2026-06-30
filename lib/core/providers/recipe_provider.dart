@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/recipe.dart';
+import '../../models/video_import_job.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
 import 'auth_provider.dart';
@@ -337,11 +338,73 @@ class RecipeCrud {
     );
     return parseRecipeEnvelope(response.data as Map<String, dynamic>);
   }
+
+  /// Starts an async video-link import via POST /v1/recipes/import/video,
+  /// returning the queued job. A 403 means the user is over their quota; a 400
+  /// means the platform is unsupported.
+  Future<VideoImportJob> startVideoImport(String videoUrl) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.importFromVideo,
+      data: {'url': videoUrl},
+      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
+    );
+    final data = response.data as Map<String, dynamic>;
+    return VideoImportJob.fromJson(data['job'] as Map<String, dynamic>);
+  }
+
+  /// Reads the current state of a video-import job.
+  Future<VideoImportJob> getVideoImportStatus(int jobId) async {
+    final response =
+        await _apiClient.get(ApiEndpoints.importVideoStatus(jobId));
+    final data = response.data as Map<String, dynamic>;
+    return VideoImportJob.fromJson(data['job'] as Map<String, dynamic>);
+  }
+
+  /// Starts a video import and polls until the job finishes, returning the
+  /// resulting [Recipe]. Throws [VideoImportException] on failure or timeout.
+  Future<Recipe> importFromVideo(
+    String videoUrl, {
+    Duration pollInterval = const Duration(seconds: 3),
+    Duration timeout = const Duration(minutes: 5),
+  }) async {
+    final started = await startVideoImport(videoUrl);
+    final deadline = DateTime.now().add(timeout);
+
+    var job = started;
+    while (!job.isTerminal) {
+      await Future<void>.delayed(pollInterval);
+      job = await getVideoImportStatus(started.id);
+      if (!job.isTerminal && DateTime.now().isAfter(deadline)) {
+        throw const VideoImportException(
+          'Video import timed out. Please try again.',
+        );
+      }
+    }
+
+    if (job.isFailed || job.recipeId == null) {
+      throw VideoImportException(
+        (job.error != null && job.error!.isNotEmpty)
+            ? job.error!
+            : 'Could not find a recipe in this video.',
+      );
+    }
+    return getById(job.recipeId!.toString());
+  }
 }
 
 /// Thrown when an async recipe generation fails or times out.
 class RecipeGenerationException implements Exception {
   const RecipeGenerationException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// Thrown when an async video-link import fails or times out.
+class VideoImportException implements Exception {
+  const VideoImportException(this.message);
 
   final String message;
 

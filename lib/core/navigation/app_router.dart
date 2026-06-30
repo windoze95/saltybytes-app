@@ -15,6 +15,7 @@ import '../../features/import/import_photo_screen.dart';
 import '../../features/import/import_screen.dart';
 import '../../features/import/import_text_screen.dart';
 import '../../features/import/import_url_screen.dart';
+import '../../features/import/import_video_screen.dart';
 import '../../features/recipe/allergen_detail_screen.dart';
 import '../../features/recipe/recipe_branches_screen.dart';
 import '../../features/recipe/recipe_detail_screen.dart';
@@ -171,6 +172,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'photo',
             name: 'import-photo',
             builder: (context, state) => const ImportPhotoScreen(),
+          ),
+          GoRoute(
+            path: 'video',
+            name: 'import-video',
+            builder: (context, state) => const ImportVideoScreen(),
           ),
           GoRoute(
             path: 'text',
