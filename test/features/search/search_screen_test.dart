@@ -176,7 +176,8 @@ void main() {
 
     testWidgets('renders narration, the shortlist card, and refine chips',
         (tester) async {
-      await tester.pumpWidget(_scriptedApp(agentResults));
+      await tester.pumpWidget(
+          _scriptedApp(agentResults.copyWith(viewMode: SearchViewMode.list)));
       await _settle(tester);
 
       expect(find.textContaining('Found 3 real recipes'), findsOneWidget);
@@ -188,7 +189,8 @@ void main() {
 
     testWidgets('tapping a shortlist card opens the preview route',
         (tester) async {
-      await tester.pumpWidget(_scriptedApp(agentResults));
+      await tester.pumpWidget(
+          _scriptedApp(agentResults.copyWith(viewMode: SearchViewMode.list)));
       await _settle(tester);
 
       await tester.tap(find.byType(FinderShortlistCard), warnIfMissed: false);
@@ -199,19 +201,20 @@ void main() {
       expect(pushedPreview?.sourceUrl, 'https://x.com/ccp');
     });
 
-    testWidgets('the view toggle switches to the immersive full-screen view',
-        (tester) async {
+    testWidgets('the view toggle switches immersive → list', (tester) async {
+      // Immersive is the default view.
       await tester.pumpWidget(_scriptedApp(agentResults));
       await _settle(tester);
 
-      // List view first: no immersive "Preview Recipe" button.
-      expect(find.text('Preview Recipe'), findsNothing);
+      expect(find.text('Preview Recipe'), findsOneWidget);
+      expect(find.byType(FinderShortlistCard), findsNothing);
 
-      // In list view the toggle shows the "switch to immersive" icon.
-      await tester.tap(find.byIcon(Icons.view_day_outlined));
+      // In immersive view the toggle shows the "switch to list" icon.
+      await tester.tap(find.byIcon(Icons.view_agenda_outlined));
       await _settle(tester);
 
-      expect(find.text('Preview Recipe'), findsOneWidget);
+      expect(find.byType(FinderShortlistCard), findsOneWidget);
+      expect(find.text('Preview Recipe'), findsNothing);
     });
   });
 

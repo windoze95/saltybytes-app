@@ -332,7 +332,7 @@ class SearchState {
   const SearchState({
     this.agentMode = true,
     this.facets = const FinderFacets(),
-    this.viewMode = SearchViewMode.list,
+    this.viewMode = SearchViewMode.immersive,
     this.query = '',
     this.results = const [],
     this.isLoading = false,

@@ -452,9 +452,9 @@ void main() {
       expect(state.isLoading, false);
       expect(state.error, isNull);
       expect(state.hasSearched, false);
-      // Unified defaults: agent mode on, curated list view.
+      // Unified defaults: agent mode on, immersive full-screen view.
       expect(state.agentMode, true);
-      expect(state.viewMode, SearchViewMode.list);
+      expect(state.viewMode, SearchViewMode.immersive);
       expect(state.phase, FinderPhase.idle);
     });
 
