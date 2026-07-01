@@ -631,46 +631,13 @@ void main() {
     });
   });
 
-  group('RecipeCrud generate / regenerate / fork request shapes', () {
+  group('RecipeCrud regenerate / fork request shapes', () {
     late MockApiClient apiClient;
     late RecipeCrud crud;
 
     setUp(() {
       apiClient = MockApiClient();
       crud = RecipeCrud(apiClient: apiClient);
-    });
-
-    test(
-        'generate POSTs /v1/recipes/chat with user_prompt + gen_image '
-        'and a 60s receive timeout', () async {
-      when(() => apiClient.post(
-            ApiEndpoints.generateRecipe,
-            data: any(named: 'data'),
-            options: any(named: 'options'),
-          )).thenAnswer((_) async => fakeResponse<dynamic>({
-            'recipe': testRecipeJson(id: '42', status: 'generating'),
-            'message': 'Generating recipe',
-          }));
-
-      final recipe = await crud.generate(
-        userPrompt: 'A cozy chicken pot pie',
-        genImage: true,
-      );
-
-      expect(recipe.id, '42');
-      expect(recipe.status, 'generating');
-
-      final captured = verify(() => apiClient.post(
-            ApiEndpoints.generateRecipe,
-            data: captureAny(named: 'data'),
-            options: captureAny(named: 'options'),
-          )).captured;
-      expect(captured[0], {
-        'user_prompt': 'A cozy chicken pot pie',
-        'gen_image': true,
-      });
-      expect(
-          (captured[1] as Options).receiveTimeout, ApiTimeouts.aiGeneration);
     });
 
     test('regenerate PUTs /v1/recipes/:id/chat with user_prompt + gen_image',

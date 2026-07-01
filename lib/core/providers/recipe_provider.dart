@@ -158,26 +158,6 @@ class RecipeCrud {
     return parseRecipeEnvelope(response.data as Map<String, dynamic>);
   }
 
-  /// Generates a brand-new recipe via POST /v1/recipes/chat.
-  ///
-  /// The backend immediately returns a placeholder recipe with
-  /// status == "generating" and finishes asynchronously; callers should
-  /// follow up with [waitUntilGenerated].
-  Future<Recipe> generate({
-    required String userPrompt,
-    required bool genImage,
-  }) async {
-    final response = await _apiClient.post(
-      ApiEndpoints.generateRecipe,
-      data: {
-        'user_prompt': userPrompt,
-        'gen_image': genImage,
-      },
-      options: Options(receiveTimeout: ApiTimeouts.aiGeneration),
-    );
-    return parseRecipeEnvelope(response.data as Map<String, dynamic>);
-  }
-
   /// Regenerates an existing recipe via PUT /v1/recipes/:id/chat.
   ///
   /// The backend responds with {"message": "Regenerating recipe"} and
