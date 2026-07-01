@@ -2,26 +2,25 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../../core/providers/finder_provider.dart';
+import '../../../core/providers/search_provider.dart';
 import '../../../models/allergen.dart';
 
-/// A full-width, curated-list row for one finder shortlist pick: a photo
-/// thumbnail, the title, the agent's one-line rationale (the hero), and a
-/// compact meta row (rating + an aggregate family-safety summary). Tapping it
-/// hands off to the existing preview → import flow.
+/// A full-width, curated-list row for one result: a photo thumbnail, the title,
+/// the agent's one-line rationale (when present), and a compact meta row
+/// (rating + an aggregate family-safety summary). Tapping it hands off to the
+/// existing preview → import flow.
 ///
-/// Finder-specific (the search grid keeps using its own card): the finder
-/// `SearchResult` carries no cook time, so none is shown; images are often
-/// absent, so a neutral placeholder is used.
+/// Used by both agent and plain search in "list" view. Plain results simply
+/// have no [WebSearchResult.reason]/safety, so those bits are omitted.
 class FinderShortlistCard extends StatelessWidget {
   const FinderShortlistCard({
     super.key,
-    required this.item,
+    required this.result,
     required this.onTap,
     this.index = 0,
   });
 
-  final FinderResultItem item;
+  final WebSearchResult result;
   final VoidCallback onTap;
 
   /// Position in the list, used to stagger the entrance animation.
@@ -30,10 +29,9 @@ class FinderShortlistCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final result = item.result;
     final rating = result.rating;
-    final reason = item.reason;
-    final safety = _safetySummary(item.safety, theme);
+    final reason = result.reason;
+    final safety = _safetySummary(result.familySafetyChecks, theme);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -70,6 +68,16 @@ class FinderShortlistCard extends StatelessWidget {
                           fontStyle: FontStyle.italic,
                           color:
                               theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ] else if (result.sourceDomain != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        result.sourceDomain!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
                         ),
                       ),
                     ],
@@ -114,11 +122,11 @@ class FinderShortlistCard extends StatelessWidget {
 /// Aggregates per-member safety into one summary badge. Returns null when there
 /// is no safety data (finder safety is best-effort/model-supplied):
 /// - any `avoid`   → red `Avoid for <name>` (or "Avoid for N")
-/// - else any `caution` → amber "N caution"
-/// - else all safe → green "Family-safe"
+/// - else any `caution` → amber `N caution`
+/// - else all safe → green `Family-safe`
 ///
-/// Colors mirror the per-member [SafetyBadge] semantics (green/amber/red) but
-/// use theme-aware tertiary/error so they stay readable on the card surface.
+/// Colors mirror the per-member SafetyBadge semantics (green/amber/red) but use
+/// theme-aware tertiary/error so they stay readable on the card surface.
 ({Color color, IconData icon, String label})? _safetySummary(
     List<FamilySafetyCheck> safety, ThemeData theme) {
   if (safety.isEmpty) return null;

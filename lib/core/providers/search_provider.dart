@@ -8,6 +8,7 @@ import '../../models/recipe.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
 import '../utils/unit_converter.dart';
+import 'finder_provider.dart';
 
 class PreviewException implements Exception {
   const PreviewException({required this.message, this.code});
@@ -46,6 +47,7 @@ class WebSearchResult {
     this.cookTimeMinutes,
     this.familySafetyChecks = const [],
     this.extractionStatus,
+    this.reason,
   });
 
   final String title;
@@ -61,7 +63,11 @@ class WebSearchResult {
   /// status ("pending"/"extracting"/"done"/"failed"). null for normal results.
   final String? extractionStatus;
 
-  WebSearchResult copyWith({String? extractionStatus}) {
+  /// The agent's one-line rationale ("why this fits"). Only set on agent-mode
+  /// results; plain search omits it (null).
+  final String? reason;
+
+  WebSearchResult copyWith({String? extractionStatus, String? reason}) {
     return WebSearchResult(
       title: title,
       sourceUrl: sourceUrl,
@@ -72,6 +78,7 @@ class WebSearchResult {
       cookTimeMinutes: cookTimeMinutes,
       familySafetyChecks: familySafetyChecks,
       extractionStatus: extractionStatus ?? this.extractionStatus,
+      reason: reason ?? this.reason,
     );
   }
 
@@ -94,6 +101,7 @@ class WebSearchResult {
               )
               .toList() ??
           [],
+      reason: json['reason'] as String?,
     );
   }
 }
@@ -313,8 +321,18 @@ class PreviewIngredient {
   }
 }
 
+/// How results are displayed. Both modes are shared by agent + plain search:
+/// an immersive full-screen PageView, or a curated photo list.
+enum SearchViewMode { immersive, list }
+
+/// The unified Search state. It carries the classic paginated search fields AND
+/// the "agent" (finder) fields — the [agentMode] flag decides which path
+/// [SearchNotifier.search]/[SearchNotifier.loadMore] take.
 class SearchState {
   const SearchState({
+    this.agentMode = true,
+    this.facets = const FinderFacets(),
+    this.viewMode = SearchViewMode.immersive,
     this.query = '',
     this.results = const [],
     this.isLoading = false,
@@ -323,7 +341,22 @@ class SearchState {
     this.nextOffset = 0,
     this.hasMore = true,
     this.isLoadingMore = false,
+    this.phase = FinderPhase.idle,
+    this.narration = const [],
+    this.refineChips = const [],
+    this.broaden = const [],
+    this.isLimitReached = false,
   });
+
+  /// Agent mode ON (default): tap-first pills → SSE `/recipes/find` (ranked,
+  /// narration, reasons, family-safety). OFF: search-bar-first keywords →
+  /// `GET /recipes/search` (plain, paginated).
+  final bool agentMode;
+
+  /// The tap-first facet selections + typed details (shared by both modes;
+  /// plain mode flattens them into a keyword query).
+  final FinderFacets facets;
+  final SearchViewMode viewMode;
 
   final String query;
   final List<WebSearchResult> results;
@@ -334,7 +367,29 @@ class SearchState {
   final bool hasMore;
   final bool isLoadingMore;
 
+  // Agent-only run fields.
+  final FinderPhase phase;
+  final List<String> narration;
+  final List<String> refineChips;
+  final List<String> broaden;
+  final bool isLimitReached;
+
+  bool get isTerminalPhase =>
+      phase == FinderPhase.done ||
+      phase == FinderPhase.empty ||
+      phase == FinderPhase.error;
+
+  /// The agent run is mid-flight (streaming), so the narration strip should
+  /// show a live "working" spinner.
+  bool get isAgentActive =>
+      agentMode && phase != FinderPhase.idle && !isTerminalPhase;
+
+  bool get isEmptyResult => hasSearched && results.isEmpty && !isLoading;
+
   SearchState copyWith({
+    bool? agentMode,
+    FinderFacets? facets,
+    SearchViewMode? viewMode,
     String? query,
     List<WebSearchResult>? results,
     bool? isLoading,
@@ -343,16 +398,30 @@ class SearchState {
     int? nextOffset,
     bool? hasMore,
     bool? isLoadingMore,
+    FinderPhase? phase,
+    List<String>? narration,
+    List<String>? refineChips,
+    List<String>? broaden,
+    bool? isLimitReached,
   }) {
     return SearchState(
+      agentMode: agentMode ?? this.agentMode,
+      facets: facets ?? this.facets,
+      viewMode: viewMode ?? this.viewMode,
       query: query ?? this.query,
       results: results ?? this.results,
       isLoading: isLoading ?? this.isLoading,
+      // Cleared unless explicitly provided (matches the original idiom).
       error: error,
       hasSearched: hasSearched ?? this.hasSearched,
       nextOffset: nextOffset ?? this.nextOffset,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      phase: phase ?? this.phase,
+      narration: narration ?? this.narration,
+      refineChips: refineChips ?? this.refineChips,
+      broaden: broaden ?? this.broaden,
+      isLimitReached: isLimitReached ?? this.isLimitReached,
     );
   }
 }
@@ -375,7 +444,253 @@ class SearchNotifier extends StateNotifier<SearchState> {
   final Set<String> _warmRequested = {};
   bool _warmPolling = false;
 
-  Future<void> search(String query) async {
+  // ---- Input mutation (the screen drives these) --------------------------
+
+  /// Flips agent ⇄ plain and resets the run (keeps the chosen facets + view).
+  void setAgentMode(bool value) {
+    if (value == state.agentMode) return;
+    state = SearchState(
+      agentMode: value,
+      facets: state.facets,
+      viewMode: state.viewMode,
+    );
+  }
+
+  void setViewMode(SearchViewMode mode) {
+    state = state.copyWith(viewMode: mode);
+  }
+
+  void setFacets(FinderFacets facets) {
+    state = state.copyWith(facets: facets);
+  }
+
+  /// Sets the typed/spoken details (stored on the facets' freeText).
+  void setQuery(String text) {
+    state = state.copyWith(facets: state.facets.copyWith(freeText: text));
+  }
+
+  // ---- Search (branches on agentMode) ------------------------------------
+
+  Future<void> search() async {
+    if (state.agentMode) {
+      await _runAgent();
+    } else {
+      await _runPlain();
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (state.agentMode) {
+      await _loadMoreAgent();
+    } else {
+      await _loadMorePlain();
+    }
+  }
+
+  // ---- Agent (SSE /recipes/find) -----------------------------------------
+
+  Future<void> _runAgent({
+    FinderRefine? refine,
+    List<String>? seedNarration,
+  }) async {
+    _warmRequested.clear();
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      hasSearched: true,
+      results: const [],
+      narration: seedNarration ?? const [],
+      refineChips: const [],
+      broaden: const [],
+      isLimitReached: false,
+      phase: FinderPhase.searching,
+      nextOffset: 0,
+      hasMore: false,
+      isLoadingMore: false,
+      query: state.facets.toKeywordQuery(),
+    );
+    await _streamAgent(state.facets.toRequestJson(refine: refine));
+  }
+
+  /// Re-runs the current facets with an added [constraint] (a refine chip).
+  Future<void> refine(String constraint) async {
+    if (!state.agentMode) return;
+    await _runAgent(
+      refine: FinderRefine(constraint: constraint),
+      seedNarration: ['Refining: $constraint…'],
+    );
+  }
+
+  Future<void> _loadMoreAgent() async {
+    if (state.isLoadingMore || !state.hasMore) return;
+    state = state.copyWith(isLoadingMore: true);
+    await _streamAgent(
+      state.facets.toRequestJson(offset: state.nextOffset),
+      loadMore: true,
+    );
+  }
+
+  Future<void> _streamAgent(Map<String, dynamic> body,
+      {bool loadMore = false}) async {
+    try {
+      final resp = await _apiClient.dio.post(
+        ApiEndpoints.find,
+        data: body,
+        options: Options(
+          responseType: ResponseType.stream,
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+      final stream = (resp.data as ResponseBody).stream.cast<List<int>>();
+      await for (final event in parseFinderSse(stream)) {
+        if (!mounted) return;
+        if (loadMore) {
+          _applyAgentLoadMoreEvent(event);
+        } else {
+          _applyAgentEvent(event);
+        }
+      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+      _applyAgentDioError(e, loadMore: loadMore);
+    } catch (_) {
+      if (!mounted) return;
+      if (loadMore) {
+        state = state.copyWith(isLoadingMore: false);
+      } else {
+        state = state.copyWith(
+          phase: FinderPhase.error,
+          isLoading: false,
+          error: 'Something went wrong finding recipes. Please try again.',
+        );
+      }
+    }
+  }
+
+  void _applyAgentEvent(FinderEvent e) {
+    switch (e.type) {
+      case 'searching':
+        final q = (e.query ?? '').trim();
+        state = state.copyWith(
+          phase: FinderPhase.searching,
+          narration: [
+            ...state.narration,
+            q.isEmpty
+                ? '\u{1F50D} Searching for recipes…'
+                : '\u{1F50D} Searching “$q”…',
+          ],
+        );
+      case 'found':
+        final c = e.count ?? 0;
+        final suffix = e.fromCache ? ' (instant — from cache)' : '';
+        state = state.copyWith(
+          phase: FinderPhase.found,
+          narration: [
+            ...state.narration,
+            'Found $c real ${c == 1 ? 'recipe' : 'recipes'}$suffix',
+          ],
+        );
+      case 'filtering':
+        state = state.copyWith(
+          phase: FinderPhase.filtering,
+          narration: [
+            ...state.narration,
+            'Checking these against your family…',
+          ],
+        );
+      case 'shortlist':
+        state = state.copyWith(
+          phase: FinderPhase.shortlist,
+          results: e.items,
+          isLoading: false,
+          hasMore: e.hasMore ?? false,
+          nextOffset: e.items.length,
+        );
+        warmAhead(0);
+      case 'warming':
+        state = state.copyWith(
+          phase: FinderPhase.warming,
+          narration: [...state.narration, 'Getting the top picks ready…'],
+        );
+      case 'refine_ready':
+        state = state.copyWith(
+          phase: FinderPhase.refineReady,
+          refineChips: e.chips,
+          broaden: e.broaden,
+        );
+      case 'done':
+        state = state.copyWith(phase: FinderPhase.done, isLoading: false);
+      case 'empty':
+        state = state.copyWith(
+          phase: FinderPhase.empty,
+          results: const [],
+          broaden: e.broaden,
+          isLoading: false,
+          hasMore: false,
+        );
+      case 'error':
+        state = state.copyWith(
+          phase: FinderPhase.error,
+          isLoading: false,
+          error: (e.error == null || e.error!.isEmpty)
+              ? 'Something went wrong finding recipes. Please try again.'
+              : e.error,
+        );
+    }
+  }
+
+  void _applyAgentLoadMoreEvent(FinderEvent e) {
+    switch (e.type) {
+      case 'shortlist':
+        final existing =
+            state.results.map((r) => r.sourceUrl).whereType<String>().toSet();
+        final fetched = e.items.length;
+        final newItems = e.items
+            .where(
+                (r) => r.sourceUrl == null || !existing.contains(r.sourceUrl))
+            .toList();
+        state = state.copyWith(
+          results: [...state.results, ...newItems],
+          isLoadingMore: false,
+          hasMore: e.hasMore ?? false,
+          nextOffset: state.nextOffset + fetched,
+        );
+        warmAhead(state.results.length - 1);
+      case 'empty':
+        state = state.copyWith(isLoadingMore: false, hasMore: false);
+      case 'error':
+        state = state.copyWith(isLoadingMore: false);
+      // narration/found/filtering/warming/refine_ready/done ignored on paging
+    }
+  }
+
+  void _applyAgentDioError(DioException e, {required bool loadMore}) {
+    if (loadMore) {
+      state = state.copyWith(isLoadingMore: false);
+      return;
+    }
+    if (e.response?.statusCode == 403) {
+      state = state.copyWith(
+        phase: FinderPhase.error,
+        isLoading: false,
+        isLimitReached: true,
+        error: 'You’ve reached your search limit. Upgrade to Premium for '
+            'unlimited searches.',
+      );
+      return;
+    }
+    state = state.copyWith(
+      phase: FinderPhase.error,
+      isLoading: false,
+      error: userFacingErrorMessage(
+          e, 'Something went wrong finding recipes. Please try again.'),
+    );
+  }
+
+  // ---- Plain (GET /recipes/search) ---------------------------------------
+
+  Future<void> _runPlain() async {
+    final query = state.facets.toKeywordQuery();
     if (query.trim().isEmpty) return;
     _warmRequested.clear();
 
@@ -387,6 +702,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
       nextOffset: 0,
       hasMore: true,
       isLoadingMore: false,
+      phase: FinderPhase.idle,
+      narration: const [],
+      refineChips: const [],
+      broaden: const [],
+      isLimitReached: false,
     );
 
     try {
@@ -429,7 +749,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
     }
   }
 
-  Future<void> loadMore() async {
+  Future<void> _loadMorePlain() async {
     if (state.isLoadingMore || !state.hasMore || state.query.isEmpty) return;
 
     state = state.copyWith(isLoadingMore: true);
@@ -743,7 +1063,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 
   void clear() {
-    state = const SearchState();
+    state = SearchState(
+      agentMode: state.agentMode,
+      facets: state.facets,
+      viewMode: state.viewMode,
+    );
   }
 }
 

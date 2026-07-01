@@ -83,19 +83,18 @@ void main() {
       final shortlist = events[3];
       expect(shortlist.items, hasLength(1));
       final item = shortlist.items.first;
-      expect(item.result.title, 'Creamy Chicken Pasta');
-      expect(item.result.sourceDomain, 'example.com');
-      expect(item.result.rating, 4.6);
+      expect(item.title, 'Creamy Chicken Pasta');
+      expect(item.sourceDomain, 'example.com');
+      expect(item.rating, 4.6);
       // image_url "" coerces to null so the card falls back to a placeholder.
-      expect(item.result.imageUrl, isNull);
+      expect(item.imageUrl, isNull);
       expect(item.reason, 'Quick and kid-friendly');
       // MemberSafety folds into the existing FamilySafetyCheck (avoid = unsafe)
-      // and also lands on the result so the card's safety UI lights up.
-      expect(item.safety, hasLength(1));
-      expect(item.safety.first.memberName, 'Junior');
-      expect(item.safety.first.status, 'avoid');
-      expect(item.safety.first.isSafe, isFalse);
-      expect(item.result.familySafetyChecks, hasLength(1));
+      // right on the WebSearchResult so the shared card's safety UI lights up.
+      expect(item.familySafetyChecks, hasLength(1));
+      expect(item.familySafetyChecks.first.memberName, 'Junior');
+      expect(item.familySafetyChecks.first.status, 'avoid');
+      expect(item.familySafetyChecks.first.isSafe, isFalse);
 
       expect(events[5].chips,
           ['quicker', 'cheaper', 'more veg', 'swap protein']);
@@ -117,7 +116,7 @@ void main() {
 
       final events = await parseFinderSse(_chunked(sse)).toList();
       expect(events, hasLength(1));
-      expect(events.first.items.first.result.rating, isNull);
+      expect(events.first.items.first.rating, isNull);
       expect(events.first.items.first.reason, isNull);
     });
 

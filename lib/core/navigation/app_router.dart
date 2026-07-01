@@ -8,8 +8,6 @@ import '../../features/cooking/cooking_mode_screen.dart';
 import '../../features/family/dietary_interview_screen.dart';
 import '../../features/family/family_member_detail_screen.dart';
 import '../../features/family/family_screen.dart';
-import '../../features/finder/finder_mood_screen.dart';
-import '../../features/finder/finder_run_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/import/import_manual_screen.dart';
 import '../../features/import/import_photo_screen.dart';
@@ -24,7 +22,6 @@ import '../../features/recipe/recipe_edit_screen.dart';
 import '../../features/recipe/recipe_fork_screen.dart';
 import '../../features/search/search_preview_screen.dart';
 import '../../features/search/search_screen.dart';
-import '../providers/finder_provider.dart';
 import '../providers/search_provider.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/subscription_screen.dart';
@@ -98,23 +95,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           final searchResult = state.extra as WebSearchResult;
           return SearchPreviewScreen(searchResult: searchResult);
         },
-      ),
-
-      // Recipe finder (outside shell for full-screen)
-      GoRoute(
-        path: '/find',
-        name: 'find',
-        builder: (context, state) => const FinderMoodScreen(),
-        routes: [
-          GoRoute(
-            path: 'run',
-            name: 'find-run',
-            builder: (context, state) {
-              final facets = state.extra as FinderFacets? ?? const FinderFacets();
-              return FinderRunScreen(facets: facets);
-            },
-          ),
-        ],
       ),
 
       // Recipe detail routes (outside shell for full-screen)
