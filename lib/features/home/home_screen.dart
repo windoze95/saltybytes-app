@@ -94,7 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   title: const Text('Find a recipe'),
                   subtitle:
-                      const Text("We'll find real recipes for your family"),
+                      const Text("We'll pull real recipes from the internet, including TikTok"),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -296,7 +296,7 @@ class _EmptyState extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Find a real recipe for your family,\nor import one from a URL or photo.',
+              'Discover real recipes from across the internet — including TikTok —\nor import one from a URL or photo.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),

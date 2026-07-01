@@ -257,7 +257,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                "Tap a few, or just search — we'll pull real recipes for your family.",
+                "Tap a few, or just search — we'll pull real recipes from across the internet, including TikTok.",
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
@@ -871,8 +871,8 @@ class _EmptySearchState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Find recipes from thousands of websites, '
-              'personalized for your family\'s dietary needs.',
+              'Real recipes from thousands of sites across the internet — '
+              'including TikTok.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),

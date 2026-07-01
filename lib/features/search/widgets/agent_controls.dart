@@ -238,7 +238,7 @@ class SurpriseTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      "We'll pick something great for your family",
+                      "We'll pick something great from across the internet",
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.onSurface.withValues(alpha: 0.6),
                       ),
