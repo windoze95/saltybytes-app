@@ -41,6 +41,9 @@ class ApiEndpoints {
   // Recipe Preview
   static const String previewFromUrl = '$apiVersion/recipes/preview/url';
 
+  // Recipe Finder (guided, SSE-streamed real-recipe finder)
+  static const String find = '$apiVersion/recipes/find';
+
   // Allergens
   static String allergenAnalysis(String recipeId) =>
       '$apiVersion/recipes/$recipeId/allergens';
