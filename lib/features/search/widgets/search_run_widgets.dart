@@ -1,5 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+
+import '../../../core/providers/search_provider.dart';
 
 /// The live "using the app for you" strip: one line per streamed agent event,
 /// with a spinner on the last line while the run is still in flight.
@@ -122,26 +125,146 @@ class RefineBar extends StatelessWidget {
   }
 }
 
-/// A subtle "working" indicator shown while the agent is streaming but no
-/// shortlist has landed yet and there is nothing in the narration strip.
-class SearchWorkingPlaceholder extends StatelessWidget {
-  const SearchWorkingPlaceholder({super.key});
+/// The body of the Search screen while an agent run is in flight. Recipes the
+/// agent has found so far ([found], the staged buffer) are teased as a
+/// thumbnail cluster + count — evidence of work, not interactive — and the
+/// complete curated list reveals all at once when the run finishes.
+class AgentWorkingView extends StatelessWidget {
+  const AgentWorkingView({super.key, required this.found});
+
+  final List<WebSearchResult> found;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final count = found.length;
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(
-            'Finding real recipes…',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (count == 0) ...[
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Finding real recipes…',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ] else ...[
+              FoundSoFarThumbs(found: found),
+              const SizedBox(height: 16),
+              Text(
+                '$count ${count == 1 ? 'recipe' : 'recipes'} found',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Curating your picks…',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 160,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: const LinearProgressIndicator(minHeight: 4),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// An overlapping cluster of the found-so-far recipe thumbnails (capped, with
+/// a "+n" bubble for the rest). Each new find pops in as it lands.
+class FoundSoFarThumbs extends StatelessWidget {
+  const FoundSoFarThumbs({super.key, required this.found});
+
+  final List<WebSearchResult> found;
+
+  static const _maxThumbs = 5;
+  static const _size = 52.0;
+  static const _overlap = 36.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final shown = found.take(_maxThumbs).toList();
+    final extra = found.length - shown.length;
+    final slots = shown.length + (extra > 0 ? 1 : 0);
+
+    Widget circle(Widget child) => Container(
+          width: _size,
+          height: _size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: colors.surface, width: 2.5),
+            color: colors.primary.withValues(alpha: 0.12),
           ),
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        );
+
+    return SizedBox(
+      height: _size,
+      width: _overlap * (slots - 1) + _size,
+      child: Stack(
+        children: [
+          for (var i = 0; i < shown.length; i++)
+            Positioned(
+              left: i * _overlap,
+              child: KeyedSubtree(
+                key: ValueKey(shown[i].sourceUrl ?? shown[i].title),
+                child: circle(
+                  shown[i].imageUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: shown[i].imageUrl!,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 156,
+                          errorWidget: (_, __, ___) => Icon(
+                            Icons.restaurant,
+                            size: 22,
+                            color: colors.primary.withValues(alpha: 0.5),
+                          ),
+                        )
+                      : Icon(
+                          Icons.restaurant,
+                          size: 22,
+                          color: colors.primary.withValues(alpha: 0.5),
+                        ),
+                ).animate().fadeIn(duration: 250.ms).scale(
+                      begin: const Offset(0.6, 0.6),
+                      end: const Offset(1, 1),
+                      duration: 250.ms,
+                      curve: Curves.easeOutBack,
+                    ),
+              ),
+            ),
+          if (extra > 0)
+            Positioned(
+              left: shown.length * _overlap,
+              child: circle(
+                Center(
+                  child: Text(
+                    '+$extra',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colors.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -48,6 +49,21 @@ Response<dynamic> _sse(String body, {int status = 200}) => Response<dynamic>(
         },
       ),
       statusCode: status,
+      requestOptions: RequestOptions(path: ApiEndpoints.find),
+    );
+
+/// An SSE response backed by a live [controller], so tests can emit frames one
+/// at a time and assert the intermediate provider state between them.
+Response<dynamic> _sseLive(StreamController<Uint8List> controller) =>
+    Response<dynamic>(
+      data: ResponseBody(
+        controller.stream,
+        200,
+        headers: {
+          Headers.contentTypeHeader: ['text/event-stream']
+        },
+      ),
+      statusCode: 200,
       requestOptions: RequestOptions(path: ApiEndpoints.find),
     );
 
@@ -449,6 +465,7 @@ void main() {
 
       expect(state.query, '');
       expect(state.results, isEmpty);
+      expect(state.staged, isEmpty);
       expect(state.isLoading, false);
       expect(state.error, isNull);
       expect(state.hasSearched, false);
@@ -859,6 +876,104 @@ void main() {
       expect(state.refineChips, ['quicker', 'cheaper']);
       expect(state.hasMore, isTrue);
       expect(state.narration, isNotEmpty);
+    });
+
+    test('holds streamed results in staged until done, then reveals at once',
+        () async {
+      final apiClient = MockApiClient();
+      final dio = MockDio();
+      when(() => apiClient.dio).thenReturn(dio);
+      when(() => apiClient.post(ApiEndpoints.warmUrls, data: any(named: 'data')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({'statuses': {}}));
+      final controller = StreamController<Uint8List>();
+      when(() => dio.post(ApiEndpoints.find,
+          data: any(named: 'data'),
+          options: any(named: 'options'))).thenAnswer((_) async =>
+          _sseLive(controller));
+
+      final container = createTestContainer(
+          overrides: [apiClientProvider.overrideWithValue(apiClient)]);
+      addTearDown(container.dispose);
+      final notifier = container.read(searchProvider.notifier);
+
+      final run = notifier.search();
+      Future<void> emit(String frame) async {
+        controller.add(Uint8List.fromList(utf8.encode(frame)));
+        await pumpEventQueue();
+      }
+
+      await pumpEventQueue(); // request + stream subscription
+
+      await emit(_frame('shortlist', {
+        'items': [
+          _finderItem('One', url: 'https://x.com/1'),
+        ],
+        'has_more': false,
+      }));
+      var state = container.read(searchProvider);
+      expect(state.results, isEmpty,
+          reason: 'shortlist stages, it must not paint mid-run');
+      expect(state.staged.single.title, 'One');
+      expect(state.isLoading, isTrue);
+
+      await emit(_frame('expanded', {
+        'items': [
+          _finderItem('Dug', url: 'https://x.com/dug'),
+        ],
+      }));
+      state = container.read(searchProvider);
+      expect(state.results, isEmpty);
+      expect(state.staged.map((r) => r.title).toList(), ['One', 'Dug']);
+
+      await emit(_frame('done', {}));
+      await controller.close();
+      await run;
+
+      state = container.read(searchProvider);
+      expect(state.results.map((r) => r.title).toList(), ['One', 'Dug']);
+      expect(state.staged, isEmpty);
+      expect(state.phase, FinderPhase.done);
+      expect(state.isLoading, isFalse);
+    });
+
+    test('a stream failure after recipes were staged reveals them instead of '
+        'erroring', () async {
+      final apiClient = MockApiClient();
+      final dio = MockDio();
+      when(() => apiClient.dio).thenReturn(dio);
+      when(() => apiClient.post(ApiEndpoints.warmUrls, data: any(named: 'data')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({'statuses': {}}));
+      final controller = StreamController<Uint8List>();
+      when(() => dio.post(ApiEndpoints.find,
+          data: any(named: 'data'),
+          options: any(named: 'options'))).thenAnswer((_) async =>
+          _sseLive(controller));
+
+      final container = createTestContainer(
+          overrides: [apiClientProvider.overrideWithValue(apiClient)]);
+      addTearDown(container.dispose);
+      final notifier = container.read(searchProvider.notifier);
+
+      final run = notifier.search();
+      await pumpEventQueue();
+      controller.add(Uint8List.fromList(utf8.encode(_frame('shortlist', {
+        'items': [
+          _finderItem('One', url: 'https://x.com/1'),
+        ],
+        'has_more': false,
+      }))));
+      await pumpEventQueue();
+      controller.addError(DioException(
+          requestOptions: RequestOptions(path: ApiEndpoints.find)));
+      await controller.close();
+      await run;
+
+      final state = container.read(searchProvider);
+      expect(state.results.single.title, 'One');
+      expect(state.staged, isEmpty);
+      expect(state.phase, FinderPhase.done);
+      expect(state.error, isNull);
+      expect(state.isLoading, isFalse);
     });
 
     test('a 403 surfaces the limit state', () async {
