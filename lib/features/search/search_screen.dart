@@ -203,6 +203,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       appBar: AppBar(
         title: Text(state.agentMode ? 'Find a recipe' : 'Search Recipes'),
         actions: [
+          IconButton(
+            tooltip: 'Search history',
+            icon: const Icon(Icons.history),
+            onPressed: () => context.pushNamed('search-history'),
+          ),
           if (state.results.isNotEmpty && !showAgentInput)
             IconButton(
               tooltip: state.viewMode == SearchViewMode.list

@@ -358,6 +358,42 @@ Map<String, dynamic> testSubscriptionJson({
       'MonthlyResetAt': monthlyResetAt,
     };
 
+/// Mirrors a GET /v1/recipes/finder/sessions item / detail. `results` are flat
+/// SearchResult objects; `intent` mirrors the FinderFacets wire shape.
+Map<String, dynamic> testFinderSessionJson({
+  int id = 1,
+  String title = 'chicken dinner',
+  String createdAt = '2026-07-01T10:00:00.000Z',
+  Map<String, dynamic>? intent,
+  List<Map<String, dynamic>>? results,
+  List<String>? narration,
+}) =>
+    {
+      'id': id,
+      'title': title,
+      'created_at': createdAt,
+      'intent': intent ??
+          {
+            'cuisine': 'Italian',
+            'protein': 'chicken',
+            'use_what_i_have': <String>[],
+            'surprise_me': false,
+            'free_text': 'cozy',
+          },
+      'results': results ??
+          [
+            {
+              'title': 'Result A',
+              'source_url': 'https://x.com/a',
+              'source_domain': 'x.com',
+              'image_url': '',
+              'rating': 4.5,
+              'description': 'A tasty recipe',
+            },
+          ],
+      'narration': narration ?? ['Searched for chicken', 'Found 1 recipe'],
+    };
+
 Map<String, dynamic> testWebSearchResultJson({
   String title = 'Best Margherita Pizza Recipe',
   String? sourceUrl = 'https://www.seriouseats.com/margherita-pizza',
