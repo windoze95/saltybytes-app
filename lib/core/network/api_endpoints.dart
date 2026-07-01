@@ -43,6 +43,12 @@ class ApiEndpoints {
   // Recipe Finder (guided, SSE-streamed real-recipe finder)
   static const String find = '$apiVersion/recipes/find';
 
+  // Recipe Finder sessions (auto-saved agent search history)
+  static const String finderSessions =
+      '$apiVersion/recipes/finder/sessions';
+  static String finderSession(int id) =>
+      '$apiVersion/recipes/finder/sessions/$id';
+
   // Allergens
   static String allergenAnalysis(String recipeId) =>
       '$apiVersion/recipes/$recipeId/allergens';

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/allergen.dart';
+import '../../models/finder_session.dart';
 import '../../models/recipe.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
@@ -469,6 +470,24 @@ class SearchNotifier extends StateNotifier<SearchState> {
     state = state.copyWith(facets: state.facets.copyWith(freeText: text));
   }
 
+  /// Repopulates Search from a saved [FinderSession] — its intent, results and
+  /// narration — as a finished agent run. Does NOT re-run the search.
+  void restoreFromSession(FinderSession session) {
+    _warmRequested.clear();
+    state = SearchState(
+      agentMode: true,
+      facets: session.intent,
+      viewMode: state.viewMode,
+      query: session.intent.toKeywordQuery(),
+      results: session.results,
+      hasSearched: true,
+      phase: FinderPhase.done,
+      narration: session.narration,
+      nextOffset: session.results.length,
+      hasMore: false,
+    );
+  }
+
   // ---- Search (branches on agentMode) ------------------------------------
 
   Future<void> search() async {
@@ -607,6 +626,23 @@ class SearchNotifier extends StateNotifier<SearchState> {
           nextOffset: e.items.length,
         );
         warmAhead(0);
+      case 'digging':
+        // The agent is opening a collection ("23 Best Weeknight Dinners") to
+        // fold individual recipes out of it.
+        final title = e.collectionTitle?.trim();
+        state = state.copyWith(
+          phase: FinderPhase.digging,
+          narration: [
+            ...state.narration,
+            (title == null || title.isEmpty)
+                ? '\u{1F37D} Opening a recipe collection…'
+                : '\u{1F37D} Opening ‘$title’…',
+          ],
+        );
+      case 'expanded':
+        // Recipes folded out of a collection — dedup + append (nextOffset is
+        // the shortlist offset, so dug-in extras don't advance it).
+        _appendDugRecipes(e.items);
       case 'warming':
         state = state.copyWith(
           phase: FinderPhase.warming,
@@ -656,12 +692,28 @@ class SearchNotifier extends StateNotifier<SearchState> {
           nextOffset: state.nextOffset + fetched,
         );
         warmAhead(state.results.length - 1);
+      case 'expanded':
+        _appendDugRecipes(e.items);
       case 'empty':
         state = state.copyWith(isLoadingMore: false, hasMore: false);
       case 'error':
         state = state.copyWith(isLoadingMore: false);
-      // narration/found/filtering/warming/refine_ready/done ignored on paging
+      // narration/found/filtering/warming/digging/refine_ready/done ignored
     }
+  }
+
+  /// Dedups dug-in recipes by sourceUrl against the current results, appends
+  /// them, and warms the newly-added tail. Shared by the run + load-more paths.
+  void _appendDugRecipes(List<WebSearchResult> items) {
+    if (items.isEmpty) return;
+    final existing =
+        state.results.map((r) => r.sourceUrl).whereType<String>().toSet();
+    final added = items
+        .where((r) => r.sourceUrl == null || !existing.contains(r.sourceUrl))
+        .toList();
+    if (added.isEmpty) return;
+    state = state.copyWith(results: [...state.results, ...added]);
+    warmAhead(state.results.length - 1);
   }
 
   void _applyAgentDioError(DioException e, {required bool loadMore}) {

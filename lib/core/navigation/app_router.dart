@@ -20,6 +20,7 @@ import '../../features/recipe/recipe_branches_screen.dart';
 import '../../features/recipe/recipe_detail_screen.dart';
 import '../../features/recipe/recipe_edit_screen.dart';
 import '../../features/recipe/recipe_fork_screen.dart';
+import '../../features/search/history_screen.dart';
 import '../../features/search/search_preview_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../providers/search_provider.dart';
@@ -95,6 +96,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           final searchResult = state.extra as WebSearchResult;
           return SearchPreviewScreen(searchResult: searchResult);
         },
+      ),
+
+      // Agent search history (outside shell for full-screen)
+      GoRoute(
+        path: '/search/history',
+        name: 'search-history',
+        builder: (context, state) => const HistoryScreen(),
       ),
 
       // Recipe detail routes (outside shell for full-screen)

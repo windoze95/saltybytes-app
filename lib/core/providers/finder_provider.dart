@@ -71,6 +71,28 @@ class FinderFacets {
     );
   }
 
+  /// Parses the `intent` object of a saved FinderSession (same wire shape as
+  /// the request `facets` plus `free_text`). Empty strings coerce to null.
+  factory FinderFacets.fromJson(Map<String, dynamic> json) {
+    String? s(dynamic v) {
+      final str = v as String?;
+      return (str == null || str.isEmpty) ? null : str;
+    }
+
+    return FinderFacets(
+      occasion: s(json['occasion']),
+      timeBudget: s(json['time_budget']),
+      protein: s(json['protein']),
+      cuisine: s(json['cuisine']),
+      useWhatIHave: (json['use_what_i_have'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      surpriseMe: json['surprise_me'] as bool? ?? false,
+      freeText: s(json['free_text']),
+    );
+  }
+
   /// The `facets` object of the `POST /v1/recipes/find` body.
   Map<String, dynamic> toFacetsJson() => {
         if (occasion != null) 'occasion': occasion,
@@ -133,6 +155,7 @@ enum FinderPhase {
   found,
   filtering,
   shortlist,
+  digging,
   warming,
   refineReady,
   done,
@@ -157,6 +180,7 @@ class FinderEvent {
     this.chips = const [],
     this.broaden = const [],
     this.hasMore,
+    this.collectionTitle,
     this.error,
   });
 
@@ -168,6 +192,9 @@ class FinderEvent {
   final List<String> urls;
   final List<String> chips;
   final List<String> broaden;
+
+  /// The collection page the agent is opening / opened (digging + expanded).
+  final String? collectionTitle;
 
   /// Whether more shortlist pages exist (Phase 1 pagination; carried on the
   /// `shortlist` event as `has_more`). Null when the backend omits it.
@@ -191,6 +218,7 @@ class FinderEvent {
       chips: strList(json['chips']),
       broaden: strList(json['broaden']),
       hasMore: json['has_more'] as bool?,
+      collectionTitle: json['collection_title'] as String?,
       error: json['error'] as String?,
     );
   }
