@@ -8,7 +8,7 @@ import 'package:saltybytes_app/core/providers/finder_provider.dart';
 import 'package:saltybytes_app/core/providers/search_provider.dart';
 import 'package:saltybytes_app/core/theme/app_theme.dart';
 import 'package:saltybytes_app/features/finder/finder_run_screen.dart';
-import 'package:saltybytes_app/features/search/widgets/search_result_card.dart';
+import 'package:saltybytes_app/features/finder/widgets/finder_shortlist_card.dart';
 
 import '../../helpers/test_helpers.dart';
 
@@ -31,6 +31,8 @@ FinderResultItem _item({
   String title = 'Creamy Chicken Pasta',
   String url = 'https://example.com/ccp',
   String? reason = 'Quick and kid-friendly',
+  String safetyStatus = 'safe',
+  String memberName = 'Junior',
 }) {
   return FinderResultItem.fromJson({
     'result': {
@@ -43,7 +45,7 @@ FinderResultItem _item({
     },
     if (reason != null) 'reason': reason,
     'safety': [
-      {'member_name': 'Junior', 'status': 'safe', 'note': ''},
+      {'member_name': memberName, 'status': safetyStatus, 'note': ''},
     ],
   });
 }
@@ -118,14 +120,31 @@ void main() {
       expect(find.textContaining('Checking these against your family'),
           findsOneWidget);
 
-      expect(find.byType(SearchResultCard), findsOneWidget);
+      // Curated single-column list of the finder card.
+      expect(find.byType(FinderShortlistCard), findsOneWidget);
       expect(find.text('Creamy Chicken Pasta'), findsOneWidget);
-      // The rationale rides along as the card's one-line subtitle.
+      // The rationale is the hero subtitle.
       expect(find.text('Quick and kid-friendly'), findsOneWidget);
+      // Meta row: rating + aggregate family-safety summary (no cook time).
+      expect(find.text('4.6'), findsOneWidget);
+      expect(find.text('Family-safe'), findsOneWidget);
 
       // Tap-to-refine chips.
       expect(find.widgetWithText(ActionChip, 'quicker'), findsOneWidget);
       expect(find.widgetWithText(ActionChip, 'swap protein'), findsOneWidget);
+    });
+
+    testWidgets('safety summary flags avoid for a member', (tester) async {
+      final avoidState = FinderRunState(
+        phase: FinderPhase.done,
+        narration: const ['Found 1 real recipe'],
+        items: [_item(safetyStatus: 'avoid', memberName: 'Junior')],
+      );
+
+      await pumpRun(tester, avoidState);
+
+      expect(find.text('Avoid for Junior'), findsOneWidget);
+      expect(find.text('Family-safe'), findsNothing);
     });
 
     testWidgets('tapping a shortlist card pushes the existing preview route',
@@ -134,8 +153,8 @@ void main() {
 
       // warnIfMissed: the card is wrapped in flutter_animate's opacity/transform
       // (the entrance animation), which confuses tap()'s hit-test-first check
-      // even though the pointer still routes to the card's GestureDetector.
-      await tester.tap(find.byType(SearchResultCard), warnIfMissed: false);
+      // even though the pointer still routes to the card's InkWell.
+      await tester.tap(find.byType(FinderShortlistCard), warnIfMissed: false);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -158,7 +177,7 @@ void main() {
       expect(find.widgetWithText(ActionChip, 'comfort food'), findsOneWidget);
       expect(
           find.widgetWithText(ActionChip, '30-minute meals'), findsOneWidget);
-      expect(find.byType(SearchResultCard), findsNothing);
+      expect(find.byType(FinderShortlistCard), findsNothing);
     });
 
     testWidgets('limit state shows the upgrade affordance', (tester) async {

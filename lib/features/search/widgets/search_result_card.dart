@@ -10,20 +10,14 @@ import '../../../models/allergen.dart';
 bool isPendingExtraction(String? status) =>
     status == 'extracting' || status == 'pending';
 
-/// Grid card for a single web search result. Shared by the search grid and the
-/// recipe finder shortlist so both render identical result tiles (image, safety
-/// dots, per-card extraction badge, title/source/rating).
-///
-/// The finder passes a one-line [reason] ("why this fits"), which replaces the
-/// rating row so the rationale is what the eye lands on. Search leaves it null
-/// and the card renders exactly as before.
+/// Grid card for a single web search result (image, safety dots, per-card
+/// extraction badge, title/source/rating), used by the search grid.
 class SearchResultCard extends StatelessWidget {
   const SearchResultCard({
     super.key,
     required this.result,
     required this.onTap,
     this.index = 0,
-    this.reason,
   });
 
   final WebSearchResult result;
@@ -31,9 +25,6 @@ class SearchResultCard extends StatelessWidget {
 
   /// Position in the list, used to stagger the entrance animation.
   final int index;
-
-  /// One-line rationale shown in place of the rating (finder only).
-  final String? reason;
 
   @override
   Widget build(BuildContext context) {
@@ -147,24 +138,8 @@ class SearchResultCard extends StatelessWidget {
                           fontSize: 11,
                         ),
                       ),
-                    // Finder rationale takes the rating's slot; search keeps
-                    // showing the star rating when there is no reason.
-                    if (reason != null && reason!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          reason!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontStyle: FontStyle.italic,
-                            fontSize: 11,
-                            color:
-                                theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      )
-                    else if (result.rating != null) ...[
+                    // Rating
+                    if (result.rating != null) ...[
                       const SizedBox(height: 2),
                       Row(
                         children: [

@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers/finder_provider.dart';
 import '../../core/voice/speech_service.dart';
-import '../search/widgets/search_result_card.dart';
+import 'widgets/finder_shortlist_card.dart';
 
 /// The finder run screen: kicks off a run for the given [facets], streams the
 /// bounded trajectory into a live narration strip, then reveals the ranked
@@ -134,21 +134,17 @@ class _FinderRunScreenState extends ConsumerState<FinderRunScreen> {
         else if (state.hasItems)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.62,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
+            sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final item = state.items[index];
-                  return SearchResultCard(
-                    result: item.result,
-                    reason: item.reason,
-                    index: index,
-                    onTap: () => _openPreview(item),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: FinderShortlistCard(
+                      item: item,
+                      index: index,
+                      onTap: () => _openPreview(item),
+                    ),
                   );
                 },
                 childCount: state.items.length,
