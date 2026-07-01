@@ -13,6 +13,8 @@ on:
 jobs:
   beta:
     runs-on: macos-15
+    # Processing waits can run long; cap the job so a stuck build can't hang CI.
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
