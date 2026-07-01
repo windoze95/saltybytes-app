@@ -4,11 +4,21 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/providers/family_provider.dart';
+import '../../core/providers/finder_provider.dart';
 import '../../core/providers/search_provider.dart';
-import 'widgets/search_result_card.dart';
+import '../../core/voice/speech_service.dart';
+import 'widgets/agent_controls.dart';
+import 'widgets/finder_shortlist_card.dart';
+import 'widgets/result_badges.dart';
+import 'widgets/search_run_widgets.dart';
 
-enum _ViewMode { fullScreen, grid }
-
+/// One unified Search surface. An "agent" toggle switches between:
+/// - Agent ON (default): tap-first — facet pills dominate; text + pills → the
+///   guided `/recipes/find` agent (ranked, narration, reasons, family-safety).
+/// - Agent OFF: search-bar-first; pills collapse to a "Filters (n)" expander;
+///   text + pills → plain `GET /recipes/search`.
+/// Two shared view modes (immersive full-screen PageView + curated list).
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -18,179 +28,473 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchController = TextEditingController();
+  final _ingredientController = TextEditingController();
   PageController _pageController = PageController();
-  final _gridScrollController = ScrollController();
-  _ViewMode _viewMode = _ViewMode.fullScreen;
+  final _listScrollController = ScrollController();
   int _currentPage = 0;
+
+  // Local UI state.
+  bool _detailsExpanded = false;
+  bool _isListening = false;
+
+  /// In agent mode, whether the pill editor is showing over the results (either
+  /// because nothing has been searched yet, or the user tapped "edit filters").
+  bool _editingFilters = false;
 
   @override
   void initState() {
     super.initState();
-    _gridScrollController.addListener(_onGridScroll);
+    _listScrollController.addListener(_onListScroll);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _ingredientController.dispose();
     _pageController.dispose();
-    _gridScrollController.dispose();
+    _listScrollController.dispose();
     super.dispose();
   }
 
-  void _performSearch() {
-    final query = _searchController.text.trim();
-    if (query.isNotEmpty) {
-      _currentPage = 0;
-      _pageController.dispose();
-      _pageController = PageController();
-      ref.read(searchProvider.notifier).search(query);
-    }
+  SearchNotifier get _notifier => ref.read(searchProvider.notifier);
+
+  // ---- Actions -----------------------------------------------------------
+
+  void _runSearch() {
+    FocusScope.of(context).unfocus();
+    _notifier.setQuery(_searchController.text.trim());
+    _resetPager();
+    setState(() => _editingFilters = false);
+    _notifier.search();
   }
 
-  void _onPageChanged(int index) {
-    _currentPage = index;
-    final searchState = ref.read(searchProvider);
-    // Warm the cache a few cards ahead of where the user is.
-    ref.read(searchProvider.notifier).warmAhead(index);
-    final threshold = searchState.results.length - 3;
-    if (index >= threshold && searchState.hasMore && !searchState.isLoadingMore) {
-      ref.read(searchProvider.notifier).loadMore();
-    }
+  void _refine(String constraint) {
+    _resetPager();
+    _notifier.refine(constraint);
   }
 
-  void _onGridScroll() {
-    final pos = _gridScrollController.position;
-    final searchState = ref.read(searchProvider);
-    // Estimate the top-of-fold index from the scroll fraction and warm ahead.
-    if (pos.maxScrollExtent > 0 && searchState.results.isNotEmpty) {
-      final frac = (pos.pixels / pos.maxScrollExtent).clamp(0.0, 1.0);
-      final visibleIndex = (frac * searchState.results.length).floor();
-      ref.read(searchProvider.notifier).warmAhead(visibleIndex);
-    }
-    if (pos.pixels >= pos.maxScrollExtent - 200) {
-      if (searchState.hasMore && !searchState.isLoadingMore) {
-        ref.read(searchProvider.notifier).loadMore();
-      }
-    }
-  }
-
-  void _switchToFullScreen(int index) {
+  void _resetPager() {
+    _currentPage = 0;
     _pageController.dispose();
-    _pageController = PageController(initialPage: index);
-    _currentPage = index;
-    setState(() => _viewMode = _ViewMode.fullScreen);
+    _pageController = PageController();
+  }
+
+  void _toggleAgent(bool value) {
+    _notifier.setAgentMode(value);
+    setState(() => _editingFilters = false);
+  }
+
+  void _toggleViewMode() {
+    final mode = ref.read(searchProvider).viewMode;
+    final next = mode == SearchViewMode.list
+        ? SearchViewMode.immersive
+        : SearchViewMode.list;
+    if (next == SearchViewMode.immersive) {
+      _pageController.dispose();
+      _pageController = PageController(initialPage: _currentPage);
+    }
+    _notifier.setViewMode(next);
+  }
+
+  void _updateFacets(FinderFacets facets) => _notifier.setFacets(facets);
+
+  void _addIngredient(FinderFacets facets) {
+    final text = _ingredientController.text.trim();
+    if (text.isEmpty) return;
+    if (!facets.useWhatIHave.contains(text)) {
+      _updateFacets(facets.copyWith(useWhatIHave: [...facets.useWhatIHave, text]));
+    }
+    _ingredientController.clear();
+  }
+
+  Future<void> _toggleVoice() async {
+    final speech = ref.read(speechServiceProvider);
+    if (_isListening) {
+      await speech.stop();
+      if (mounted) setState(() => _isListening = false);
+      return;
+    }
+    final available = await speech.initialize(
+      onStatus: (status) {
+        if ((status == 'done' || status == 'notListening') && mounted) {
+          setState(() => _isListening = false);
+        }
+      },
+      onError: (_) {
+        if (mounted) setState(() => _isListening = false);
+      },
+    );
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Voice input is unavailable on this device.')),
+        );
+      }
+      return;
+    }
+    if (mounted) setState(() => _isListening = true);
+    await speech.listen(
+      onResult: (text, isFinal) {
+        if (!mounted) return;
+        setState(() {
+          _searchController.text = text;
+          _searchController.selection =
+              TextSelection.collapsed(offset: text.length);
+          _detailsExpanded = true;
+          if (isFinal) _isListening = false;
+        });
+        _notifier.setQuery(text);
+      },
+    );
   }
 
   Future<void> _previewResult(WebSearchResult result) async {
     final popResult =
         await context.push<int?>('/search/preview', extra: result);
-    if (popResult != null && mounted && _viewMode == _ViewMode.fullScreen) {
-      // Multi-recipe expansion returned a target index
+    final immersive = ref.read(searchProvider).viewMode == SearchViewMode.immersive;
+    if (popResult != null && mounted && immersive) {
+      // Multi-recipe expansion returned a target index.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_pageController.hasClients) {
-          _pageController.jumpToPage(popResult);
-        }
+        if (_pageController.hasClients) _pageController.jumpToPage(popResult);
       });
     }
   }
 
-  void _toggleViewMode() {
-    setState(() {
-      if (_viewMode == _ViewMode.fullScreen) {
-        _viewMode = _ViewMode.grid;
-      } else {
-        _switchToFullScreen(_currentPage);
-      }
-    });
+  // ---- Pagination / warming triggers -------------------------------------
+
+  void _onPageChanged(int index) {
+    _currentPage = index;
+    final state = ref.read(searchProvider);
+    _notifier.warmAhead(index);
+    final threshold = state.results.length - 3;
+    if (index >= threshold && state.hasMore && !state.isLoadingMore) {
+      _notifier.loadMore();
+    }
   }
+
+  void _onListScroll() {
+    final pos = _listScrollController.position;
+    final state = ref.read(searchProvider);
+    if (pos.maxScrollExtent > 0 && state.results.isNotEmpty) {
+      final frac = (pos.pixels / pos.maxScrollExtent).clamp(0.0, 1.0);
+      _notifier.warmAhead((frac * state.results.length).floor());
+    }
+    if (pos.pixels >= pos.maxScrollExtent - 200 &&
+        state.hasMore &&
+        !state.isLoadingMore) {
+      _notifier.loadMore();
+    }
+  }
+
+  // ---- Build -------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final searchState = ref.watch(searchProvider);
+    final state = ref.watch(searchProvider);
+    final showAgentInput =
+        state.agentMode && (!state.hasSearched || _editingFilters);
+    final showRefineBar = state.agentMode &&
+        !showAgentInput &&
+        state.refineChips.isNotEmpty &&
+        state.results.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Search Recipes'),
+        title: Text(state.agentMode ? 'Find a recipe' : 'Search Recipes'),
         actions: [
-          if (searchState.results.isNotEmpty)
+          if (state.results.isNotEmpty && !showAgentInput)
             IconButton(
-              icon: Icon(
-                _viewMode == _ViewMode.fullScreen
-                    ? Icons.grid_view_rounded
-                    : Icons.view_agenda_rounded,
-              ),
-              tooltip: _viewMode == _ViewMode.fullScreen
-                  ? 'Grid view'
-                  : 'Full screen view',
+              tooltip: state.viewMode == SearchViewMode.list
+                  ? 'Immersive view'
+                  : 'List view',
+              icon: Icon(state.viewMode == SearchViewMode.list
+                  ? Icons.view_day_outlined
+                  : Icons.view_agenda_outlined),
               onPressed: _toggleViewMode,
             ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search for recipes...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.arrow_forward),
-                  onPressed: _performSearch,
-                ),
-              ),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _performSearch(),
+          if (state.agentMode && state.hasSearched && !showAgentInput)
+            IconButton(
+              tooltip: 'Edit filters',
+              icon: const Icon(Icons.tune),
+              onPressed: () => setState(() => _editingFilters = true),
             ),
-          ),
-
-          // Results area
-          Expanded(
-            child: _buildBody(theme, searchState),
-          ),
+          _AgentToggle(value: state.agentMode, onChanged: _toggleAgent),
+          const SizedBox(width: 4),
         ],
       ),
+      body: showAgentInput
+          ? _agentInput(state)
+          : (state.agentMode ? _agentResults(state) : _plainLayout(state)),
+      bottomNavigationBar: showRefineBar
+          ? RefineBar(
+              chips: state.refineChips,
+              isListening: _isListening,
+              onChip: _refine,
+              onVoice: _toggleVoice,
+            )
+          : null,
     );
   }
 
-  Widget _buildBody(ThemeData theme, SearchState searchState) {
-    if (searchState.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  // ---- Agent input (pills dominate) --------------------------------------
 
-    if (searchState.error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+  Widget _agentInput(SearchState state) {
+    final theme = Theme.of(context);
+    final facets = state.facets;
+    final diet = familyDietSummary(ref.watch(familyProvider).valueOrNull);
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             children: [
-              Icon(Icons.error_outline,
-                  size: 48,
-                  color: theme.colorScheme.error.withValues(alpha: 0.5)),
+              Text(
+                'What are you in the mood for?',
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Tap a few, or just search — we'll pull real recipes for your family.",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
               const SizedBox(height: 16),
-              Text('Search failed', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text(searchState.error!,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall),
-              const SizedBox(height: 16),
-              OutlinedButton(
-                  onPressed: _performSearch, child: const Text('Retry')),
+              if (diet != null) ...[
+                DietaryChip(
+                  summary: diet,
+                  onTap: () => context.pushNamed('family'),
+                ),
+                const SizedBox(height: 16),
+              ],
+              SurpriseTile(
+                selected: facets.surpriseMe,
+                onTap: () =>
+                    _updateFacets(facets.copyWith(surpriseMe: !facets.surpriseMe)),
+              ),
+              const SizedBox(height: 20),
+              ..._facetSections(facets),
+              const SizedBox(height: 4),
+              DetailsField(
+                controller: _searchController,
+                expanded: _detailsExpanded,
+                isListening: _isListening,
+                onToggleExpand: () =>
+                    setState(() => _detailsExpanded = !_detailsExpanded),
+                onVoice: _toggleVoice,
+              ),
             ],
           ),
         ),
+        SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _runSearch,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Find recipes'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _facetSections(FinderFacets facets) {
+    Widget chips(List<FacetOption> options, String? group,
+            void Function(String?) onChanged) =>
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final o in options)
+              FacetChoiceChip(
+                  option: o, groupValue: group, onChanged: onChanged),
+          ],
+        );
+
+    return [
+      FacetSection(
+        title: 'Occasion',
+        child: chips(kOccasions, facets.occasion,
+            (v) => _updateFacets(facets.copyWith(occasion: v))),
+      ),
+      FacetSection(
+        title: 'Time',
+        child: chips(kTimes, facets.timeBudget,
+            (v) => _updateFacets(facets.copyWith(timeBudget: v))),
+      ),
+      FacetSection(
+        title: 'Protein',
+        child: chips(kProteins, facets.protein,
+            (v) => _updateFacets(facets.copyWith(protein: v))),
+      ),
+      FacetSection(
+        title: 'Cuisine',
+        child: SizedBox(
+          height: 40,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: kCuisines.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) => Center(
+              child: FacetChoiceChip(
+                option: kCuisines[i],
+                groupValue: facets.cuisine,
+                onChanged: (v) => _updateFacets(facets.copyWith(cuisine: v)),
+              ),
+            ),
+          ),
+        ),
+      ),
+      FacetSection(
+        title: 'Use what I have',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ingredientController,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      hintText: 'Add an ingredient…',
+                      prefixIcon: Icon(Icons.kitchen_outlined),
+                    ),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _addIngredient(facets),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  onPressed: () => _addIngredient(facets),
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Add ingredient',
+                ),
+              ],
+            ),
+            if (facets.useWhatIHave.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final ing in facets.useWhatIHave)
+                    InputChip(
+                      label: Text(ing),
+                      onDeleted: () => _updateFacets(facets.copyWith(
+                          useWhatIHave: facets.useWhatIHave
+                              .where((i) => i != ing)
+                              .toList())),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+
+  // ---- Agent results (narration + shortlist + refine) --------------------
+
+  Widget _agentResults(SearchState state) {
+    return Column(
+      children: [
+        if (state.narration.isNotEmpty)
+          NarrationStrip(lines: state.narration, active: state.isAgentActive),
+        Expanded(child: _resultsContent(state)),
+      ],
+    );
+  }
+
+  Widget _resultsContent(SearchState state) {
+    if (state.isLimitReached) {
+      return SearchLimitState(
+        message: state.error ??
+            'You’ve reached your search limit. Upgrade to Premium for '
+                'unlimited searches.',
+        onUpgrade: () => context.pushNamed('subscription'),
       );
     }
+    if (state.phase == FinderPhase.error && state.error != null) {
+      return _ErrorState(message: state.error!, onRetry: _runSearch);
+    }
+    if (state.phase == FinderPhase.empty) {
+      return FinderEmptyState(broaden: state.broaden, onBroaden: _refine);
+    }
+    if (state.results.isNotEmpty) {
+      return _resultsView(state);
+    }
+    if (state.isAgentActive) {
+      return state.narration.isEmpty
+          ? const SearchWorkingPlaceholder()
+          : const SizedBox.shrink();
+    }
+    return const SizedBox.shrink();
+  }
 
-    if (!searchState.hasSearched) {
+  // ---- Plain layout (search bar first + collapsed filters) ---------------
+
+  Widget _plainLayout(SearchState state) {
+    final theme = Theme.of(context);
+    final facets = state.facets;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search for recipes...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.arrow_forward),
+                onPressed: _runSearch,
+              ),
+            ),
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _runSearch(),
+          ),
+        ),
+        Theme(
+          data: theme.copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            leading: const Icon(Icons.tune, size: 20),
+            title: Text('Filters (${facets.selectedCount})',
+                style: theme.textTheme.bodyMedium),
+            children: _facetSections(facets),
+          ),
+        ),
+        Expanded(child: _plainContent(state)),
+      ],
+    );
+  }
+
+  Widget _plainContent(SearchState state) {
+    final theme = Theme.of(context);
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state.error != null) {
+      return _ErrorState(message: state.error!, onRetry: _runSearch);
+    }
+    if (!state.hasSearched) {
       return const _EmptySearchState();
     }
-
-    if (searchState.results.isEmpty) {
+    if (state.results.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -203,38 +507,37 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               const SizedBox(height: 16),
               Text('No results found', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
-              Text(
-                'Try different keywords or check your spelling.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall,
-              ),
+              Text('Try different keywords or check your spelling.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall),
             ],
           ),
         ),
       );
     }
-
-    if (_viewMode == _ViewMode.fullScreen) {
-      return _buildFullScreenView(searchState);
-    } else {
-      return _buildGridView(theme, searchState);
-    }
+    return _resultsView(state);
   }
 
-  Widget _buildFullScreenView(SearchState searchState) {
-    final itemCount =
-        searchState.results.length + (searchState.hasMore ? 1 : 0);
+  // ---- Shared results view (immersive / list) ----------------------------
 
+  Widget _resultsView(SearchState state) {
+    return state.viewMode == SearchViewMode.immersive
+        ? _immersiveView(state)
+        : _listView(state);
+  }
+
+  Widget _immersiveView(SearchState state) {
+    final itemCount = state.results.length + (state.hasMore ? 1 : 0);
     return PageView.builder(
       controller: _pageController,
       scrollDirection: Axis.vertical,
       itemCount: itemCount,
       onPageChanged: _onPageChanged,
       itemBuilder: (context, index) {
-        if (index >= searchState.results.length) {
+        if (index >= state.results.length) {
           return const _FullScreenLoadingPage();
         }
-        final result = searchState.results[index];
+        final result = state.results[index];
         return _FullScreenResultPage(
           result: result,
           onTap: () => _previewResult(result),
@@ -243,33 +546,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildGridView(ThemeData theme, SearchState searchState) {
-    // If the grid can't scroll but more results exist, trigger pagination.
-    if (searchState.hasMore && !searchState.isLoadingMore) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_gridScrollController.hasClients) return;
-        final pos = _gridScrollController.position;
-        if (pos.maxScrollExtent <= 0) {
-          ref.read(searchProvider.notifier).loadMore();
-        }
-      });
-    }
-
-    final itemCount =
-        searchState.results.length + (searchState.isLoadingMore ? 1 : 0);
-
-    return GridView.builder(
-      controller: _gridScrollController,
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.72,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
+  Widget _listView(SearchState state) {
+    final itemCount = state.results.length + (state.isLoadingMore ? 1 : 0);
+    return ListView.builder(
+      controller: _listScrollController,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        if (index >= searchState.results.length) {
+        if (index >= state.results.length) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -277,11 +561,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
           );
         }
-        final result = searchState.results[index];
-        return SearchResultCard(
-          result: result,
-          onTap: () => _switchToFullScreen(index),
-          index: index,
+        final result = state.results[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: FinderShortlistCard(
+            result: result,
+            index: index,
+            onTap: () => _previewResult(result),
+          ),
         );
       },
     );
@@ -289,14 +576,40 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Full-screen page for a single search result
+// App-bar agent toggle
+// ---------------------------------------------------------------------------
+
+class _AgentToggle extends StatelessWidget {
+  const _AgentToggle({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.auto_awesome,
+            size: 18,
+            color: value
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+        const SizedBox(width: 2),
+        Text('Agent', style: theme.textTheme.labelMedium),
+        Switch(value: value, onChanged: onChanged),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Full-screen (immersive) page for a single result
 // ---------------------------------------------------------------------------
 
 class _FullScreenResultPage extends StatelessWidget {
-  const _FullScreenResultPage({
-    required this.result,
-    required this.onTap,
-  });
+  const _FullScreenResultPage({required this.result, required this.onTap});
 
   final WebSearchResult result;
   final VoidCallback onTap;
@@ -310,22 +623,16 @@ class _FullScreenResultPage extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Hero image
           if (result.imageUrl != null)
             CachedNetworkImage(
               imageUrl: result.imageUrl!,
-              // Cap the decoded bitmap so large source photos don't blow up
-              // memory (iOS jetsam) — full-screen hero, decode near screen width.
               memCacheWidth: 1080,
               fit: BoxFit.cover,
               placeholder: (_, __) => _FullScreenPlaceholder(theme: theme),
-              errorWidget: (_, __, ___) =>
-                  _FullScreenPlaceholder(theme: theme),
+              errorWidget: (_, __, ___) => _FullScreenPlaceholder(theme: theme),
             )
           else
             _FullScreenPlaceholder(theme: theme),
-
-          // Bottom gradient overlay
           Positioned(
             left: 0,
             right: 0,
@@ -336,16 +643,11 @@ class _FullScreenResultPage extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Color(0xCC000000),
-                  ],
+                  colors: [Colors.transparent, Color(0xCC000000)],
                 ),
               ),
             ),
           ),
-
-          // Metadata overlay
           Positioned(
             left: 20,
             right: 20,
@@ -356,20 +658,20 @@ class _FullScreenResultPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Extraction status for a multi-recipe card still resolving
                   if (isPendingExtraction(result.extractionStatus) ||
                       result.extractionStatus == 'failed') ...[
                     ExtractionStatusBadge(status: result.extractionStatus!),
                     const SizedBox(height: 10),
                   ],
-                  // Rating
                   if (result.rating != null) ...[
                     Row(
                       children: [
                         ...List.generate(5, (i) {
                           final filled = i < result.rating!.round();
                           return Icon(
-                            filled ? Icons.star_rounded : Icons.star_border_rounded,
+                            filled
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
                             size: 18,
                             color: filled
                                 ? const Color(0xFFF9A825)
@@ -379,16 +681,13 @@ class _FullScreenResultPage extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text(
                           result.rating!.toStringAsFixed(1),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.white70,
-                          ),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: Colors.white70),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                   ],
-
-                  // Title
                   Text(
                     result.title,
                     maxLines: 2,
@@ -398,10 +697,7 @@ class _FullScreenResultPage extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-
                   const SizedBox(height: 6),
-
-                  // Source domain + cook time
                   Row(
                     children: [
                       if (result.sourceDomain != null)
@@ -410,56 +706,34 @@ class _FullScreenResultPage extends StatelessWidget {
                             result.sourceDomain!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white70,
-                            ),
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(color: Colors.white70),
                           ),
-                        ),
-                      if (result.sourceDomain != null &&
-                          result.cookTimeMinutes != null)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Container(
-                            width: 4,
-                            height: 4,
-                            decoration: const BoxDecoration(
-                              color: Colors.white38,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      if (result.cookTimeMinutes != null)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.timer_outlined,
-                                size: 16, color: Colors.white70),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${result.cookTimeMinutes} min',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
                         ),
                     ],
                   ),
-
-                  // Description
-                  if (result.description != null) ...[
+                  // Agent rationale ("why this fits").
+                  if (result.reason != null && result.reason!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '✨ ${result.reason!}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ] else if (result.description != null) ...[
                     const SizedBox(height: 8),
                     Text(
                       result.description!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white60,
-                      ),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: Colors.white60),
                     ),
                   ],
-
-                  // Family safety badges
                   if (result.familySafetyChecks.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Wrap(
@@ -470,8 +744,6 @@ class _FullScreenResultPage extends StatelessWidget {
                           .toList(),
                     ),
                   ],
-
-                  // Preview button
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -514,11 +786,8 @@ class _FullScreenPlaceholder extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Icon(
-          Icons.restaurant,
-          size: 64,
-          color: theme.colorScheme.primary.withValues(alpha: 0.25),
-        ),
+        child: Icon(Icons.restaurant,
+            size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.25)),
       ),
     );
   }
@@ -548,6 +817,37 @@ class _FullScreenLoadingPage extends StatelessWidget {
   }
 }
 
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline,
+                size: 48, color: theme.colorScheme.error.withValues(alpha: 0.5)),
+            const SizedBox(height: 16),
+            Text('Search failed', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(message,
+                textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+            const SizedBox(height: 16),
+            OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _EmptySearchState extends StatelessWidget {
   const _EmptySearchState();
 
@@ -560,17 +860,13 @@ class _EmptySearchState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.travel_explore,
-              size: 80,
-              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-            ),
+            Icon(Icons.travel_explore,
+                size: 80, color: theme.colorScheme.primary.withValues(alpha: 0.3)),
             const SizedBox(height: 24),
             Text(
               'Search for recipes across the web',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),

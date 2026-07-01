@@ -1,13 +1,61 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:saltybytes_app/core/network/api_client.dart';
 import 'package:saltybytes_app/core/network/api_endpoints.dart';
+import 'package:saltybytes_app/core/providers/finder_provider.dart';
 import 'package:saltybytes_app/core/providers/search_provider.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/test_helpers.dart';
+
+// ---- SSE + plain-search test helpers -------------------------------------
+
+String _frame(String type, Map<String, dynamic> data) =>
+    'event: $type\ndata: ${jsonEncode({'type': type, ...data})}\n\n';
+
+Map<String, dynamic> _finderItem(
+  String title, {
+  String? url,
+  String? reason,
+  String? safetyStatus,
+}) =>
+    {
+      'result': {
+        'title': title,
+        if (url != null) 'source_url': url,
+        'image_url': '',
+        'rating': 0.0,
+      },
+      if (reason != null) 'reason': reason,
+      if (safetyStatus != null)
+        'safety': [
+          {'member_name': 'Junior', 'status': safetyStatus, 'note': ''}
+        ],
+    };
+
+Response<dynamic> _sse(String body, {int status = 200}) => Response<dynamic>(
+      data: ResponseBody(
+        Stream.fromIterable([Uint8List.fromList(utf8.encode(body))]),
+        status,
+        headers: {
+          Headers.contentTypeHeader: ['text/event-stream']
+        },
+      ),
+      statusCode: status,
+      requestOptions: RequestOptions(path: ApiEndpoints.find),
+    );
+
+void _seedPlainSearch(SearchNotifier notifier, String query) {
+  notifier.setAgentMode(false);
+  notifier.setQuery(query);
+  notifier.search();
+}
 
 void main() {
   group('WebSearchResult', () {
@@ -404,6 +452,10 @@ void main() {
       expect(state.isLoading, false);
       expect(state.error, isNull);
       expect(state.hasSearched, false);
+      // Unified defaults: agent mode on, curated list view.
+      expect(state.agentMode, true);
+      expect(state.viewMode, SearchViewMode.list);
+      expect(state.phase, FinderPhase.idle);
     });
 
     test('copyWith replaces specified fields', () {
@@ -530,7 +582,7 @@ void main() {
         addTearDown(container.dispose);
         final notifier = container.read(searchProvider.notifier);
 
-        notifier.search('beef');
+        _seedPlainSearch(notifier, 'beef');
         async.flushMicrotasks();
 
         final original = container.read(searchProvider).results.single;
@@ -603,7 +655,7 @@ void main() {
         addTearDown(container.dispose);
         final notifier = container.read(searchProvider.notifier);
 
-        notifier.search('beef');
+        _seedPlainSearch(notifier, 'beef');
         async.flushMicrotasks();
 
         // Warmed on search: a/c show as extracting, b as ready (cached → done).
@@ -652,7 +704,7 @@ void main() {
         addTearDown(container.dispose);
         final notifier = container.read(searchProvider.notifier);
 
-        notifier.search('beef'); // triggers warmAhead(0)
+        _seedPlainSearch(notifier, 'beef'); // triggers warmAhead(0)
         async.flushMicrotasks();
         expect(warmCalls, 1);
 
@@ -686,7 +738,7 @@ void main() {
           apiClientProvider.overrideWithValue(apiClient),
         ]);
         addTearDown(container.dispose);
-        container.read(searchProvider.notifier).search('beef');
+        _seedPlainSearch(container.read(searchProvider.notifier), 'beef');
         async.flushMicrotasks();
 
         // 'failed' clears to a no-badge state — not a stuck "extracting".
@@ -695,6 +747,201 @@ void main() {
         // And no poll loop is left running (nothing is extracting).
         async.elapse(const Duration(seconds: 5));
       });
+    });
+  });
+
+  group('WebSearchResult.reason', () {
+    test('fromJson reads reason when present, null otherwise', () {
+      expect(
+          WebSearchResult.fromJson({'title': 'x', 'reason': 'because'}).reason,
+          'because');
+      expect(WebSearchResult.fromJson({'title': 'x'}).reason, isNull);
+    });
+  });
+
+  group('FinderFacets.toKeywordQuery', () {
+    test('joins cuisine, protein, occasion, time, ingredients, free text', () {
+      const facets = FinderFacets(
+        cuisine: 'Italian',
+        protein: 'chicken',
+        occasion: 'quick weeknight',
+        timeBudget: 'under 30 minutes',
+        useWhatIHave: ['spinach', 'garlic'],
+        freeText: 'no dairy',
+      );
+      expect(
+        facets.toKeywordQuery(),
+        'Italian chicken quick weeknight under 30 minutes spinach garlic no dairy',
+      );
+    });
+
+    test('is empty when nothing is set', () {
+      expect(const FinderFacets().toKeywordQuery(), '');
+    });
+  });
+
+  group('SearchNotifier plain mode', () {
+    test('search() flattens facets to a keyword query and GETs /search',
+        () async {
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.search,
+              queryParameters: any(named: 'queryParameters')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'results': [
+                  {'title': 'Chicken Parm', 'source_url': 'https://x.com/cp'}
+                ],
+                'has_more': false,
+              }));
+      when(() => apiClient.post(ApiEndpoints.warmUrls, data: any(named: 'data')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({'statuses': {}}));
+
+      final container = createTestContainer(
+          overrides: [apiClientProvider.overrideWithValue(apiClient)]);
+      addTearDown(container.dispose);
+      final notifier = container.read(searchProvider.notifier);
+
+      notifier.setAgentMode(false);
+      notifier.setFacets(const FinderFacets(cuisine: 'Italian', freeText: 'chicken'));
+      await notifier.search();
+
+      final captured = verify(() => apiClient.get(ApiEndpoints.search,
+              queryParameters: captureAny(named: 'queryParameters')))
+          .captured
+          .single as Map<String, dynamic>;
+      expect(captured['q'], 'Italian chicken');
+
+      final state = container.read(searchProvider);
+      expect(state.results.single.title, 'Chicken Parm');
+      expect(state.phase, FinderPhase.idle);
+      expect(state.narration, isEmpty);
+    });
+  });
+
+  group('SearchNotifier agent mode (SSE /find)', () {
+    test('streams the happy path into results + narration + refine chips',
+        () async {
+      final apiClient = MockApiClient();
+      final dio = MockDio();
+      when(() => apiClient.dio).thenReturn(dio);
+      when(() => apiClient.post(ApiEndpoints.warmUrls, data: any(named: 'data')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({'statuses': {}}));
+      when(() => dio.post(ApiEndpoints.find,
+          data: any(named: 'data'),
+          options: any(named: 'options'))).thenAnswer((_) async => _sse([
+            _frame('searching', {'query': 'chicken pasta'}),
+            _frame('found', {'count': 3}),
+            _frame('shortlist', {
+              'items': [
+                _finderItem('Creamy Chicken Pasta',
+                    reason: 'Quick + kid-friendly', safetyStatus: 'safe')
+              ],
+              'has_more': true,
+            }),
+            _frame('refine_ready', {
+              'chips': ['quicker', 'cheaper'],
+              'broaden': <String>[],
+            }),
+            _frame('done', {}),
+          ].join()));
+
+      final container = createTestContainer(
+          overrides: [apiClientProvider.overrideWithValue(apiClient)]);
+      addTearDown(container.dispose);
+      final notifier = container.read(searchProvider.notifier);
+
+      await notifier.search(); // agent mode is the default
+
+      final state = container.read(searchProvider);
+      expect(state.results.single.title, 'Creamy Chicken Pasta');
+      expect(state.results.single.reason, 'Quick + kid-friendly');
+      expect(state.results.single.familySafetyChecks, hasLength(1));
+      expect(state.phase, FinderPhase.done);
+      expect(state.refineChips, ['quicker', 'cheaper']);
+      expect(state.hasMore, isTrue);
+      expect(state.narration, isNotEmpty);
+    });
+
+    test('a 403 surfaces the limit state', () async {
+      final apiClient = MockApiClient();
+      final dio = MockDio();
+      when(() => apiClient.dio).thenReturn(dio);
+      when(() => dio.post(ApiEndpoints.find,
+          data: any(named: 'data'),
+          options: any(named: 'options'))).thenThrow(DioException(
+        requestOptions: RequestOptions(path: ApiEndpoints.find),
+        response: Response(
+            requestOptions: RequestOptions(path: ApiEndpoints.find),
+            statusCode: 403),
+      ));
+
+      final container = createTestContainer(
+          overrides: [apiClientProvider.overrideWithValue(apiClient)]);
+      addTearDown(container.dispose);
+      final notifier = container.read(searchProvider.notifier);
+
+      await notifier.search();
+      final state = container.read(searchProvider);
+      expect(state.isLimitReached, isTrue);
+      expect(state.phase, FinderPhase.error);
+    });
+
+    test('loadMore sends offset and dedups against the first page', () async {
+      final apiClient = MockApiClient();
+      final dio = MockDio();
+      when(() => apiClient.dio).thenReturn(dio);
+      when(() => apiClient.post(ApiEndpoints.warmUrls, data: any(named: 'data')))
+          .thenAnswer((_) async => fakeResponse<dynamic>({'statuses': {}}));
+
+      final bodies = <Map<String, dynamic>>[];
+      when(() => dio.post(ApiEndpoints.find,
+          data: any(named: 'data'),
+          options: any(named: 'options'))).thenAnswer((invocation) async {
+        final body =
+            invocation.namedArguments[const Symbol('data')] as Map<String, dynamic>;
+        bodies.add(body);
+        final offset = body['offset'] as int?;
+        if (offset == null) {
+          return _sse([
+            _frame('shortlist', {
+              'items': [
+                _finderItem('One', url: 'https://x.com/1'),
+                _finderItem('Two', url: 'https://x.com/2'),
+              ],
+              'has_more': true,
+            }),
+            _frame('done', {}),
+          ].join());
+        }
+        // Page 2 repeats Two and adds Three.
+        return _sse([
+          _frame('shortlist', {
+            'items': [
+              _finderItem('Two', url: 'https://x.com/2'),
+              _finderItem('Three', url: 'https://x.com/3'),
+            ],
+            'has_more': false,
+          }),
+          _frame('done', {}),
+        ].join());
+      });
+
+      final container = createTestContainer(
+          overrides: [apiClientProvider.overrideWithValue(apiClient)]);
+      addTearDown(container.dispose);
+      final notifier = container.read(searchProvider.notifier);
+
+      await notifier.search();
+      expect(container.read(searchProvider).results.map((r) => r.title).toList(),
+          ['One', 'Two']);
+      expect(container.read(searchProvider).nextOffset, 2);
+
+      await notifier.loadMore();
+      final state = container.read(searchProvider);
+      // Two is deduped; Three is appended.
+      expect(state.results.map((r) => r.title).toList(),
+          ['One', 'Two', 'Three']);
+      expect(state.hasMore, isFalse);
+      expect(bodies.last['offset'], 2);
     });
   });
 }

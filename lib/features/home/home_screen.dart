@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/providers/recipe_provider.dart';
+import '../../core/providers/search_provider.dart';
 import '../../models/recipe.dart';
 import 'widgets/recipe_card.dart';
 
@@ -99,7 +100,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    context.pushNamed('find');
+                    ref.read(searchProvider.notifier).setAgentMode(true);
+                    context.goNamed('search');
                   },
                 ),
                 const SizedBox(height: 4),
@@ -268,11 +270,11 @@ class _RecipeGrid extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState extends ConsumerWidget {
   const _EmptyState();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
@@ -302,7 +304,10 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () => context.pushNamed('find'),
+              onPressed: () {
+                ref.read(searchProvider.notifier).setAgentMode(true);
+                context.goNamed('search');
+              },
               icon: const Icon(Icons.travel_explore),
               label: const Text('Find a Recipe'),
             ),
