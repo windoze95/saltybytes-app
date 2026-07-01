@@ -87,18 +87,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     backgroundColor:
                         theme.colorScheme.primary.withValues(alpha: 0.1),
                     child: Icon(
-                      Icons.auto_awesome,
+                      Icons.travel_explore,
                       color: theme.colorScheme.primary,
                     ),
                   ),
-                  title: const Text('Generate with AI'),
-                  subtitle: const Text('Describe what you want to cook'),
+                  title: const Text('Find a recipe'),
+                  subtitle:
+                      const Text("We'll find real recipes for your family"),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    context.pushNamed('generate');
+                    context.pushNamed('find');
                   },
                 ),
                 const SizedBox(height: 4),
@@ -293,7 +294,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Import your first recipe from a URL, photo,\nor create one from scratch.',
+              'Find a real recipe for your family,\nor import one from a URL or photo.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -301,9 +302,9 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () => context.pushNamed('import'),
-              icon: const Icon(Icons.add),
-              label: const Text('Create Your First Recipe'),
+              onPressed: () => context.pushNamed('find'),
+              icon: const Icon(Icons.travel_explore),
+              label: const Text('Find a Recipe'),
             ),
           ],
         ),
