@@ -201,6 +201,30 @@ void main() {
       expect(pushedPreview?.sourceUrl, 'https://x.com/ccp');
     });
 
+    testWidgets('an in-flight run shows the working view, never results',
+        (tester) async {
+      final working = SearchState(
+        agentMode: true,
+        hasSearched: true,
+        isLoading: true,
+        phase: FinderPhase.digging,
+        narration: const ['🔍 Searching…', '🍽 Opening ‘23 Best Dinners’…'],
+        staged: [
+          _result(),
+          _result(title: 'Two', url: 'https://x.com/2'),
+        ],
+        viewMode: SearchViewMode.list,
+      );
+      await tester.pumpWidget(_scriptedApp(working));
+      await _settle(tester);
+
+      // Found-so-far tease + curating line, but no tappable result cards yet.
+      expect(find.text('2 recipes found'), findsOneWidget);
+      expect(find.text('Curating your picks…'), findsOneWidget);
+      expect(find.byType(FinderShortlistCard), findsNothing);
+      expect(find.text('Preview Recipe'), findsNothing);
+    });
+
     testWidgets('the view toggle switches immersive → list', (tester) async {
       // Immersive is the default view.
       await tester.pumpWidget(_scriptedApp(agentResults));

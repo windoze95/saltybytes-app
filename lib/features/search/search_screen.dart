@@ -438,13 +438,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     if (state.phase == FinderPhase.empty) {
       return FinderEmptyState(broaden: state.broaden, onBroaden: _refine);
     }
-    if (state.results.isNotEmpty) {
-      return _resultsView(state);
-    }
+    // A fresh run in flight: hold the results back and show the live working
+    // view (found-so-far count + thumbs). The curated list reveals at `done`.
     if (state.isAgentActive) {
-      return state.narration.isEmpty
-          ? const SearchWorkingPlaceholder()
-          : const SizedBox.shrink();
+      return AgentWorkingView(found: state.staged);
+    }
+    if (state.results.isNotEmpty) {
+      return _resultsView(state)
+          .animate(key: const ValueKey('results-reveal'))
+          .fadeIn(duration: 250.ms);
     }
     return const SizedBox.shrink();
   }
@@ -532,7 +534,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _immersiveView(SearchState state) {
-    final itemCount = state.results.length + (state.hasMore ? 1 : 0);
+    // Keep the tail loading page up while a load-more stream is in flight
+    // (its items stage and land all at once when the page completes).
+    final itemCount = state.results.length +
+        ((state.hasMore || state.isLoadingMore) ? 1 : 0);
     return PageView.builder(
       controller: _pageController,
       scrollDirection: Axis.vertical,
