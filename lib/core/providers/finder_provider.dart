@@ -240,6 +240,11 @@ WebSearchResult webSearchResultFromFinderItem(Map<String, dynamic> json) {
   final rating = (resultJson['rating'] as num?)?.toDouble();
   final imageUrl = resultJson['image_url'] as String?;
   final reason = (json['reason'] as String?)?.trim();
+  // Provenance for recipes mined out of a roundup ("found inside 'X'") — sent
+  // on the item wrapper for picks/expanded, and inside the flat result for
+  // saved sessions.
+  final via =
+      ((json['via'] ?? resultJson['via']) as String?)?.trim();
 
   return WebSearchResult(
     title: resultJson['title'] as String? ?? 'Untitled',
@@ -250,6 +255,7 @@ WebSearchResult webSearchResultFromFinderItem(Map<String, dynamic> json) {
     rating: (rating != null && rating > 0) ? rating : null,
     familySafetyChecks: safety,
     reason: (reason == null || reason.isEmpty) ? null : reason,
+    via: (via == null || via.isEmpty) ? null : via,
   );
 }
 

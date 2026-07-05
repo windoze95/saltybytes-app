@@ -37,10 +37,16 @@ class FinderSession {
   factory FinderSession.fromJson(Map<String, dynamic> json) {
     // Session `results` are flat SearchResult objects; wrap each as
     // {result: ...} so the shared folder handles rating-0 / empty-image
-    // coercion (reason + safety are simply absent).
+    // coercion. Sessions saved since the live-agent overhaul carry the
+    // agent's reason/safety/via INSIDE the flat result — lift them onto the
+    // wrapper where the folder expects them (older sessions simply omit them).
     final results = ((json['results'] as List?) ?? const [])
         .whereType<Map<String, dynamic>>()
-        .map((r) => webSearchResultFromFinderItem({'result': r}))
+        .map((r) => webSearchResultFromFinderItem({
+              'result': r,
+              if (r['reason'] != null) 'reason': r['reason'],
+              if (r['safety'] != null) 'safety': r['safety'],
+            }))
         .toList();
 
     return FinderSession(

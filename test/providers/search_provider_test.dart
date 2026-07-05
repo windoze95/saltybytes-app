@@ -465,7 +465,8 @@ void main() {
 
       expect(state.query, '');
       expect(state.results, isEmpty);
-      expect(state.staged, isEmpty);
+      expect(state.topPicks, isEmpty);
+      expect(state.digging, isEmpty);
       expect(state.isLoading, false);
       expect(state.error, isNull);
       expect(state.hasSearched, false);
@@ -844,6 +845,7 @@ void main() {
           .thenAnswer((_) async => fakeResponse<dynamic>({'statuses': {}}));
       when(() => dio.post(ApiEndpoints.find,
           data: any(named: 'data'),
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'))).thenAnswer((_) async => _sse([
             _frame('searching', {'query': 'chicken pasta'}),
             _frame('found', {'count': 3}),
@@ -888,6 +890,7 @@ void main() {
       final controller = StreamController<Uint8List>();
       when(() => dio.post(ApiEndpoints.find,
           data: any(named: 'data'),
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'))).thenAnswer((_) async =>
           _sseLive(controller));
 
@@ -904,26 +907,70 @@ void main() {
 
       await pumpEventQueue(); // request + stream subscription
 
-      await emit(_frame('shortlist', {
+      // Instant results paint immediately, before any model step.
+      await emit(_frame('results', {
         'items': [
           _finderItem('One', url: 'https://x.com/1'),
+          _finderItem('Roundup Leftover', url: 'https://x.com/extra'),
         ],
         'has_more': false,
       }));
       var state = container.read(searchProvider);
-      expect(state.results, isEmpty,
-          reason: 'shortlist stages, it must not paint mid-run');
-      expect(state.staged.single.title, 'One');
-      expect(state.isLoading, isTrue);
+      expect(state.results.map((r) => r.title).toList(),
+          ['One', 'Roundup Leftover']);
+      expect(state.isLoading, isFalse,
+          reason: 'results on screen — no more blocking spinner');
+      expect(state.results.first.reason, isNull);
 
+      // The ranked shortlist annotates painted results in place (no reorder).
+      await emit(_frame('shortlist', {
+        'items': [
+          _finderItem('One',
+              url: 'https://x.com/1', reason: 'Fits the brief'),
+        ],
+        'has_more': false,
+      }));
+      state = container.read(searchProvider);
+      expect(state.results.first.reason, 'Fits the brief');
+      expect(state.results, hasLength(2));
+
+      // Digging pulls the collection out and tracks it in the strip.
+      await emit(_frame('digging', {'collection_title': 'Roundup Leftover'}));
+      state = container.read(searchProvider);
+      expect(state.results.map((r) => r.title).toList(), ['One']);
+      expect(state.digging.single.title, 'Roundup Leftover');
+      expect(state.digging.single.done, isFalse);
+
+      // Mined recipes land live with provenance; the strip chip completes.
       await emit(_frame('expanded', {
+        'collection_title': 'Roundup Leftover',
         'items': [
           _finderItem('Dug', url: 'https://x.com/dug'),
         ],
       }));
       state = container.read(searchProvider);
-      expect(state.results, isEmpty);
-      expect(state.staged.map((r) => r.title).toList(), ['One', 'Dug']);
+      expect(state.results.map((r) => r.title).toList(), ['One', 'Dug']);
+      expect(state.digging.single.done, isTrue);
+      expect(state.digging.single.folded, 1);
+
+      // The final curated picks land as their own section.
+      await emit(_frame('picks', {
+        'items': [
+          {
+            'result': {
+              'title': 'Dug',
+              'source_url': 'https://x.com/dug',
+              'image_url': ''
+            },
+            'reason': 'Weeknight hero',
+            'via': 'Roundup Leftover',
+          },
+        ],
+      }));
+      state = container.read(searchProvider);
+      expect(state.topPicks.single.title, 'Dug');
+      expect(state.topPicks.single.reason, 'Weeknight hero');
+      expect(state.topPicks.single.via, 'Roundup Leftover');
 
       await emit(_frame('done', {}));
       await controller.close();
@@ -931,12 +978,11 @@ void main() {
 
       state = container.read(searchProvider);
       expect(state.results.map((r) => r.title).toList(), ['One', 'Dug']);
-      expect(state.staged, isEmpty);
       expect(state.phase, FinderPhase.done);
       expect(state.isLoading, isFalse);
     });
 
-    test('a stream failure after recipes were staged reveals them instead of '
+    test('a stream failure after results painted keeps them instead of '
         'erroring', () async {
       final apiClient = MockApiClient();
       final dio = MockDio();
@@ -946,6 +992,7 @@ void main() {
       final controller = StreamController<Uint8List>();
       when(() => dio.post(ApiEndpoints.find,
           data: any(named: 'data'),
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'))).thenAnswer((_) async =>
           _sseLive(controller));
 
@@ -956,7 +1003,7 @@ void main() {
 
       final run = notifier.search();
       await pumpEventQueue();
-      controller.add(Uint8List.fromList(utf8.encode(_frame('shortlist', {
+      controller.add(Uint8List.fromList(utf8.encode(_frame('results', {
         'items': [
           _finderItem('One', url: 'https://x.com/1'),
         ],
@@ -970,7 +1017,6 @@ void main() {
 
       final state = container.read(searchProvider);
       expect(state.results.single.title, 'One');
-      expect(state.staged, isEmpty);
       expect(state.phase, FinderPhase.done);
       expect(state.error, isNull);
       expect(state.isLoading, isFalse);
@@ -982,6 +1028,7 @@ void main() {
       when(() => apiClient.dio).thenReturn(dio);
       when(() => dio.post(ApiEndpoints.find,
           data: any(named: 'data'),
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'))).thenThrow(DioException(
         requestOptions: RequestOptions(path: ApiEndpoints.find),
         response: Response(
@@ -1010,6 +1057,7 @@ void main() {
       final bodies = <Map<String, dynamic>>[];
       when(() => dio.post(ApiEndpoints.find,
           data: any(named: 'data'),
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'))).thenAnswer((invocation) async {
         final body =
             invocation.namedArguments[const Symbol('data')] as Map<String, dynamic>;
