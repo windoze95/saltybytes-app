@@ -167,7 +167,16 @@ class _AuthInterceptor extends Interceptor {
   final SecureStorage _secureStorage;
   final VoidCallback _onAuthFailure;
   final Dio? _refreshDio;
-  bool _isRefreshing = false;
+
+  /// In-flight refresh shared by every request that 401s while it runs, so
+  /// a burst of expired calls costs one refresh round-trip instead of N
+  /// (the server rate-limits the refresh endpoint per IP, and concurrent
+  /// 401s used to fail outright instead of waiting for the refresh).
+  Future<_RefreshResult>? _refreshFuture;
+
+  /// Marks a request that was already retried once with a fresh token, so a
+  /// second 401 propagates instead of looping refresh -> retry forever.
+  static const _retriedKey = 'auth_retried';
 
   @override
   void onRequest(
@@ -188,38 +197,78 @@ class _AuthInterceptor extends Interceptor {
       return;
     }
 
-    // Don't retry refresh endpoint itself
+    // A 401 from the refresh endpoint itself is a definitive rejection.
     if (err.requestOptions.path == ApiEndpoints.refreshToken) {
       _onAuthFailure();
       handler.next(err);
       return;
     }
 
-    if (_isRefreshing) {
+    // Already retried with a fresh token and still 401 — give up.
+    if (err.requestOptions.extra[_retriedKey] == true) {
       handler.next(err);
       return;
     }
 
-    _isRefreshing = true;
+    final result = await (_refreshFuture ??=
+        _refresh().whenComplete(() => _refreshFuture = null));
+
+    final newAccessToken = result.accessToken;
+    if (newAccessToken == null) {
+      final cause = result.transientCause;
+      if (cause != null) {
+        // The refresh failed for a reason that says nothing about the
+        // session (offline, rate-limited, server error). Surface THAT
+        // instead of the original 401 so callers don't read a network blip
+        // as an expired login and wipe the session.
+        handler.next(DioException(
+          requestOptions: err.requestOptions,
+          response: cause.response,
+          type: cause.type,
+          error: cause.error,
+          message: cause.message,
+        ));
+      } else {
+        handler.next(err);
+      }
+      return;
+    }
+
+    // Retry the original request with the new token
+    final options = err.requestOptions;
+    options.extra[_retriedKey] = true;
+    options.headers['Authorization'] = 'Bearer $newAccessToken';
+    try {
+      final retryResponse = await _dio.fetch(options);
+      handler.resolve(retryResponse);
+    } on DioException catch (retryErr) {
+      handler.next(retryErr);
+    }
+  }
+
+  /// Runs one refresh round-trip. Forces logout ONLY when the server
+  /// definitively rejects the session (missing refresh token, or a
+  /// 400/401/403 response) — never for transient failures, which used to
+  /// wipe tokens whenever the app cold-started offline or hit the rate
+  /// limiter.
+  Future<_RefreshResult> _refresh() async {
+    final refreshToken = await _secureStorage.getRefreshToken();
+    if (refreshToken == null) {
+      _onAuthFailure();
+      return _RefreshResult.rejected();
+    }
+
+    final refreshDio = _refreshDio ??
+        Dio(BaseOptions(
+          baseUrl: ApiEndpoints.baseUrl,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            if (_saltyId.isNotEmpty) 'X-SaltyBytes-Identifier': _saltyId,
+          },
+        ));
 
     try {
-      final refreshToken = await _secureStorage.getRefreshToken();
-      if (refreshToken == null) {
-        _onAuthFailure();
-        handler.next(err);
-        return;
-      }
-
-      final refreshDio = _refreshDio ??
-          Dio(BaseOptions(
-            baseUrl: ApiEndpoints.baseUrl,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              if (_saltyId.isNotEmpty) 'X-SaltyBytes-Identifier': _saltyId,
-            },
-          ));
-
       final response = await refreshDio.post(
         ApiEndpoints.refreshToken,
         data: {'refresh_token': refreshToken},
@@ -231,20 +280,33 @@ class _AuthInterceptor extends Interceptor {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
       );
-
-      // Retry the original request with the new token
-      final options = err.requestOptions;
-      options.headers['Authorization'] = 'Bearer $newAccessToken';
-
-      final retryResponse = await _dio.fetch(options);
-      handler.resolve(retryResponse);
-    } on DioException {
-      _onAuthFailure();
-      handler.next(err);
-    } finally {
-      _isRefreshing = false;
+      return _RefreshResult.success(newAccessToken);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 400 || status == 401 || status == 403) {
+        _onAuthFailure();
+        return _RefreshResult.rejected();
+      }
+      return _RefreshResult.transient(e);
+    } catch (_) {
+      // Malformed refresh response (server bug) — treat as transient; the
+      // session may well still be valid.
+      return _RefreshResult.transient(null);
     }
   }
+}
+
+/// Outcome of a token-refresh attempt: a new access token, a definitive
+/// rejection, or a transient failure carrying its cause.
+class _RefreshResult {
+  _RefreshResult.success(this.accessToken) : transientCause = null;
+  _RefreshResult.rejected()
+      : accessToken = null,
+        transientCause = null;
+  _RefreshResult.transient(this.transientCause) : accessToken = null;
+
+  final String? accessToken;
+  final DioException? transientCause;
 }
 
 class _LoggingInterceptor extends Interceptor {

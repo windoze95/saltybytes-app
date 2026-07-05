@@ -229,6 +229,129 @@ void main() {
       expect(harness.refresh.requests, isEmpty);
     });
 
+    test('transient refresh failure (429) does NOT force logout and '
+        'surfaces the transient status instead of the original 401',
+        () async {
+      currentAccessToken = 'stale-access';
+      currentRefreshToken = 'refresh-1';
+
+      final harness = buildClient(
+        mainHandler: (_) async =>
+            jsonResponseBody({'error': 'token expired'}, statusCode: 401),
+        refreshHandler: (_) async =>
+            jsonResponseBody({'error': 'Too many requests'}, statusCode: 429),
+      );
+
+      var forcedLogout = false;
+      harness.client.onForceLogout = () => forcedLogout = true;
+
+      await expectLater(
+        harness.client.get('/v1/test'),
+        throwsA(isA<DioException>().having(
+          (e) => (e.error as ApiError).statusCode,
+          'wrapped ApiError statusCode',
+          429,
+        )),
+      );
+
+      // A rate limiter blip says nothing about the session.
+      expect(forcedLogout, isFalse);
+      verifyNever(() => storage.saveTokens(
+            accessToken: any(named: 'accessToken'),
+            refreshToken: any(named: 'refreshToken'),
+          ));
+    });
+
+    test('refresh network failure does NOT force logout (offline cold '
+        'start must not wipe the session)', () async {
+      currentAccessToken = 'stale-access';
+      currentRefreshToken = 'refresh-1';
+
+      final harness = buildClient(
+        mainHandler: (_) async =>
+            jsonResponseBody({'error': 'token expired'}, statusCode: 401),
+        refreshHandler: (options) async {
+          throw DioException(
+            requestOptions: options,
+            type: DioExceptionType.connectionError,
+          );
+        },
+      );
+
+      var forcedLogout = false;
+      harness.client.onForceLogout = () => forcedLogout = true;
+
+      await expectLater(
+        harness.client.get('/v1/test'),
+        throwsA(isA<DioException>().having(
+          (e) => (e.error as ApiError).message,
+          'wrapped ApiError message',
+          'No internet connection.',
+        )),
+      );
+
+      expect(forcedLogout, isFalse);
+    });
+
+    test('concurrent 401s share a single refresh round-trip and all retry '
+        'with the new token', () async {
+      currentAccessToken = 'stale-access';
+      currentRefreshToken = 'refresh-1';
+
+      final harness = buildClient(
+        mainHandler: (options) async {
+          if (options.headers['Authorization'] == 'Bearer stale-access') {
+            return jsonResponseBody(
+              {'error': 'token expired'},
+              statusCode: 401,
+            );
+          }
+          return jsonResponseBody({'ok': true});
+        },
+        refreshHandler: (_) async => jsonResponseBody({
+          'access_token': 'new-access',
+          'refresh_token': 'new-refresh',
+        }),
+      );
+
+      final responses = await Future.wait([
+        harness.client.get('/v1/a'),
+        harness.client.get('/v1/b'),
+        harness.client.get('/v1/c'),
+      ]);
+
+      expect(responses.map((r) => r.statusCode), everyElement(200));
+      // One refresh for the whole burst — not one per request.
+      expect(harness.refresh.requests, hasLength(1));
+      // 3 original attempts + 3 retries.
+      expect(harness.main.requests, hasLength(6));
+    });
+
+    test('a retried request that 401s again propagates instead of looping '
+        'refresh -> retry forever', () async {
+      currentAccessToken = 'stale-access';
+      currentRefreshToken = 'refresh-1';
+
+      final harness = buildClient(
+        // Always 401, even with the fresh token.
+        mainHandler: (_) async =>
+            jsonResponseBody({'error': 'nope'}, statusCode: 401),
+        refreshHandler: (_) async => jsonResponseBody({
+          'access_token': 'new-access',
+          'refresh_token': 'new-refresh',
+        }),
+      );
+
+      await expectLater(
+        harness.client.get('/v1/test'),
+        throwsA(isA<DioException>()),
+      );
+
+      // Original + exactly one retry; one refresh. No loop.
+      expect(harness.main.requests, hasLength(2));
+      expect(harness.refresh.requests, hasLength(1));
+    });
+
     test('non-401 errors pass straight through without touching refresh',
         () async {
       currentAccessToken = 'tok-123';

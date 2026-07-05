@@ -77,70 +77,69 @@ void main() {
       expect(status, AuthStatus.authenticated);
     });
 
-    test('refreshes an expired token and persists the new pair', () async {
+    // The ApiClient interceptor owns the 401 -> refresh -> retry dance (see
+    // api_client_test.dart). By the time an error surfaces to build(), a
+    // 401/403 means the refresh was definitively rejected; anything else is
+    // transient and must NOT end the session — the old code wiped tokens on
+    // any failure, logging users out on offline cold starts and rate limits.
+
+    test('401 surfacing from the client (refresh already exhausted) clears '
+        'tokens and resolves unauthenticated', () async {
       when(() => storage.hasTokens()).thenAnswer((_) async => true);
       when(() => apiClient.get(ApiEndpoints.userProfile))
           .thenThrow(_httpError(ApiEndpoints.userProfile, 401));
-      when(() => storage.getRefreshToken())
-          .thenAnswer((_) async => 'old-refresh');
-      when(() => apiClient.post(
+
+      final container = buildContainer();
+      final status = await container.read(authStateProvider.future);
+
+      expect(status, AuthStatus.unauthenticated);
+      verify(() => storage.clearTokens()).called(1);
+      // The provider no longer runs its own (second, racing) refresh.
+      verifyNever(() => apiClient.post(
             ApiEndpoints.refreshToken,
             data: any(named: 'data'),
-          )).thenAnswer((_) async => fakeResponse<dynamic>({
-            'access_token': 'new-access',
-            'refresh_token': 'new-refresh',
-          }));
+          ));
+    });
+
+    test('offline cold start keeps the session and the stored tokens',
+        () async {
+      when(() => storage.hasTokens()).thenAnswer((_) async => true);
+      when(() => apiClient.get(ApiEndpoints.userProfile)).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: ApiEndpoints.userProfile),
+          type: DioExceptionType.connectionError,
+        ),
+      );
 
       final container = buildContainer();
       final status = await container.read(authStateProvider.future);
 
       expect(status, AuthStatus.authenticated);
-      final body = verify(() => apiClient.post(
-            ApiEndpoints.refreshToken,
-            data: captureAny(named: 'data'),
-          )).captured.single;
-      expect(body, {'refresh_token': 'old-refresh'});
-      verify(() => storage.saveTokens(
-            accessToken: 'new-access',
-            refreshToken: 'new-refresh',
-          )).called(1);
+      verifyNever(() => storage.clearTokens());
     });
 
-    test('clears tokens and resolves unauthenticated when the refresh '
-        'is rejected', () async {
+    test('rate-limited cold start (429) keeps the session', () async {
       when(() => storage.hasTokens()).thenAnswer((_) async => true);
       when(() => apiClient.get(ApiEndpoints.userProfile))
-          .thenThrow(_httpError(ApiEndpoints.userProfile, 401));
-      when(() => storage.getRefreshToken())
-          .thenAnswer((_) async => 'stale-refresh');
-      when(() => apiClient.post(
-            ApiEndpoints.refreshToken,
-            data: any(named: 'data'),
-          )).thenThrow(_httpError(ApiEndpoints.refreshToken, 401));
+          .thenThrow(_httpError(ApiEndpoints.userProfile, 429));
 
       final container = buildContainer();
       final status = await container.read(authStateProvider.future);
 
-      expect(status, AuthStatus.unauthenticated);
-      verify(() => storage.clearTokens()).called(1);
+      expect(status, AuthStatus.authenticated);
+      verifyNever(() => storage.clearTokens());
     });
 
-    test('clears tokens when the access token is invalid and no refresh '
-        'token exists', () async {
+    test('server outage on cold start (500) keeps the session', () async {
       when(() => storage.hasTokens()).thenAnswer((_) async => true);
       when(() => apiClient.get(ApiEndpoints.userProfile))
-          .thenThrow(_httpError(ApiEndpoints.userProfile, 401));
-      when(() => storage.getRefreshToken()).thenAnswer((_) async => null);
+          .thenThrow(_httpError(ApiEndpoints.userProfile, 500));
 
       final container = buildContainer();
       final status = await container.read(authStateProvider.future);
 
-      expect(status, AuthStatus.unauthenticated);
-      verify(() => storage.clearTokens()).called(1);
-      verifyNever(() => apiClient.post(
-            ApiEndpoints.refreshToken,
-            data: any(named: 'data'),
-          ));
+      expect(status, AuthStatus.authenticated);
+      verifyNever(() => storage.clearTokens());
     });
   });
 

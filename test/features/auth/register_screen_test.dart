@@ -71,7 +71,7 @@ void main() {
     WidgetTester tester, {
     String username = 'chefmike',
     String email = 'mike@example.com',
-    String password = 'Password1',
+    String password = 'Password1!',
     String? confirmPassword,
   }) async {
     await tester.enterText(
@@ -147,10 +147,35 @@ void main() {
       await pumpScreen(tester, () => notifier);
 
       await fillForm(tester,
-          password: 'Password1', confirmPassword: 'Password2');
+          password: 'Password1!', confirmPassword: 'Password2!');
       await submit(tester);
 
       expect(find.text('Passwords do not match'), findsOneWidget);
+      expect(notifier.registerCalls, isEmpty);
+    });
+
+    testWidgets('rejects a password without a symbol (server requires one)',
+        (tester) async {
+      final notifier = _RecordingAuthNotifier();
+      await pumpScreen(tester, () => notifier);
+
+      await fillForm(tester, password: 'Password1');
+      await submit(tester);
+
+      expect(find.text('Include at least one symbol (e.g. ! @ # \$ %)'),
+          findsOneWidget);
+      expect(notifier.registerCalls, isEmpty);
+    });
+
+    testWidgets('rejects usernames with underscores (server rule parity)',
+        (tester) async {
+      final notifier = _RecordingAuthNotifier();
+      await pumpScreen(tester, () => notifier);
+
+      await fillForm(tester, username: 'chef_mike');
+      await submit(tester);
+
+      expect(find.text('Only letters and numbers'), findsOneWidget);
       expect(notifier.registerCalls, isEmpty);
     });
   });
@@ -165,7 +190,7 @@ void main() {
         tester,
         username: '  chefmike  ',
         email: ' mike@example.com ',
-        password: 'Password1',
+        password: 'Password1!',
       );
       await submit(tester);
 
@@ -173,7 +198,7 @@ void main() {
       expect(notifier.registerCalls.single['username'], 'chefmike');
       expect(notifier.registerCalls.single['email'], 'mike@example.com');
       // Password is sent verbatim (never trimmed).
-      expect(notifier.registerCalls.single['password'], 'Password1');
+      expect(notifier.registerCalls.single['password'], 'Password1!');
     });
 
     testWidgets('shows the API error message when registration fails',
