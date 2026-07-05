@@ -42,8 +42,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (value.trim().length > 30) {
       return 'Username must be 30 characters or less';
     }
-    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value.trim())) {
-      return 'Only letters, numbers, and underscores';
+    // Must match the server rule (alphanumeric only). The old client rule
+    // also allowed underscores, which the server rejected — and the error
+    // never reached the user.
+    if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value.trim())) {
+      return 'Only letters and numbers';
     }
     return null;
   }
@@ -65,6 +68,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (value.length < 8) {
       return 'Password must be at least 8 characters';
     }
+    // bcrypt (server-side) reads at most 72 bytes.
+    if (value.length > 72) {
+      return 'Password must be 72 characters or less';
+    }
     if (!RegExp(r'[A-Z]').hasMatch(value)) {
       return 'Include at least one uppercase letter';
     }
@@ -73,6 +80,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
     if (!RegExp(r'[0-9]').hasMatch(value)) {
       return 'Include at least one number';
+    }
+    // The server also requires a symbol; without this check here, signup
+    // failed server-side after the form said everything was fine.
+    if (!RegExp(r'[^a-zA-Z0-9]').hasMatch(value)) {
+      return 'Include at least one symbol (e.g. ! @ # \$ %)';
     }
     return null;
   }
@@ -209,10 +221,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Username',
                       prefixIcon: Icon(Icons.person_outline),
-                      hintText: 'chef_username',
+                      hintText: 'chefusername',
                     ),
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
+                    enableSuggestions: false,
                     validator: _validateUsername,
                   ),
                   const SizedBox(height: 14),
@@ -250,7 +263,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           );
                         },
                       ),
-                      helperText: 'Min 8 chars, upper, lower, number',
+                      helperText:
+                          'Min 8 chars with upper, lower, number & symbol',
                       helperMaxLines: 2,
                     ),
                     obscureText: _obscurePassword,

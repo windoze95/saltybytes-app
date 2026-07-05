@@ -147,8 +147,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         labelText: 'Username or Email',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
+                      // Email-style keyboard: no auto-capitalization or
+                      // suggestions rewriting the identifier behind the
+                      // user's back.
+                      keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       autocorrect: false,
+                      enableSuggestions: false,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter your username or email';

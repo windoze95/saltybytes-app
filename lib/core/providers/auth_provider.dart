@@ -33,33 +33,26 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
       return AuthStatus.unauthenticated;
     }
 
-    // Validate the existing token by fetching user profile
+    // Validate the session by fetching the profile. The ApiClient already
+    // handles an expired access token internally (401 -> refresh -> retry),
+    // so a 401/403 surfacing HERE means the refresh was definitively
+    // rejected: the session is over. Anything else — offline, rate-limited,
+    // server down — says nothing about the session, so keep the user signed
+    // in and let per-request refresh recover when the network does.
+    //
+    // The old behavior (wipe tokens on ANY failure, then run a second,
+    // racing refresh here) logged users out every time a cold start hit a
+    // network blip or the rate limiter.
     try {
       await _apiClient.get(ApiEndpoints.userProfile);
       return AuthStatus.authenticated;
-    } on DioException {
-      // Token might be expired; try refresh
-      try {
-        final refreshToken = await _secureStorage.getRefreshToken();
-        if (refreshToken == null) {
-          await _secureStorage.clearTokens();
-          return AuthStatus.unauthenticated;
-        }
-
-        final response = await _apiClient.post(
-          ApiEndpoints.refreshToken,
-          data: {'refresh_token': refreshToken},
-        );
-
-        await _secureStorage.saveTokens(
-          accessToken: response.data['access_token'] as String,
-          refreshToken: response.data['refresh_token'] as String,
-        );
-        return AuthStatus.authenticated;
-      } catch (_) {
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403) {
         await _secureStorage.clearTokens();
         return AuthStatus.unauthenticated;
       }
+      return AuthStatus.authenticated;
     }
   }
 

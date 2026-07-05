@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
+import '../../features/auth/splash_screen.dart';
 import '../../features/cooking/cooking_mode_screen.dart';
 import '../../features/family/dietary_interview_screen.dart';
 import '../../features/family/family_member_detail_screen.dart';
@@ -29,13 +30,42 @@ import '../../features/settings/subscription_screen.dart';
 import '../providers/auth_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  // Bridge auth state into a Listenable so ONE long-lived router re-runs its
+  // redirect when auth changes. Watching authStateProvider here instead would
+  // recreate the whole GoRouter on every emission — including the loading
+  // tick of each login/register attempt — tearing down whichever screen the
+  // user was on. That teardown is what swallowed signup errors (the register
+  // screen was disposed before it could show them) and cleared the login
+  // form mid-attempt.
+  final authListenable = ValueNotifier(ref.read(authStateProvider));
+  ref.listen(
+    authStateProvider,
+    (_, next) => authListenable.value = next,
+  );
+  ref.onDispose(authListenable.dispose);
 
-  return GoRouter(
-    initialLocation: '/home',
+  final router = GoRouter(
+    initialLocation: '/splash',
     debugLogDiagnostics: true,
+    refreshListenable: authListenable,
     redirect: (context, state) {
-      final isAuthenticated = authState.value == AuthStatus.authenticated;
+      final auth = authListenable.value;
+      final isSplash = state.matchedLocation == '/splash';
+
+      // Cold start: hold the splash screen until the stored session is
+      // restored (or ruled out), then leave and never come back.
+      if (isSplash) {
+        if (auth.isLoading) return null;
+        return auth.value == AuthStatus.authenticated
+            ? '/home'
+            : '/auth/login';
+      }
+
+      // Loading ticks after startup (a login/register attempt in flight)
+      // must not yank the current screen away.
+      if (auth.isLoading) return null;
+
+      final isAuthenticated = auth.value == AuthStatus.authenticated;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
 
       if (!isAuthenticated && !isAuthRoute) {
@@ -49,6 +79,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Splash: only ever shown while the cold-start session restore runs.
+      GoRoute(
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+
       // Auth routes
       GoRoute(
         path: '/auth/login',
@@ -219,6 +256,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  ref.onDispose(router.dispose);
+  return router;
 });
 
 class _ScaffoldWithNavBar extends StatelessWidget {
