@@ -179,7 +179,7 @@ void main() {
       results: [_result(reason: 'Quick + kid-friendly')],
       narration: const [
         'Found 3 real recipes',
-        'Checking these against your family…',
+        'Picking the best matches…',
       ],
       refineChips: const ['quicker', 'cheaper'],
       hasMore: false,

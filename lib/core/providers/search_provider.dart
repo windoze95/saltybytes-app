@@ -690,11 +690,13 @@ class SearchNotifier extends StateNotifier<SearchState> {
         );
         warmAhead(0);
       case 'filtering':
+        // Neutral copy — never assumes the user set up a family profile
+        // (dietary checks still run server-side when one exists).
         state = state.copyWith(
           phase: FinderPhase.filtering,
           narration: [
             ...state.narration,
-            'Checking these against your family…',
+            'Picking the best matches…',
           ],
         );
       case 'shortlist':
