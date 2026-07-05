@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
 import '../../features/auth/splash_screen.dart';
+import '../../features/auth/verify_email_screen.dart';
 import '../../features/cooking/cooking_mode_screen.dart';
 import '../../features/family/dietary_interview_screen.dart';
 import '../../features/family/family_member_detail_screen.dart';
@@ -73,7 +74,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (isAuthenticated && isAuthRoute) {
-        return '/home';
+        // A signup whose email isn't verified yet goes to the code screen
+        // first (skippable there; the home banner keeps nudging).
+        final needsVerification =
+            ref.read(authStateProvider.notifier).needsEmailVerification;
+        return needsVerification ? '/verify-email' : '/home';
       }
 
       return null;
@@ -96,6 +101,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/auth/register',
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+
+      // Post-signup email verification (authenticated; skippable)
+      GoRoute(
+        path: '/verify-email',
+        name: 'verifyEmail',
+        builder: (context, state) => const VerifyEmailScreen(),
       ),
 
       // Shell route for bottom navigation

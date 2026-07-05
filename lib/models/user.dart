@@ -9,6 +9,9 @@ class User with _$User {
     required String id,
     required String username,
     required String email,
+    // Servers that predate email verification omit the field; treating
+    // absent as verified keeps the banner/verify UX dormant against them.
+    @JsonKey(name: 'email_verified') @Default(true) bool emailVerified,
     @JsonKey(name: 'first_name') String? firstName,
     @Default(UserSettings()) UserSettings settings,
     @Default(Personalization()) Personalization personalization,

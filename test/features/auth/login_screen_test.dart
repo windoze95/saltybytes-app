@@ -59,6 +59,14 @@ void main() {
 /// Fake auth notifier that stays unauthenticated.
 class _FakeAuthNotifier extends AsyncNotifier<AuthStatus>
     implements AuthNotifier {
+
+  @override
+  bool needsEmailVerification = false;
+
+  @override
+  void markEmailVerificationHandled() {
+    needsEmailVerification = false;
+  }
   @override
   Future<AuthStatus> build() async {
     return AuthStatus.unauthenticated;

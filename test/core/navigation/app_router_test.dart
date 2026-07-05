@@ -5,16 +5,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:dio/dio.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:saltybytes_app/core/navigation/app_router.dart';
+import 'package:saltybytes_app/core/network/api_client.dart';
 import 'package:saltybytes_app/core/providers/auth_provider.dart';
 import 'package:saltybytes_app/features/auth/login_screen.dart';
 import 'package:saltybytes_app/features/auth/splash_screen.dart';
+import 'package:saltybytes_app/features/auth/verify_email_screen.dart';
+
+import '../../helpers/test_helpers.dart';
 
 /// Auth notifier whose build() stays pending until the test completes it,
 /// and which can emit loading/error/data states on demand — the shapes the
 /// real AuthNotifier goes through during cold start and login attempts.
 class _ControlledAuthNotifier extends AsyncNotifier<AuthStatus>
     implements AuthNotifier {
+
+  @override
+  bool needsEmailVerification = false;
+
+  @override
+  void markEmailVerificationHandled() {
+    needsEmailVerification = false;
+  }
   _ControlledAuthNotifier(this._initial);
 
   final Completer<AuthStatus> _initial;
@@ -52,8 +66,14 @@ void main() {
   (ProviderContainer, _ControlledAuthNotifier) buildHarness() {
     final completer = Completer<AuthStatus>();
     final notifier = _ControlledAuthNotifier(completer);
+    final api = MockApiClient();
+    when(() => api.get(any())).thenThrow(DioException(
+      requestOptions: RequestOptions(path: '/stub'),
+      type: DioExceptionType.connectionError,
+    ));
     final container = ProviderContainer(overrides: [
       authStateProvider.overrideWith(() => notifier),
+      apiClientProvider.overrideWithValue(api),
     ]);
     addTearDown(container.dispose);
     return (container, notifier);
@@ -121,6 +141,27 @@ void main() {
     // Same State object: the screen was never disposed, so it can still
     // show the error and keep the typed form values.
     expect(tester.state(find.byType(LoginScreen)), same(stateBefore));
+  });
+
+  testWidgets(
+      'a fresh unverified signup is routed to the verify-email screen '
+      'instead of home', (tester) async {
+    final (container, notifier) = buildHarness();
+    await pumpApp(tester, container);
+    notifier._initial.complete(AuthStatus.unauthenticated);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(LoginScreen), findsOneWidget);
+
+    // Register succeeds for an account with an unverified email.
+    notifier.needsEmailVerification = true;
+    notifier.emitData(AuthStatus.authenticated);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(VerifyEmailScreen), findsOneWidget);
+    expect(find.byType(LoginScreen), findsNothing);
   });
 
   testWidgets('a signed-out emission bounces protected routes to login',

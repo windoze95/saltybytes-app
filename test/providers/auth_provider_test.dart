@@ -331,6 +331,59 @@ void main() {
       );
     });
 
+    test('an unverified-email register response sets the '
+        'needsEmailVerification routing flag', () async {
+      when(() => apiClient.post(
+            ApiEndpoints.register,
+            data: any(named: 'data'),
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'access_token': 'acc-new',
+            'refresh_token': 'ref-new',
+            'user': {
+              ...testUserJson(id: 'u-new', username: 'newchef'),
+              'email_verified': false,
+            },
+          }));
+
+      final container = buildContainer();
+      await container.read(authStateProvider.future);
+
+      final notifier = container.read(authStateProvider.notifier);
+      await notifier.register(
+        username: 'newchef',
+        email: 'new@example.com',
+        password: 'securePass!',
+      );
+
+      expect(notifier.needsEmailVerification, isTrue);
+      notifier.markEmailVerificationHandled();
+      expect(notifier.needsEmailVerification, isFalse);
+    });
+
+    test('a verified (or legacy, field-less) register response leaves the '
+        'flag off', () async {
+      when(() => apiClient.post(
+            ApiEndpoints.register,
+            data: any(named: 'data'),
+          )).thenAnswer((_) async => fakeResponse<dynamic>({
+            'access_token': 'acc-new',
+            'refresh_token': 'ref-new',
+            'user': testUserJson(id: 'u-new', username: 'newchef'),
+          }));
+
+      final container = buildContainer();
+      await container.read(authStateProvider.future);
+
+      final notifier = container.read(authStateProvider.notifier);
+      await notifier.register(
+        username: 'newchef',
+        email: 'new@example.com',
+        password: 'securePass!',
+      );
+
+      expect(notifier.needsEmailVerification, isFalse);
+    });
+
     test('409 (username taken) lands in an error state', () async {
       when(() => apiClient.post(
             ApiEndpoints.register,

@@ -10,6 +10,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       id: json['id'] as String,
       username: json['username'] as String,
       email: json['email'] as String,
+      emailVerified: json['email_verified'] as bool? ?? true,
       firstName: json['first_name'] as String?,
       settings: json['settings'] == null
           ? const UserSettings()
@@ -29,6 +30,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'id': instance.id,
       'username': instance.username,
       'email': instance.email,
+      'email_verified': instance.emailVerified,
       'first_name': instance.firstName,
       'settings': instance.settings,
       'personalization': instance.personalization,

@@ -16,6 +16,14 @@ import '../../helpers/test_helpers.dart';
 /// Fake auth notifier that reports authenticated immediately.
 class _FakeAuthNotifier extends AsyncNotifier<AuthStatus>
     implements AuthNotifier {
+
+  @override
+  bool needsEmailVerification = false;
+
+  @override
+  void markEmailVerificationHandled() {
+    needsEmailVerification = false;
+  }
   @override
   Future<AuthStatus> build() async => AuthStatus.authenticated;
 
