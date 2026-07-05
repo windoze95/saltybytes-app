@@ -4,8 +4,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/providers/search_provider.dart';
 
-/// The live "using the app for you" strip: one line per streamed agent event,
-/// with a spinner on the last line while the run is still in flight.
+/// The live "using the app for you" status: a single slim line showing the
+/// agent's LATEST step (with a spinner while the run is in flight). Results
+/// paint live underneath, so the strip stays out of the way — the full
+/// narration log lives on in saved sessions.
 class NarrationStrip extends StatelessWidget {
   const NarrationStrip({super.key, required this.lines, required this.active});
 
@@ -15,52 +17,119 @@ class NarrationStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (lines.isEmpty) return const SizedBox.shrink();
+    final latest = lines.last;
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          for (var i = 0; i < lines.length; i++)
-            Padding(
-              padding: EdgeInsets.only(top: i == 0 ? 0 : 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      lines[i],
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: i == lines.length - 1
-                            ? theme.colorScheme.onSurface
-                            : theme.colorScheme.onSurface
-                                .withValues(alpha: 0.55),
-                        fontWeight:
-                            i == lines.length - 1 ? FontWeight.w600 : null,
-                      ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: 250.ms,
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.4),
+                    end: Offset.zero,
+                  ).animate(anim),
+                  child: child,
+                ),
+              ),
+              child: Text(
+                latest,
+                key: ValueKey(latest),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          if (active) ...[
+            const SizedBox(width: 8),
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Chips for the collections the agent is digging through this run:
+/// 📖 '50 Best Weeknight Dinners' pulses while open, then shows how many
+/// recipes it folded in.
+class DiggingStrip extends StatelessWidget {
+  const DiggingStrip({super.key, required this.digging});
+
+  final List<DiggingCollection> digging;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (digging.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: digging.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final d = digging[i];
+          final chip = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondaryContainer
+                  .withValues(alpha: d.done ? 0.35 : 0.6),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(d.done ? '📖' : '🔎',
+                    style: const TextStyle(fontSize: 13)),
+                const SizedBox(width: 6),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: Text(
+                    d.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium,
+                  ),
+                ),
+                if (d.done && d.folded > 0) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '+${d.folded}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
-                  if (active && i == lines.length - 1) ...[
-                    const SizedBox(width: 8),
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ],
                 ],
-              ),
-            ).animate(key: ValueKey('narr-$i')).fadeIn(duration: 250.ms).slideY(
-                  begin: 0.2,
-                  end: 0,
-                  duration: 250.ms,
-                ),
-        ],
+              ],
+            ),
+          );
+          if (d.done) return Center(child: chip);
+          return Center(
+            child: chip
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .fade(begin: 0.55, end: 1.0, duration: 700.ms),
+          );
+        },
       ),
     );
   }
@@ -125,10 +194,10 @@ class RefineBar extends StatelessWidget {
   }
 }
 
-/// The body of the Search screen while an agent run is in flight. Recipes the
-/// agent has found so far ([found], the staged buffer) are teased as a
-/// thumbnail cluster + count — evidence of work, not interactive — and the
-/// complete curated list reveals all at once when the run finishes.
+/// The body of the Search screen in the brief window before an agent run's
+/// FIRST results paint (results land live as soon as search returns). [found]
+/// shows a thumbnail cluster when a late stage is still assembling the list
+/// (e.g. an all-collections search waiting on its first mined batch).
 class AgentWorkingView extends StatelessWidget {
   const AgentWorkingView({super.key, required this.found});
 

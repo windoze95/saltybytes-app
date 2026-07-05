@@ -120,21 +120,30 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  group('SearchScreen — agent input', () {
-    testWidgets('shows facet pills, Surprise me, and the Find CTA',
+  group('SearchScreen — search-bar-first layout', () {
+    testWidgets('agent mode leads with the bar; pills wait in the expander',
         (tester) async {
       await tester.pumpWidget(_realApp());
       await _settle(tester);
 
-      expect(find.widgetWithText(ChoiceChip, 'Weeknight'), findsOneWidget);
+      // The search bar is front and center with the agent hint.
+      expect(find.text('What are you in the mood for?'), findsOneWidget);
+      // Tap-first on-ramps: Surprise me + mood chips.
       expect(find.text('Surprise me'), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Find recipes'), findsOneWidget);
+      expect(find.text('cozy comfort food'), findsOneWidget);
+      // Facet pills are behind the collapsed Filters expander.
+      expect(find.text('Filters (0)'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'Weeknight'), findsNothing);
       // Agent is the default mode.
       expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
     });
 
-    testWidgets('tapping a facet chip selects it', (tester) async {
+    testWidgets('expanding Filters reveals the pills and taps select',
+        (tester) async {
       await tester.pumpWidget(_realApp());
+      await _settle(tester);
+
+      await tester.tap(find.text('Filters (0)'));
       await _settle(tester);
 
       ChoiceChip chip() => tester
@@ -146,7 +155,7 @@ void main() {
       expect(chip().selected, isTrue);
     });
 
-    testWidgets('turning the agent off shows the search bar + collapsed filters',
+    testWidgets('turning the agent off keeps the same layout, plainer',
         (tester) async {
       await tester.pumpWidget(_realApp());
       await _settle(tester);
@@ -154,9 +163,11 @@ void main() {
       await tester.tap(find.byType(Switch));
       await tester.pump(const Duration(milliseconds: 100));
 
+      expect(find.text('Search for recipes...'), findsOneWidget);
       expect(find.text('Filters (0)'), findsOneWidget);
-      // The pills are now hidden behind the collapsed expander.
-      expect(find.widgetWithText(FilledButton, 'Find recipes'), findsNothing);
+      // Agent-only on-ramps disappear in plain mode.
+      expect(find.text('Surprise me'), findsNothing);
+      expect(find.text('cozy comfort food'), findsNothing);
     });
   });
 
@@ -174,17 +185,18 @@ void main() {
       hasMore: false,
     );
 
-    testWidgets('renders narration, the shortlist card, and refine chips',
-        (tester) async {
+    testWidgets('renders the shortlist card and refine chips; the narration '
+        'strip retires once the run is done', (tester) async {
       await tester.pumpWidget(
           _scriptedApp(agentResults.copyWith(viewMode: SearchViewMode.list)));
       await _settle(tester);
 
-      expect(find.textContaining('Found 3 real recipes'), findsOneWidget);
       expect(find.byType(FinderShortlistCard), findsOneWidget);
       expect(find.text('Creamy Chicken Pasta'), findsOneWidget);
       expect(find.text('Quick + kid-friendly'), findsOneWidget);
       expect(find.widgetWithText(ActionChip, 'quicker'), findsOneWidget);
+      // Done = the results speak; the live status line steps aside.
+      expect(find.textContaining('Found 3 real recipes'), findsNothing);
     });
 
     testWidgets('tapping a shortlist card opens the preview route',
@@ -201,28 +213,76 @@ void main() {
       expect(pushedPreview?.sourceUrl, 'https://x.com/ccp');
     });
 
-    testWidgets('an in-flight run shows the working view, never results',
+    testWidgets('an in-flight run paints results live, tappable immediately',
         (tester) async {
       final working = SearchState(
         agentMode: true,
         hasSearched: true,
-        isLoading: true,
         phase: FinderPhase.digging,
         narration: const ['🔍 Searching…', '🍽 Opening ‘23 Best Dinners’…'],
-        staged: [
+        results: [
           _result(),
           _result(title: 'Two', url: 'https://x.com/2'),
         ],
+        digging: const [DiggingCollection(title: '23 Best Dinners')],
         viewMode: SearchViewMode.list,
       );
       await tester.pumpWidget(_scriptedApp(working));
       await _settle(tester);
 
-      // Found-so-far tease + curating line, but no tappable result cards yet.
-      expect(find.text('2 recipes found'), findsOneWidget);
-      expect(find.text('Curating your picks…'), findsOneWidget);
+      // Results are on screen mid-run, with the live status + digging chip.
+      expect(find.byType(FinderShortlistCard), findsNWidgets(2));
+      expect(find.text('🍽 Opening ‘23 Best Dinners’…'), findsOneWidget);
+      expect(find.textContaining('23 Best Dinners'), findsNWidgets(2));
+    });
+
+    testWidgets('before any result paints, the working view holds the floor',
+        (tester) async {
+      final working = SearchState(
+        agentMode: true,
+        hasSearched: true,
+        isLoading: true,
+        phase: FinderPhase.searching,
+        narration: const ['🔍 Searching…'],
+        viewMode: SearchViewMode.list,
+      );
+      await tester.pumpWidget(_scriptedApp(working));
+      await _settle(tester);
+
+      expect(find.text('Finding real recipes…'), findsOneWidget);
       expect(find.byType(FinderShortlistCard), findsNothing);
-      expect(find.text('Preview Recipe'), findsNothing);
+    });
+
+    testWidgets('top picks render as their own section with provenance',
+        (tester) async {
+      final done = SearchState(
+        agentMode: true,
+        hasSearched: true,
+        phase: FinderPhase.done,
+        results: [
+          _result(),
+          _result(title: 'Two', url: 'https://x.com/2'),
+        ],
+        topPicks: [
+          const WebSearchResult(
+            title: 'Ground Beef Gyros',
+            sourceUrl: 'https://x.com/gyros',
+            sourceDomain: 'x.com',
+            reason: 'Weeknight hero: 20 minutes, one skillet.',
+            via: '23 Best Dinners',
+          ),
+        ],
+        viewMode: SearchViewMode.list,
+      );
+      await tester.pumpWidget(_scriptedApp(done));
+      await _settle(tester);
+
+      expect(find.text('Top picks for you'), findsOneWidget);
+      expect(find.text('Everything found'), findsOneWidget);
+      expect(find.text('Ground Beef Gyros'), findsOneWidget);
+      expect(find.textContaining('inside ‘23 Best Dinners’'), findsOneWidget);
+      // Picks + the two non-pick results all render as cards.
+      expect(find.byType(FinderShortlistCard), findsNWidgets(3));
     });
 
     testWidgets('the view toggle switches immersive → list', (tester) async {

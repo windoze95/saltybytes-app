@@ -49,6 +49,7 @@ class WebSearchResult {
     this.familySafetyChecks = const [],
     this.extractionStatus,
     this.reason,
+    this.via,
   });
 
   final String title;
@@ -68,7 +69,15 @@ class WebSearchResult {
   /// results; plain search omits it (null).
   final String? reason;
 
-  WebSearchResult copyWith({String? extractionStatus, String? reason}) {
+  /// For recipes the agent mined out of a roundup/collection: the collection's
+  /// title ("found inside '50 Best Weeknight Dinners'"). null otherwise.
+  final String? via;
+
+  WebSearchResult copyWith({
+    String? extractionStatus,
+    String? reason,
+    List<FamilySafetyCheck>? familySafetyChecks,
+  }) {
     return WebSearchResult(
       title: title,
       sourceUrl: sourceUrl,
@@ -77,9 +86,10 @@ class WebSearchResult {
       description: description,
       rating: rating,
       cookTimeMinutes: cookTimeMinutes,
-      familySafetyChecks: familySafetyChecks,
+      familySafetyChecks: familySafetyChecks ?? this.familySafetyChecks,
       extractionStatus: extractionStatus ?? this.extractionStatus,
       reason: reason ?? this.reason,
+      via: via,
     );
   }
 
@@ -103,8 +113,33 @@ class WebSearchResult {
               .toList() ??
           [],
       reason: json['reason'] as String?,
+      via: json['via'] as String?,
     );
   }
+}
+
+/// A roundup/collection the agent is digging into during a run, shown as a
+/// chip in the digging strip ("📖 50 Best Weeknight Dinners ✓ 3").
+class DiggingCollection {
+  const DiggingCollection({
+    required this.title,
+    this.folded = 0,
+    this.done = false,
+  });
+
+  final String title;
+
+  /// How many individual recipes have been folded out of it so far.
+  final int folded;
+
+  /// Whether its recipes have landed (an expanded batch arrived).
+  final bool done;
+
+  DiggingCollection copyWith({int? folded, bool? done}) => DiggingCollection(
+        title: title,
+        folded: folded ?? this.folded,
+        done: done ?? this.done,
+      );
 }
 
 /// A single recipe card from a resolved multi-recipe page.
@@ -336,7 +371,8 @@ class SearchState {
     this.viewMode = SearchViewMode.immersive,
     this.query = '',
     this.results = const [],
-    this.staged = const [],
+    this.topPicks = const [],
+    this.digging = const [],
     this.isLoading = false,
     this.error,
     this.hasSearched = false,
@@ -350,24 +386,29 @@ class SearchState {
     this.isLimitReached = false,
   });
 
-  /// Agent mode ON (default): tap-first pills → SSE `/recipes/find` (ranked,
-  /// narration, reasons, family-safety). OFF: search-bar-first keywords →
-  /// `GET /recipes/search` (plain, paginated).
+  /// Agent mode ON (default): search-bar-first with the agent layered on top —
+  /// SSE `/recipes/find` paints real results instantly, then enhances them
+  /// (reasons, family-safety, digging, top picks). OFF: the same bar →
+  /// `GET /recipes/search` (plain, paginated, no enhancement).
   final bool agentMode;
 
-  /// The tap-first facet selections + typed details (shared by both modes;
+  /// The facet selections + typed details (shared by both modes;
   /// plain mode flattens them into a keyword query).
   final FinderFacets facets;
   final SearchViewMode viewMode;
 
   final String query;
+
+  /// Everything found, painted LIVE as the run streams (instant results →
+  /// annotated shortlist → recipes dug out of collections).
   final List<WebSearchResult> results;
 
-  /// Results accumulated by an in-flight agent run (shortlist + recipes dug
-  /// out of collections), held back from [results] until the run finishes so
-  /// the user gets one complete curated reveal instead of cards popping in
-  /// and reordering mid-browse. Committed on the terminal event.
-  final List<WebSearchResult> staged;
+  /// The agent's final curated top picks (direct + mined re-ranked together,
+  /// each with a fresh rationale). Lands once, near the end of a run.
+  final List<WebSearchResult> topPicks;
+
+  /// Collections the agent is digging into this run, in dig order.
+  final List<DiggingCollection> digging;
 
   final bool isLoading;
   final String? error;
@@ -401,7 +442,8 @@ class SearchState {
     SearchViewMode? viewMode,
     String? query,
     List<WebSearchResult>? results,
-    List<WebSearchResult>? staged,
+    List<WebSearchResult>? topPicks,
+    List<DiggingCollection>? digging,
     bool? isLoading,
     String? error,
     bool? hasSearched,
@@ -420,7 +462,8 @@ class SearchState {
       viewMode: viewMode ?? this.viewMode,
       query: query ?? this.query,
       results: results ?? this.results,
-      staged: staged ?? this.staged,
+      topPicks: topPicks ?? this.topPicks,
+      digging: digging ?? this.digging,
       isLoading: isLoading ?? this.isLoading,
       // Cleared unless explicitly provided (matches the original idiom).
       error: error,
@@ -455,11 +498,23 @@ class SearchNotifier extends StateNotifier<SearchState> {
   final Set<String> _warmRequested = {};
   bool _warmPolling = false;
 
+  // A new run (search/refine/toggle/clear) bumps the sequence and cancels the
+  // previous SSE stream, so a stale stream can never write over fresh state.
+  int _runSeq = 0;
+  CancelToken? _sseCancel;
+
+  int _newRun() {
+    _sseCancel?.cancel('superseded by a new search');
+    _sseCancel = null;
+    return ++_runSeq;
+  }
+
   // ---- Input mutation (the screen drives these) --------------------------
 
   /// Flips agent ⇄ plain and resets the run (keeps the chosen facets + view).
   void setAgentMode(bool value) {
     if (value == state.agentMode) return;
+    _newRun();
     state = SearchState(
       agentMode: value,
       facets: state.facets,
@@ -483,6 +538,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
   /// Repopulates Search from a saved [FinderSession] — its intent, results and
   /// narration — as a finished agent run. Does NOT re-run the search.
   void restoreFromSession(FinderSession session) {
+    _newRun();
     _warmRequested.clear();
     state = SearchState(
       agentMode: true,
@@ -522,13 +578,15 @@ class SearchNotifier extends StateNotifier<SearchState> {
     FinderRefine? refine,
     List<String>? seedNarration,
   }) async {
+    final seq = _newRun();
     _warmRequested.clear();
     state = state.copyWith(
       isLoading: true,
       error: null,
       hasSearched: true,
       results: const [],
-      staged: const [],
+      topPicks: const [],
+      digging: const [],
       narration: seedNarration ?? const [],
       refineChips: const [],
       broaden: const [],
@@ -539,7 +597,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       isLoadingMore: false,
       query: state.facets.toKeywordQuery(),
     );
-    await _streamAgent(state.facets.toRequestJson(refine: refine));
+    await _streamAgent(state.facets.toRequestJson(refine: refine), seq: seq);
   }
 
   /// Re-runs the current facets with an added [constraint] (a refine chip).
@@ -556,16 +614,20 @@ class SearchNotifier extends StateNotifier<SearchState> {
     state = state.copyWith(isLoadingMore: true);
     await _streamAgent(
       state.facets.toRequestJson(offset: state.nextOffset),
+      seq: _runSeq,
       loadMore: true,
     );
   }
 
   Future<void> _streamAgent(Map<String, dynamic> body,
-      {bool loadMore = false}) async {
+      {required int seq, bool loadMore = false}) async {
+    final cancel = CancelToken();
+    _sseCancel = cancel;
     try {
       final resp = await _apiClient.dio.post(
         ApiEndpoints.find,
         data: body,
+        cancelToken: cancel,
         options: Options(
           responseType: ResponseType.stream,
           receiveTimeout: const Duration(seconds: 60),
@@ -573,7 +635,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       );
       final stream = (resp.data as ResponseBody).stream.cast<List<int>>();
       await for (final event in parseFinderSse(stream)) {
-        if (!mounted) return;
+        if (!mounted || seq != _runSeq) return; // superseded by a newer run
         if (loadMore) {
           _applyAgentLoadMoreEvent(event);
         } else {
@@ -581,12 +643,13 @@ class SearchNotifier extends StateNotifier<SearchState> {
         }
       }
     } on DioException catch (e) {
-      if (!mounted) return;
+      if (!mounted || seq != _runSeq) return;
+      if (CancelToken.isCancel(e)) return; // superseded, not a failure
       _applyAgentDioError(e, loadMore: loadMore);
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || seq != _runSeq) return;
       if (loadMore) {
-        _appendStagedToResults();
+        state = state.copyWith(isLoadingMore: false);
       } else {
         _failFreshRun(
             'Something went wrong finding recipes. Please try again.');
@@ -617,6 +680,15 @@ class SearchNotifier extends StateNotifier<SearchState> {
             'Found $c real ${c == 1 ? 'recipe' : 'recipes'}$suffix',
           ],
         );
+      case 'results':
+        // Instant paint: the real candidates land tappable BEFORE any model
+        // call. Everything after this enhances in place.
+        state = state.copyWith(
+          results: e.items,
+          isLoading: false,
+          hasMore: e.hasMore ?? state.hasMore,
+        );
+        warmAhead(0);
       case 'filtering':
         state = state.copyWith(
           phase: FinderPhase.filtering,
@@ -626,33 +698,53 @@ class SearchNotifier extends StateNotifier<SearchState> {
           ],
         );
       case 'shortlist':
-        // Stage (don't show) — the run may still dig recipes out of
-        // collections; everything reveals together at `done`. Warming starts
-        // now so the eventual taps are still instant.
+        // Enhancement patch: attach reasons/safety to the painted results (in
+        // place, no reorder — the picks section carries the curation) and
+        // append any ranked results the instant paint didn't include.
+        _mergeShortlist(e.items);
         state = state.copyWith(
           phase: FinderPhase.shortlist,
-          staged: e.items,
           hasMore: e.hasMore ?? false,
           nextOffset: e.items.length,
         );
-        _warmStaged();
       case 'digging':
         // The agent is opening a collection ("23 Best Weeknight Dinners") to
-        // fold individual recipes out of it.
-        final title = e.collectionTitle?.trim();
+        // fold individual recipes out of it. The collection itself is pulled
+        // from the painted results (it's a dig source, not a recipe).
+        final title = (e.collectionTitle ?? '').trim();
         state = state.copyWith(
           phase: FinderPhase.digging,
+          results: title.isEmpty
+              ? state.results
+              : state.results.where((r) => r.title != title).toList(),
+          digging: [
+            ...state.digging,
+            if (title.isNotEmpty) DiggingCollection(title: title),
+          ],
           narration: [
             ...state.narration,
-            (title == null || title.isEmpty)
+            title.isEmpty
                 ? '\u{1F37D} Opening a recipe collection…'
                 : '\u{1F37D} Opening ‘$title’…',
           ],
         );
       case 'expanded':
-        // Recipes folded out of a collection — dedup + stage (nextOffset is
-        // the shortlist offset, so dug-in extras don't advance it).
-        _stageDugRecipes(e.items);
+        // Recipes folded out of a collection land live, with provenance.
+        _appendResults(e.items);
+        final title = (e.collectionTitle ?? '').trim();
+        state = state.copyWith(
+          digging: [
+            for (final d in state.digging)
+              d.title == title
+                  ? d.copyWith(done: true, folded: d.folded + e.items.length)
+                  : d,
+          ],
+        );
+      case 'picks':
+        // The agent's final curated top picks (direct + mined re-ranked
+        // together). Lands once as its own section — the browsing list stays
+        // stable underneath.
+        state = state.copyWith(topPicks: e.items);
       case 'warming':
         state = state.copyWith(
           phase: FinderPhase.warming,
@@ -665,18 +757,18 @@ class SearchNotifier extends StateNotifier<SearchState> {
           broaden: e.broaden,
         );
       case 'done':
-        // The reveal: commit everything staged during the run in one shot.
         state = state.copyWith(
           phase: FinderPhase.done,
-          results: state.staged.isEmpty ? state.results : state.staged,
-          staged: const [],
           isLoading: false,
+          digging: [
+            for (final d in state.digging) d.copyWith(done: true),
+          ],
         );
       case 'empty':
         state = state.copyWith(
           phase: FinderPhase.empty,
           results: const [],
-          staged: const [],
+          topPicks: const [],
           broaden: e.broaden,
           isLoading: false,
           hasMore: false,
@@ -688,16 +780,15 @@ class SearchNotifier extends StateNotifier<SearchState> {
     }
   }
 
-  /// Terminal failure of a fresh agent run. If recipes were already staged,
-  /// the run found real results before dying — reveal them rather than
+  /// Terminal failure of a fresh agent run. If real results already painted,
+  /// the run found recipes before dying — keep them on screen rather than
   /// replacing them with an error screen. Otherwise surface the error state.
   void _failFreshRun(String message) {
-    if (state.staged.isNotEmpty) {
+    if (state.results.isNotEmpty) {
       state = state.copyWith(
         phase: FinderPhase.done,
-        results: state.staged,
-        staged: const [],
         isLoading: false,
+        digging: [for (final d in state.digging) d.copyWith(done: true)],
       );
       return;
     }
@@ -710,66 +801,77 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
   void _applyAgentLoadMoreEvent(FinderEvent e) {
     switch (e.type) {
+      case 'results':
+        // Next-page candidates land live behind the loading tail.
+        _appendResults(e.items);
+        state = state.copyWith(hasMore: e.hasMore ?? state.hasMore);
       case 'shortlist':
-        // Stage the page (bookkeeping now, display at `done`) so the appended
-        // batch lands complete instead of trickling in under the user.
+        _mergeShortlist(e.items);
         state = state.copyWith(
-          staged: [...state.staged, ...e.items],
           hasMore: e.hasMore ?? false,
           nextOffset: state.nextOffset + e.items.length,
         );
-        _warmStaged();
+      case 'digging':
+        final title = (e.collectionTitle ?? '').trim();
+        if (title.isNotEmpty) {
+          state = state.copyWith(
+            results: state.results.where((r) => r.title != title).toList(),
+          );
+        }
       case 'expanded':
-        _stageDugRecipes(e.items);
+        _appendResults(e.items);
       case 'done':
-        _appendStagedToResults();
+        state = state.copyWith(isLoadingMore: false);
       case 'empty':
-        state = state.copyWith(
-            isLoadingMore: false, hasMore: false, staged: const []);
+        state = state.copyWith(isLoadingMore: false, hasMore: false);
       case 'error':
-        // Keep whatever the page managed to stage before failing.
-        _appendStagedToResults();
-      // narration/found/filtering/warming/digging/refine_ready ignored
+        state = state.copyWith(isLoadingMore: false);
+      // narration/found/filtering/warming/picks/refine_ready ignored
     }
   }
 
-  /// Dedups dug-in recipes by sourceUrl against everything already shown or
-  /// staged, and adds them to the staged buffer (they reveal together at the
-  /// end of the run). Shared by the run + load-more paths.
-  void _stageDugRecipes(List<WebSearchResult> items) {
+  /// Attaches the ranked shortlist's reasons/safety to already-painted results
+  /// (matched by sourceUrl, in place — no reorder) and appends ranked results
+  /// the instant paint didn't include (e.g. a pattern false positive).
+  void _mergeShortlist(List<WebSearchResult> items) {
     if (items.isEmpty) return;
-    final existing = <String>{
-      for (final r in state.results)
-        if (r.sourceUrl != null) r.sourceUrl!,
-      for (final r in state.staged)
-        if (r.sourceUrl != null) r.sourceUrl!,
+    final byUrl = <String, WebSearchResult>{
+      for (final it in items)
+        if (it.sourceUrl != null) it.sourceUrl!: it,
     };
+    final seen = <String>{};
+    final merged = state.results.map((r) {
+      final match = r.sourceUrl == null ? null : byUrl[r.sourceUrl];
+      if (match == null) return r;
+      seen.add(r.sourceUrl!);
+      return r.copyWith(
+        reason: match.reason,
+        familySafetyChecks: match.familySafetyChecks,
+      );
+    }).toList();
+    final appended = items
+        .where((it) => it.sourceUrl == null || !seen.contains(it.sourceUrl))
+        .toList();
+    state = state.copyWith(results: [...merged, ...appended]);
+    _warmNew(appended);
+  }
+
+  /// Appends new results live, deduped by sourceUrl against what's shown.
+  void _appendResults(List<WebSearchResult> items) {
+    if (items.isEmpty) return;
+    final existing =
+        state.results.map((r) => r.sourceUrl).whereType<String>().toSet();
     final added = items
         .where((r) => r.sourceUrl == null || !existing.contains(r.sourceUrl))
         .toList();
     if (added.isEmpty) return;
-    state = state.copyWith(staged: [...state.staged, ...added]);
-    _warmStaged();
-  }
-
-  /// Load-more commit: dedups the staged page against what's already visible
-  /// and appends it in one shot.
-  void _appendStagedToResults() {
-    final existing =
-        state.results.map((r) => r.sourceUrl).whereType<String>().toSet();
-    final added = state.staged
-        .where((r) => r.sourceUrl == null || !existing.contains(r.sourceUrl))
-        .toList();
-    state = state.copyWith(
-      results: [...state.results, ...added],
-      staged: const [],
-      isLoadingMore: false,
-    );
+    state = state.copyWith(results: [...state.results, ...added]);
+    _warmNew(added);
   }
 
   void _applyAgentDioError(DioException e, {required bool loadMore}) {
     if (loadMore) {
-      _appendStagedToResults();
+      state = state.copyWith(isLoadingMore: false);
       return;
     }
     if (e.response?.statusCode == 403) {
@@ -791,6 +893,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
   Future<void> _runPlain() async {
     final query = state.facets.toKeywordQuery();
     if (query.trim().isEmpty) return;
+    _newRun(); // cancel any in-flight agent stream
     _warmRequested.clear();
 
     state = state.copyWith(
@@ -840,10 +943,16 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
       // Pre-warm the first few results so early taps are instant.
       warmAhead(0);
-    } catch (e) {
+    } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userFacingErrorMessage(
+            e, 'Something went wrong searching. Please try again.'),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Something went wrong searching. Please try again.',
       );
     }
   }
@@ -983,11 +1092,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
     unawaited(_warmWindow(state.results, visibleIndex));
   }
 
-  /// Warm everything staged by an in-flight agent run (the buffer is small and
-  /// bounded) so the results are already extracted by the time they reveal.
-  void _warmStaged() {
-    final staged = state.staged;
-    unawaited(_warmWindow(staged, staged.length - 1));
+  /// Warm results that just streamed in (the batches are small and bounded)
+  /// so they're already extracted by the time the user reaches them.
+  void _warmNew(List<WebSearchResult> items) {
+    if (items.isEmpty) return;
+    unawaited(_warmWindow(items, items.length - 1));
   }
 
   Future<void> _warmWindow(
@@ -1044,8 +1153,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
     }
   }
 
-  // Applies warm statuses to the visible results AND the staged buffer, so
-  // badges set while a run streams survive the reveal.
+  // Applies warm statuses to the visible results AND the top-picks section,
+  // so both card sets flip their badges in place.
   void _applyWarmStatuses(Map<String, String> statuses) {
     var changed = false;
     List<WebSearchResult> apply(List<WebSearchResult> items) => items.map((r) {
@@ -1062,15 +1171,15 @@ class SearchNotifier extends StateNotifier<SearchState> {
         }).toList();
 
     final results = apply(state.results);
-    final staged = apply(state.staged);
-    if (changed) state = state.copyWith(results: results, staged: staged);
+    final picks = apply(state.topPicks);
+    if (changed) state = state.copyWith(results: results, topPicks: picks);
   }
 
   void _maybeStartWarmPoll() {
     if (_warmPolling) return;
     final extracting = state.results.any(
             (r) => r.extractionStatus == 'extracting') ||
-        state.staged.any((r) => r.extractionStatus == 'extracting');
+        state.topPicks.any((r) => r.extractionStatus == 'extracting');
     if (!extracting) return;
     _warmPolling = true;
     unawaited(_pollWarmStatuses());
@@ -1085,7 +1194,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
         await Future<void>.delayed(const Duration(seconds: 2));
         if (!mounted) return;
         final extracting = <String>[
-          for (final r in [...state.results, ...state.staged])
+          for (final r in [...state.results, ...state.topPicks])
             if (r.extractionStatus == 'extracting' && r.sourceUrl != null)
               r.sourceUrl!,
         ];
@@ -1177,6 +1286,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 
   void clear() {
+    _newRun();
     state = SearchState(
       agentMode: state.agentMode,
       facets: state.facets,

@@ -81,6 +81,31 @@ class FinderShortlistCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                    // Provenance for recipes mined out of a roundup.
+                    if (result.via != null) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.menu_book_outlined,
+                              size: 12,
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.45)),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'inside ‘${result.via!}’',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     // Meta row: rating (only when > 0) + family-safety summary.
                     // No cook time — the finder result has none.

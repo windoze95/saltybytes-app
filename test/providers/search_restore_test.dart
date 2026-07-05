@@ -120,6 +120,7 @@ void main() {
           .thenAnswer((_) async => fakeResponse<dynamic>({'statuses': {}}));
       when(() => dio.post(ApiEndpoints.find,
           data: any(named: 'data'),
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'))).thenAnswer((_) async => _sse([
             _frame('shortlist', {
               'items': [
