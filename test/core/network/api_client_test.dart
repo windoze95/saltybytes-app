@@ -421,8 +421,8 @@ void main() {
       }
     });
 
-    test('uses a generic message for JSON bodies with neither key, and '
-        '"Server error" for non-map bodies', () {
+    test('5xx failures read as "we\'re working on it", not raw server '
+        'errors', () {
       final emptyBody = ApiError.fromDioException(DioException(
         requestOptions: RequestOptions(path: '/v1/test'),
         response: Response<dynamic>(
@@ -431,7 +431,8 @@ void main() {
           data: <String, dynamic>{},
         ),
       ));
-      expect(emptyBody.message, 'An error occurred');
+      expect(emptyBody.message,
+          "Something hiccuped on our side — we're working on it. Please try again.");
       expect(emptyBody.statusCode, 500);
 
       final htmlBody = ApiError.fromDioException(DioException(
@@ -442,8 +443,43 @@ void main() {
           data: '<html>Bad Gateway</html>',
         ),
       ));
-      expect(htmlBody.message, 'Server error');
+      expect(htmlBody.message,
+          "Something hiccuped on our side — we're working on it. Please try again.");
       expect(htmlBody.statusCode, 502);
+    });
+
+    test('known machine codes map to warm, actionable copy', () {
+      ApiError from(int status, Map<String, dynamic> body) =>
+          ApiError.fromDioException(DioException(
+            requestOptions: RequestOptions(path: '/v1/test'),
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/v1/test'),
+              statusCode: status,
+              data: body,
+            ),
+          ));
+
+      final budget = from(429, {
+        'error': 'AI features are temporarily at capacity — please try again later',
+        'error_code': 'ai_budget_exhausted',
+      });
+      expect(budget.errorCode, 'ai_budget_exhausted');
+      expect(budget.message, contains("we're on it"));
+
+      final unverified = from(403, {
+        'error': 'Please verify your email address to use this feature',
+        'error_code': 'email_unverified',
+      });
+      expect(unverified.errorCode, 'email_unverified');
+      expect(unverified.message, contains('Verify your email'));
+
+      // Plain rate limiting (no code) still gets friendly copy.
+      final rateLimited = from(429, {'error': 'Too many requests'});
+      expect(rateLimited.message, contains('try again in a minute'));
+
+      // 4xx with a user-facing server message passes through untouched.
+      final userError = from(400, {'error': 'invalid username or password'});
+      expect(userError.message, 'invalid username or password');
     });
 
     test('maps timeout and connectivity failures to friendly messages', () {
