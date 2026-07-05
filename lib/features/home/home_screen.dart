@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../core/providers/search_provider.dart';
+import '../../core/providers/user_provider.dart';
 import '../../models/recipe.dart';
 import 'widgets/recipe_card.dart';
 
@@ -164,10 +165,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        color: theme.colorScheme.primary,
-        child: recipesAsync.when(
+      body: Column(
+        children: [
+          const _VerifyEmailBanner(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: theme.colorScheme.primary,
+              child: recipesAsync.when(
           loading: () => const _LoadingGrid(),
           error: (error, _) => _ErrorState(
             error:
@@ -180,12 +185,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             }
             return _RecipeGrid(recipes: recipes);
           },
-        ),
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateDialog,
         tooltip: 'Add Recipe',
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+/// Slim nudge shown while the account's email is unverified: AI features
+/// are gated until the code from the signup email is entered. Hidden for
+/// verified users and against servers that predate verification.
+class _VerifyEmailBanner extends ConsumerWidget {
+  const _VerifyEmailBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider).valueOrNull;
+    if (user == null || user.emailVerified) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.primary.withValues(alpha: 0.10),
+      child: InkWell(
+        onTap: () => context.go('/verify-email'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              Icon(Icons.mark_email_unread_outlined,
+                  size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Verify your email to unlock AI features — tap to enter your code',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right,
+                  size: 18, color: theme.colorScheme.primary),
+            ],
+          ),
+        ),
       ),
     );
   }

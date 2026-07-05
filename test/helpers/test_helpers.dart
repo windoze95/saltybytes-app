@@ -28,6 +28,14 @@ class MockApiClient extends Mock implements ApiClient {}
 /// exercise the signed-out paths.
 class FakeAuthNotifier extends AsyncNotifier<AuthStatus>
     implements AuthNotifier {
+
+  @override
+  bool needsEmailVerification = false;
+
+  @override
+  void markEmailVerificationHandled() {
+    needsEmailVerification = false;
+  }
   FakeAuthNotifier([this.status = AuthStatus.authenticated]);
 
   final AuthStatus status;

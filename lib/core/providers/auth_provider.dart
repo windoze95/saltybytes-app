@@ -19,6 +19,18 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
   late SecureStorage _secureStorage;
   late ApiClient _apiClient;
 
+  /// True right after a login/register whose response says the account's
+  /// email is not verified yet. The router uses it to route the fresh
+  /// session to the verify-email screen instead of home. Deliberately NOT
+  /// part of the AsyncValue state: it's routing advice, not auth status.
+  bool needsEmailVerification = false;
+
+  /// Clears the verify-email routing flag (after verifying, or when the
+  /// user chooses to do it later — the home banner remains until verified).
+  void markEmailVerificationHandled() {
+    needsEmailVerification = false;
+  }
+
   @override
   Future<AuthStatus> build() async {
     _secureStorage = ref.watch(secureStorageProvider);
@@ -77,6 +89,7 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
         refreshToken: data['refresh_token'] as String,
       );
 
+      _captureVerificationState(data['user']);
       if (data['user'] != null) {
         try {
           final user = User.fromJson(data['user'] as Map<String, dynamic>);
@@ -113,6 +126,7 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
         refreshToken: data['refresh_token'] as String,
       );
 
+      _captureVerificationState(data['user']);
       if (data['user'] != null) {
         try {
           final user = User.fromJson(data['user'] as Map<String, dynamic>);
@@ -124,6 +138,13 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
 
       return AuthStatus.authenticated;
     });
+  }
+
+  /// Reads email_verified out of a login/register response's user object.
+  /// Absent field (older server) counts as verified.
+  void _captureVerificationState(Object? userJson) {
+    needsEmailVerification =
+        userJson is Map<String, dynamic> && userJson['email_verified'] == false;
   }
 
   Future<void> logout() async {
@@ -139,11 +160,13 @@ class AuthNotifier extends AsyncNotifier<AuthStatus> {
       // Ignore network/server failures; local logout proceeds regardless.
     }
     await _secureStorage.clearTokens();
+    needsEmailVerification = false;
     state = const AsyncData(AuthStatus.unauthenticated);
   }
 
   void _forceLogout() async {
     await _secureStorage.clearTokens();
+    needsEmailVerification = false;
     state = const AsyncData(AuthStatus.unauthenticated);
   }
 }

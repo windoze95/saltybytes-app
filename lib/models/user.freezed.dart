@@ -22,7 +22,11 @@ User _$UserFromJson(Map<String, dynamic> json) {
 mixin _$User {
   String get id => throw _privateConstructorUsedError;
   String get username => throw _privateConstructorUsedError;
-  String get email => throw _privateConstructorUsedError;
+  String get email =>
+      throw _privateConstructorUsedError; // Servers that predate email verification omit the field; treating
+// absent as verified keeps the banner/verify UX dormant against them.
+  @JsonKey(name: 'email_verified')
+  bool get emailVerified => throw _privateConstructorUsedError;
   @JsonKey(name: 'first_name')
   String? get firstName => throw _privateConstructorUsedError;
   UserSettings get settings => throw _privateConstructorUsedError;
@@ -48,6 +52,7 @@ abstract class $UserCopyWith<$Res> {
       {String id,
       String username,
       String email,
+      @JsonKey(name: 'email_verified') bool emailVerified,
       @JsonKey(name: 'first_name') String? firstName,
       UserSettings settings,
       Personalization personalization,
@@ -76,6 +81,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? id = null,
     Object? username = null,
     Object? email = null,
+    Object? emailVerified = null,
     Object? firstName = freezed,
     Object? settings = null,
     Object? personalization = null,
@@ -95,6 +101,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.email
           : email // ignore: cast_nullable_to_non_nullable
               as String,
+      emailVerified: null == emailVerified
+          ? _value.emailVerified
+          : emailVerified // ignore: cast_nullable_to_non_nullable
+              as bool,
       firstName: freezed == firstName
           ? _value.firstName
           : firstName // ignore: cast_nullable_to_non_nullable
@@ -150,6 +160,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       {String id,
       String username,
       String email,
+      @JsonKey(name: 'email_verified') bool emailVerified,
       @JsonKey(name: 'first_name') String? firstName,
       UserSettings settings,
       Personalization personalization,
@@ -177,6 +188,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? id = null,
     Object? username = null,
     Object? email = null,
+    Object? emailVerified = null,
     Object? firstName = freezed,
     Object? settings = null,
     Object? personalization = null,
@@ -196,6 +208,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.email
           : email // ignore: cast_nullable_to_non_nullable
               as String,
+      emailVerified: null == emailVerified
+          ? _value.emailVerified
+          : emailVerified // ignore: cast_nullable_to_non_nullable
+              as bool,
       firstName: freezed == firstName
           ? _value.firstName
           : firstName // ignore: cast_nullable_to_non_nullable
@@ -227,6 +243,7 @@ class _$UserImpl implements _User {
       {required this.id,
       required this.username,
       required this.email,
+      @JsonKey(name: 'email_verified') this.emailVerified = true,
       @JsonKey(name: 'first_name') this.firstName,
       this.settings = const UserSettings(),
       this.personalization = const Personalization(),
@@ -242,6 +259,11 @@ class _$UserImpl implements _User {
   final String username;
   @override
   final String email;
+// Servers that predate email verification omit the field; treating
+// absent as verified keeps the banner/verify UX dormant against them.
+  @override
+  @JsonKey(name: 'email_verified')
+  final bool emailVerified;
   @override
   @JsonKey(name: 'first_name')
   final String? firstName;
@@ -258,7 +280,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(id: $id, username: $username, email: $email, firstName: $firstName, settings: $settings, personalization: $personalization, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'User(id: $id, username: $username, email: $email, emailVerified: $emailVerified, firstName: $firstName, settings: $settings, personalization: $personalization, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -270,6 +292,8 @@ class _$UserImpl implements _User {
             (identical(other.username, username) ||
                 other.username == username) &&
             (identical(other.email, email) || other.email == email) &&
+            (identical(other.emailVerified, emailVerified) ||
+                other.emailVerified == emailVerified) &&
             (identical(other.firstName, firstName) ||
                 other.firstName == firstName) &&
             (identical(other.settings, settings) ||
@@ -284,8 +308,17 @@ class _$UserImpl implements _User {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, username, email, firstName,
-      settings, personalization, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      username,
+      email,
+      emailVerified,
+      firstName,
+      settings,
+      personalization,
+      createdAt,
+      updatedAt);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -308,6 +341,7 @@ abstract class _User implements User {
       {required final String id,
       required final String username,
       required final String email,
+      @JsonKey(name: 'email_verified') final bool emailVerified,
       @JsonKey(name: 'first_name') final String? firstName,
       final UserSettings settings,
       final Personalization personalization,
@@ -321,7 +355,12 @@ abstract class _User implements User {
   @override
   String get username;
   @override
-  String get email;
+  String
+      get email; // Servers that predate email verification omit the field; treating
+// absent as verified keeps the banner/verify UX dormant against them.
+  @override
+  @JsonKey(name: 'email_verified')
+  bool get emailVerified;
   @override
   @JsonKey(name: 'first_name')
   String? get firstName;

@@ -12,6 +12,10 @@ class ApiEndpoints {
 
   // User
   static const String userProfile = '$apiVersion/users/me';
+  static const String emailVerification =
+      '$apiVersion/users/me/email/verification';
+  static const String emailVerificationConfirm =
+      '$apiVersion/users/me/email/verification/confirm';
   static const String userSettings = '$apiVersion/users/me/settings';
   static const String userPersonalization = '$apiVersion/users/me/personalization';
   static const String verifyToken = '$apiVersion/users/verify';
