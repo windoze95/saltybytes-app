@@ -376,20 +376,25 @@ class ApiError {
   factory ApiError.fromDioException(DioException exception) {
     final response = exception.response;
     if (response != null) {
+      final statusCode = response.statusCode ?? 0;
       final data = response.data;
       if (data is Map<String, dynamic>) {
+        // The API emits machine codes under "error_code"; older endpoints
+        // used "code".
+        final errorCode =
+            data['error_code'] as String? ?? data['code'] as String?;
+        final serverMessage =
+            data['message'] as String? ?? data['error'] as String?;
         return ApiError(
-          message: data['message'] as String? ??
-              data['error'] as String? ??
-              'An error occurred',
-          statusCode: response.statusCode ?? 0,
-          errorCode: data['code'] as String?,
+          message: _friendlyMessage(errorCode, statusCode, serverMessage),
+          statusCode: statusCode,
+          errorCode: errorCode,
           details: data['details'] as Map<String, dynamic>?,
         );
       }
       return ApiError(
-        message: 'Server error',
-        statusCode: response.statusCode ?? 0,
+        message: _friendlyMessage(null, statusCode, null),
+        statusCode: statusCode,
       );
     }
 
@@ -418,6 +423,34 @@ class ApiError {
   final int statusCode;
   final String? errorCode;
   final Map<String, dynamic>? details;
+
+  /// Turns machine failures into copy a person can act on. Known machine
+  /// codes and "not your fault" statuses (rate limits, server errors) get a
+  /// warm "we're on it" voice; everything else keeps the server's own
+  /// message, which is written for users.
+  static String _friendlyMessage(
+      String? errorCode, int statusCode, String? serverMessage) {
+    switch (errorCode) {
+      case 'ai_budget_exhausted':
+        return "Our AI kitchen is at full capacity right now — we're on it! "
+            'Please try again a little later.';
+      case 'email_unverified':
+        return 'Verify your email to unlock AI features — it takes 30 '
+            'seconds from the banner on your home screen.';
+      case 'at_capacity':
+        return "This feature is taking a quick breather — we're working on "
+            'it. Try again soon!';
+    }
+    if (statusCode == 429) {
+      return "We're getting a lot of love right now — please try again in "
+          'a minute.';
+    }
+    if (statusCode >= 500) {
+      return "Something hiccuped on our side — we're working on it. "
+          'Please try again.';
+    }
+    return serverMessage ?? 'An error occurred';
+  }
 
   @override
   String toString() => 'ApiError($statusCode): $message';
