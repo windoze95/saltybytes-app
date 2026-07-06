@@ -1,0 +1,38 @@
+SaltyBytes finds real recipes from across the web and gets out of your way. No ads, no pop-ups, no scrolling past somebody's life story to reach the ingredients.
+
+FIND REAL RECIPES
+
+Tell the agent what you're in the mood for — "cozy comfort food", "quick weeknight dinner", "something new with chicken" — and it searches the web for real recipes from real sites and creators. No AI-invented dishes.
+
+• Results start streaming in seconds, and the agent keeps digging while you browse
+• Roundup pages ("31 Best Casseroles") are opened up so the individual recipes inside come to you
+• Top Picks: a curated shortlist of the best matches, with the agent's reasoning for every pick
+• Tap any result for an instant preview — ingredients, steps, cook time — before you save it
+• Prefer classic search? Flip the agent toggle off
+
+IMPORT FROM ANYWHERE
+
+• Paste any recipe link — including TikTok, Instagram, Facebook, YouTube, and Pinterest videos
+• Snap photos of cookbook pages or import a PDF — pages with several recipes come in as separate recipes
+• Dictate a family recipe out loud, paste raw text, or type it in manually
+• Whatever the source, you get the same clean, structured recipe card
+
+MAKE EVERY RECIPE YOURS
+
+• Fork a recipe into a variant, or regenerate it with feedback — "make it dairy-free", "double the garlic"
+• Follow every variant in a branching recipe tree
+• Source measurements stay as written, with your units alongside: 2 cups (480 mL)
+
+COOK FOR THE WHOLE FAMILY
+
+• Build dietary profiles for each family member through a conversational AI interview
+• Recipes and search results are checked against everyone's allergies and restrictions, with clear flags
+• Hands-free cooking mode: say "next step" or ask "how much butter?" — no touching the screen with raw-chicken hands
+
+WORKS WITH YOUR AI ASSISTANT
+
+Add SaltyBytes as a connector in Claude or ChatGPT and search, preview, and save your recipes straight from a conversation.
+
+PRIVACY
+
+Sign-up needs only an email address. Your recipes stay yours: no ads, no data selling, no third-party analytics SDKs. AI processing happens only to fulfill your requests. Full policy: https://github.com/windoze95/saltybytes-app/blob/main/docs/privacy-policy.md
