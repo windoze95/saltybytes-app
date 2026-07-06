@@ -1,4 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- vosk_flutter_2 declares minSdk 30 in its manifest, but the underlying
+         vosk-android runs on far lower APIs and the app ships no wake-word
+         model, so the plugin never initializes at runtime. Override rather
+         than cutting every pre-Android-11 device. -->
+    <uses-sdk tools:overrideLibrary="org.vosk.vosk_flutter,org.vosk.vosk_flutter_2"/>
+
     <!-- Release builds need INTERNET explicitly (debug/profile get it from the
          tooling manifests for hot reload only). -->
     <uses-permission android:name="android.permission.INTERNET"/>
