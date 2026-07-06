@@ -39,4 +39,4 @@ COOK FOR THE WHOLE FAMILY
 
 PRIVACY
 
-Sign-up needs only an email address. Your recipes stay yours: no ads, no data selling, no third-party analytics SDKs. AI processing happens only to fulfill your requests. Full policy: https://github.com/windoze95/saltybytes-app/blob/main/docs/privacy-policy.md
+Sign-up needs only an email address. Your recipes stay yours: no ads, no data selling, no third-party analytics SDKs. AI processing happens only to fulfill your requests. Full policy: https://saltybytes.ai/privacy
