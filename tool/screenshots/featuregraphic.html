@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SaltyBytes feature graphic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Raleway:wght@600;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1024px; height: 500px; overflow: hidden;
+      display: flex; align-items: center; gap: 56px;
+      padding: 0 72px;
+      background:
+        radial-gradient(720px 480px at 88% -10%, rgba(108, 92, 231, 0.55), transparent 65%),
+        radial-gradient(560px 420px at 4% 110%, rgba(255, 59, 92, 0.42), transparent 60%),
+        linear-gradient(120deg, #1a1a2e 0%, #221b3f 100%);
+      font-family: 'Raleway', sans-serif;
+    }
+    .icon {
+      width: 232px; height: 232px; border-radius: 52px; flex: none;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+    }
+    h1 { font-size: 88px; line-height: 1; color: #fff; letter-spacing: -1px; }
+    h1 .salty { font-family: 'Pacifico', cursive; font-weight: 400; color: #ff3b5c; padding-right: 6px; }
+    h1 .bytes { font-weight: 800; }
+    p.tag { margin-top: 22px; font-size: 34px; font-weight: 600; color: rgba(255, 255, 255, 0.92); }
+    p.sub { margin-top: 12px; font-size: 22px; font-weight: 600; color: rgba(255, 255, 255, 0.55); }
+  </style>
+</head>
+<body>
+  <img class="icon" src="graphic-assets/icon.png" alt="">
+  <div>
+    <h1><span class="salty">Salty</span><span class="bytes">Bytes</span></h1>
+    <p class="tag">Real recipes, found for you.</p>
+    <p class="sub">No ads. No pop-ups. No life stories.</p>
+  </div>
+</body>
+</html>
