@@ -1,4 +1,4 @@
-SaltyBytes finds real recipes from across the web and gets out of your way. No ads, no pop-ups, no scrolling past somebody's life story to reach the ingredients.
+SaltyBytes finds real recipes from across the web — food blogs, the big recipe sites, and yes, TikTok: the dishes going viral on your feed are usually already in here, ready to open instantly. No ads, no pop-ups, no scrolling past somebody's life story to reach the ingredients.
 
 FIND REAL RECIPES
 
@@ -10,9 +10,13 @@ Tell the agent what you're in the mood for — "cozy comfort food", "quick weekn
 • Tap any result for an instant preview — ingredients, steps, cook time — before you save it
 • Prefer classic search? Flip the agent toggle off
 
-IMPORT FROM ANYWHERE
+SAW IT ON TIKTOK? IT'S PROBABLY ALREADY HERE
 
-• Paste any recipe link — including TikTok, Instagram, Facebook, YouTube, and Pinterest videos
+SaltyBytes pulls in trending video recipes automatically, and every video anyone imports joins the shared library too — so the dishes blowing up your feed are usually inside before you go looking. Paste the link and the full recipe opens instantly. Found something new? SaltyBytes watches the video for you and turns it into a clean, saved recipe card. No more screenshots, no more pausing at 0.5x speed to read the ingredients. Instagram Reels, YouTube, Facebook, and Pinterest videos work too.
+
+IMPORT FROM ANYWHERE ELSE
+
+• Paste any recipe link from the web
 • Snap photos of cookbook pages or import a PDF — pages with several recipes come in as separate recipes
 • Dictate a family recipe out loud, paste raw text, or type it in manually
 • Whatever the source, you get the same clean, structured recipe card
