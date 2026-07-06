@@ -1,6 +1,6 @@
 # SaltyBytes Privacy Policy
 
-_Last updated: July 5, 2026_
+_Last updated: July 6, 2026_
 
 SaltyBytes ("we", "our") is a recipe app operated by Julian Dice. This policy describes what
 data the SaltyBytes app and service handle, why, and the choices you have. The short version:
@@ -41,6 +41,13 @@ right to train their models on your data. Content is sent only to fulfill your r
 
 When you ask SaltyBytes to import or preview a URL, our servers (and our web-fetching
 subprocessor, Firecrawl) fetch that page on your behalf.
+
+## Public recipe pages
+
+When a recipe is extracted from a public web page, the cleaned-up extraction may be viewable at
+a saltybytes.ai link so it can be shared. These pages contain only content extracted from the
+public source (with attribution and a link back) — never your account details, notes, or
+personal edits.
 
 ## Sharing
 
