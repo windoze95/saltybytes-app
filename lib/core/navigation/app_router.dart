@@ -45,6 +45,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
   ref.onDispose(authListenable.dispose);
 
+  // A deep link that arrives while logged out would otherwise be dropped by
+  // the auth redirect (login always landed on /home). Stash it here and
+  // replay it once the user is authenticated.
+  String? pendingDeepLink;
+
   final router = GoRouter(
     initialLocation: '/splash',
     debugLogDiagnostics: true,
@@ -70,6 +75,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
 
       if (!isAuthenticated && !isAuthRoute) {
+        // Remember where a shared link was headed so login can resume it.
+        if (state.matchedLocation == '/preview') {
+          pendingDeepLink = state.uri.toString();
+        }
         return '/auth/login';
       }
 
@@ -78,7 +87,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         // first (skippable there; the home banner keeps nudging).
         final needsVerification =
             ref.read(authStateProvider.notifier).needsEmailVerification;
-        return needsVerification ? '/verify-email' : '/home';
+        if (needsVerification) return '/verify-email';
+        final resume = pendingDeepLink;
+        pendingDeepLink = null;
+        return resume ?? '/home';
       }
 
       return null;
@@ -144,6 +156,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final searchResult = state.extra as WebSearchResult;
           return SearchPreviewScreen(searchResult: searchResult);
+        },
+      ),
+
+      // Shared-link entry: saltybytes://app/preview?u=<source-url> (and the
+      // web's open-in-app button). Unlike /search/preview it needs no
+      // in-memory extra, so it works from a cold start.
+      GoRoute(
+        path: '/preview',
+        name: 'shared-preview',
+        redirect: (context, state) =>
+            (state.uri.queryParameters['u'] ?? '').isEmpty ? '/home' : null,
+        builder: (context, state) {
+          final url = state.uri.queryParameters['u']!;
+          return SearchPreviewScreen(
+            searchResult: WebSearchResult(
+              title: _sharedLinkTitle(url),
+              sourceUrl: url,
+            ),
+          );
         },
       ),
 
@@ -271,6 +302,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(router.dispose);
   return router;
 });
+
+/// AppBar title for a preview opened from a shared link, where all we have is
+/// the URL: the source site's domain reads better than the raw URL.
+String _sharedLinkTitle(String url) {
+  final host = Uri.tryParse(url)?.host ?? '';
+  if (host.isEmpty) return 'Shared recipe';
+  return host.startsWith('www.') ? host.substring(4) : host;
+}
 
 class _ScaffoldWithNavBar extends StatelessWidget {
   const _ScaffoldWithNavBar({required this.child});

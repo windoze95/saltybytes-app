@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/web_links.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers/allergen_provider.dart';
 import '../../core/providers/recipe_provider.dart';
@@ -41,6 +42,13 @@ class RecipeDetailScreen extends ConsumerWidget {
 /// Builds a plain-text rendition of a recipe for sharing.
 String buildRecipeShareText(Recipe recipe) {
   final buffer = StringBuffer()..writeln(recipe.title);
+
+  final sourceUrl = recipe.sourceUrl;
+  if (sourceUrl != null && sourceUrl.isNotEmpty) {
+    // Lead with the public web page: recipients without the app get the
+    // recipe in the browser plus the open-in-app banner.
+    buffer.writeln(WebLinks.recipePage(sourceUrl));
+  }
 
   if (recipe.cookTimeMinutes != null) {
     buffer.writeln('Cook time: ${recipe.cookTimeMinutes} min');

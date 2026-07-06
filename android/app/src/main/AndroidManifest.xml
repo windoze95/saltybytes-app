@@ -37,6 +37,19 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Shared-recipe deep links: saltybytes://app/preview?u=<url>
+                 (the public site's open-in-app button emits these). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="saltybytes"/>
+            </intent-filter>
+            <!-- Route deep links through Flutter's router (go_router) instead
+                 of only launching the app. -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="true"/>
         </activity>
         <!-- image_cropper's crop screen (uCrop) must be declared by the app. -->
         <activity
