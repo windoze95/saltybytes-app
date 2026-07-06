@@ -14,6 +14,10 @@ SAW IT ON TIKTOK? IT'S PROBABLY ALREADY HERE
 
 SaltyBytes pulls in trending video recipes automatically, and every video anyone imports joins the shared library too — so the dishes blowing up your feed are usually inside before you go looking. Paste the link and the full recipe opens instantly. Found something new? SaltyBytes watches the video for you and turns it into a clean, saved recipe card. No more screenshots, no more pausing at 0.5x speed to read the ingredients. Instagram Reels, YouTube, Facebook, and Pinterest videos work too.
 
+YOUR AI ASSISTANT CAN USE IT FOR YOU
+
+Add SaltyBytes as a connector in Claude or ChatGPT and your assistant can actually operate the app: ask for dinner ideas and it searches SaltyBytes, shows recipe cards right in the chat, and saves the keepers to your collection. Next time you open the app, they're waiting.
+
 IMPORT FROM ANYWHERE ELSE
 
 • Paste any recipe link from the web
@@ -32,10 +36,6 @@ COOK FOR THE WHOLE FAMILY
 • Build dietary profiles for each family member through a conversational AI interview
 • Recipes and search results are checked against everyone's allergies and restrictions, with clear flags
 • Hands-free cooking mode: say "next step" or ask "how much butter?" — no touching the screen with raw-chicken hands
-
-WORKS WITH YOUR AI ASSISTANT
-
-Add SaltyBytes as a connector in Claude or ChatGPT and search, preview, and save your recipes straight from a conversation.
 
 PRIVACY
 
