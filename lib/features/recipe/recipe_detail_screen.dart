@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/web_links.dart';
+import '../../core/navigation/smart_back.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers/allergen_provider.dart';
 import '../../core/providers/recipe_provider.dart';
@@ -143,6 +144,10 @@ class _RecipeDetailBody extends ConsumerWidget {
           SliverAppBar(
             expandedHeight: 280,
             pinned: true,
+            // Explicit leading: importing from a deep-linked preview lands
+            // here with nothing underneath (pushReplacement on a bare stack),
+            // and the implied back button would vanish.
+            leading: smartBackLeading(context),
             flexibleSpace: FlexibleSpaceBar(
               background: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
                   ? CachedNetworkImage(

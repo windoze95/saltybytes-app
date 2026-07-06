@@ -139,6 +139,27 @@ void main() {
     expect(find.byType(SearchPreviewScreen), findsNothing);
   });
 
+  testWidgets(
+      'a deep-linked preview is never a dead end: the back button goes home '
+      'when there is nothing to pop', (tester) async {
+    final (container, notifier) = buildHarness();
+    await pumpApp(tester, container);
+    notifier._initial.complete(AuthStatus.authenticated);
+    await settleRoute(tester);
+
+    container.read(routerProvider).go('/preview?u=$encoded');
+    await settleRoute(tester);
+    expect(find.byType(SearchPreviewScreen), findsOneWidget);
+
+    // The whole stack is this one screen — the explicit leading must exist
+    // and must escape to home rather than throwing on an empty stack.
+    await tester.tap(find.byType(BackButton));
+    await settleRoute(tester);
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(SearchPreviewScreen), findsNothing);
+  });
+
   testWidgets('universal link /r?u= opens the preview screen', (tester) async {
     final (container, notifier) = buildHarness();
     await pumpApp(tester, container);

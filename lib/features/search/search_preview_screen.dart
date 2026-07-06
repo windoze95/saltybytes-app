@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/navigation/smart_back.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers/recipe_provider.dart';
 import '../../core/providers/search_provider.dart';
@@ -42,7 +43,14 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
         final targetIndex = ref
             .read(searchProvider.notifier)
             .replaceWithExpanded(e.sourceResult, e.resolution);
-        context.pop<int?>(targetIndex);
+        if (context.canPop()) {
+          context.pop<int?>(targetIndex);
+        } else {
+          // Deep-linked collection URL: there is no search screen below to
+          // receive the pop result (and pop() on a bare stack throws). The
+          // provider already holds the expanded cards, so show them there.
+          context.go('/search');
+        }
       }
       return Future.error('multi-recipe redirect');
     }
@@ -88,6 +96,9 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // Explicit leading: opened from a shared/universal link this screen
+        // is the whole stack, and the implied back button would vanish.
+        leading: smartBackLeading(context),
         title: Text(
           widget.searchResult.title,
           maxLines: 1,
