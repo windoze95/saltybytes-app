@@ -12,7 +12,7 @@ Tell the agent what you're in the mood for — "cozy comfort food", "quick weekn
 
 SAW IT ON TIKTOK? IT'S PROBABLY ALREADY HERE
 
-Every video recipe ever imported joins SaltyBytes' shared library, so the dishes blowing up your feed are usually already inside — paste the link and the full recipe opens instantly. First one to find it? SaltyBytes watches the video for you and turns it into a clean, saved recipe card. No more screenshots, no more pausing at 0.5x speed to read the ingredients. Instagram Reels, YouTube, Facebook, and Pinterest videos work too.
+SaltyBytes pulls in trending video recipes automatically, and every video anyone imports joins the shared library too — so the dishes blowing up your feed are usually inside before you go looking. Paste the link and the full recipe opens instantly. Found something new? SaltyBytes watches the video for you and turns it into a clean, saved recipe card. No more screenshots, no more pausing at 0.5x speed to read the ingredients. Instagram Reels, YouTube, Facebook, and Pinterest videos work too.
 
 IMPORT FROM ANYWHERE ELSE
 
