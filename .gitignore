@@ -47,3 +47,7 @@ app.*.map.json
 # Auto-generated / machine-specific
 android/local.properties
 android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# Screenshot tooling
+tool/screenshots/node_modules/
+tool/screenshots/out/

@@ -1,6 +1,6 @@
 # SaltyBytes
 
-iOS client for [SaltyBytes](https://saltybytes.ai) — a recipe app that gets out of your way. Search the web for recipes without the ads and life stories, import from any source, generate with AI, and cook hands-free with voice-guided cooking mode.
+Mobile client (iOS + Android) for [SaltyBytes](https://saltybytes.ai) — a recipe app that gets out of your way. An agent finds real recipes from across the web without the ads and life stories, import from any source, and cook hands-free with voice-guided cooking mode.
 
 Built with Flutter, Riverpod, and a deep hatred for recipe blogs.
 
@@ -8,11 +8,11 @@ Built with Flutter, Riverpod, and a deep hatred for recipe blogs.
 
 ## Features
 
-**Recipe Search & Discovery** — Search the web for recipes and get clean, card-based results. Tap any result for an instant AI-extracted preview — ingredients, steps, cook time — before committing to an import. No ads, no SEO spam, no scrolling past someone's vacation story.
+**Agent Recipe Search** — Tell the agent what you're in the mood for and it finds real recipes from across the web: results stream in live, roundup collections get dug into and their individual recipes pulled out, and a curated Top Picks section lands with the agent's reasoning. Tap any result for an instant AI-extracted preview — ingredients, steps, cook time — before committing to an import. No ads, no SEO spam, no scrolling past someone's vacation story.
 
-**Multi-Source Import** — Import recipes from URLs, photos (point your camera at a cookbook), freeform text, or manual entry. The app extracts structured recipe data from anything you throw at it.
+**Multi-Source Import** — Import recipes from URLs (including TikTok, Instagram, Facebook, YouTube, and Pinterest video links), photos (point your camera at a cookbook), PDFs, voice, freeform text, or manual entry. The app extracts structured recipe data from anything you throw at it.
 
-**AI Recipe Generation** — Can't find what you're looking for? Describe what you want in a chat and Claude generates a full recipe. Fork existing recipes into new variants, regenerate with feedback, and explore branching version history through an interactive recipe tree.
+**Recipe Tree** — Fork existing recipes into new variants, regenerate with feedback, and explore branching version history through an interactive recipe tree.
 
 **Family Allergen Safety** — AI-powered ingredient analysis flags common allergens (dairy, nuts, shellfish, wheat, soy, sesame, etc.) with confidence scoring. Cross-reference any recipe against your family members' dietary profiles before cooking.
 
@@ -120,9 +120,16 @@ test/
 
 CI/CD runs via GitHub Actions on push to `main`:
 
-- Flutter build → IPA → Fastlane → TestFlight
+- **iOS**: Flutter build → IPA → Fastlane → TestFlight (`testflight.yml`)
+- **Android**: Flutter build → signed AAB → Fastlane → Play closed testing (`playstore.yml`;
+  the AAB is also attached to every run as an artifact)
+- **Store listings**: copy/graphics/screenshots live in `android/fastlane/` + `ios/fastlane/`
+  and sync to both consoles on merge (`storelisting.yml`)
+- **App Store submission**: manual dispatch (`appstore-release.yml`)
 
-Apple signing credentials and API keys are injected via GitHub Secrets.
+Signing credentials and API keys are injected via GitHub Secrets. The full release playbook —
+console setup, data-safety answers, screenshot regeneration — is in
+[docs/store-release.md](docs/store-release.md).
 
 ## Tech Stack
 

@@ -1,0 +1,11 @@
+{
+  "name": "saltybytes-screenshots",
+  "private": true,
+  "description": "Store-screenshot runner: drives the Flutter web screenshot harness at exact store pixel sizes.",
+  "scripts": {
+    "shoot": "node shoot.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

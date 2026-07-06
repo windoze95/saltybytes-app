@@ -21,4 +21,99 @@ platform :ios do
       wait_processing_timeout_duration: 1800,
     )
   end
+
+  desc "Push App Store metadata + screenshots (no binary)"
+  lane :metadata do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_B64"],
+      is_key_content_base64: true,
+      in_house: false,
+    )
+
+    # deliver unconditionally fetches the App Store review-detail record while
+    # syncing metadata, and an app that has never had a review contact set has
+    # no such record - the API returns data:null, which fastlane surfaces as a
+    # hard "No data" crash (fastlane#20538). Creating the record via the API
+    # requires a contact phone we deliberately don't commit, so skip the
+    # review-attachment step until the record exists (one-time console step);
+    # once it does, the original behavior resumes.
+    require 'deliver'
+    unless Deliver::UploadMetadata.method_defined?(:saltybytes_orig_review_attachment_file)
+      Deliver::UploadMetadata.class_eval do
+        alias_method :saltybytes_orig_review_attachment_file, :review_attachment_file
+        def review_attachment_file(version)
+          saltybytes_orig_review_attachment_file(version)
+        rescue => e
+          raise unless e.message.to_s.include?("No data")
+          FastlaneCore::UI.important("No App Store review-detail record exists yet (set the review contact, incl. phone, once in App Store Connect); skipping review-attachment handling.")
+        end
+      end
+    end
+
+    # The ASC API intermittently returns empty bodies that spaceship surfaces
+    # as "No data". Everything deliver does here is an idempotent PATCH/upload,
+    # so retrying the whole call is safe.
+    attempts = 0
+    begin
+      attempts += 1
+      deliver(
+        api_key: api_key,
+        app_identifier: "codes.julian.saltybytes",
+        app_version: ENV["APP_VERSION"],
+        metadata_path: "./fastlane/metadata",
+        screenshots_path: "./fastlane/screenshots",
+        skip_binary_upload: true,
+        overwrite_screenshots: true,
+        run_precheck_before_submit: false,
+        force: true,
+      )
+    rescue => e
+      if attempts < 3
+        UI.important("deliver attempt #{attempts} failed (#{e.message.to_s.lines.first&.strip}); retrying in 30s")
+        sleep 30
+        retry
+      end
+      raise
+    end
+  end
+
+  desc "Submit the latest TestFlight build of APP_VERSION for App Store review"
+  lane :release do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_B64"],
+      is_key_content_base64: true,
+      in_house: false,
+    )
+
+    version = ENV["APP_VERSION"]
+    build = latest_testflight_build_number(
+      api_key: api_key,
+      app_identifier: "codes.julian.saltybytes",
+      version: version,
+      initial_build_number: 0,
+    )
+    UI.user_error!("No TestFlight build found for #{version}") if build.to_i <= 0
+
+    deliver(
+      api_key: api_key,
+      app_identifier: "codes.julian.saltybytes",
+      app_version: version,
+      build_number: build.to_s,
+      submit_for_review: true,
+      automatic_release: false,
+      phased_release: true,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      run_precheck_before_submit: false,
+      force: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+      },
+    )
+  end
 end

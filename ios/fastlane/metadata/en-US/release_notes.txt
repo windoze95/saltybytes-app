@@ -1,0 +1,1 @@
+First App Store release. Agent search that finds real recipes across the web, instant previews, import from links, photos, PDFs, voice, and video links (TikTok, Instagram, YouTube, and more), recipe forking with a branching history tree, family allergen safety, and hands-free cooking mode.
