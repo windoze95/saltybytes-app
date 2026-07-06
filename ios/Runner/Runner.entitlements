@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal links: https://saltybytes.ai/r/... opens the app directly.
+	     The site serves /.well-known/apple-app-site-association scoping this
+	     to /r and /r/*. Requires the Associated Domains capability on the
+	     App ID (enabled 2026-07-06) and a provisioning profile that grants it. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:saltybytes.ai</string>
+		<string>applinks:www.saltybytes.ai</string>
+	</array>
+</dict>
+</plist>
