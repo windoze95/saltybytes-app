@@ -44,6 +44,11 @@ class ApiEndpoints {
   // Recipe Preview
   static const String previewFromUrl = '$apiVersion/recipes/preview/url';
 
+  /// Resolves a public recipe-page id (`saltybytes.ai/r/<id>`, arriving via
+  /// universal link) to its source URL for the normal preview flow.
+  static String canonicalSource(String id) =>
+      '$apiVersion/recipes/canonical/$id/source';
+
   // Recipe Finder (guided, SSE-streamed real-recipe finder)
   static const String find = '$apiVersion/recipes/find';
 

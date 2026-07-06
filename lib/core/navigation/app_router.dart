@@ -25,6 +25,7 @@ import '../../features/recipe/recipe_fork_screen.dart';
 import '../../features/search/history_screen.dart';
 import '../../features/search/search_preview_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/search/shared_link_resolver_screen.dart';
 import '../providers/search_provider.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/subscription_screen.dart';
@@ -76,7 +77,10 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!isAuthenticated && !isAuthRoute) {
         // Remember where a shared link was headed so login can resume it.
-        if (state.matchedLocation == '/preview') {
+        final location = state.matchedLocation;
+        if (location == '/preview' ||
+            location == '/r' ||
+            location.startsWith('/r/')) {
           pendingDeepLink = state.uri.toString();
         }
         return '/auth/login';
@@ -165,17 +169,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/preview',
         name: 'shared-preview',
-        redirect: (context, state) =>
-            (state.uri.queryParameters['u'] ?? '').isEmpty ? '/home' : null,
-        builder: (context, state) {
-          final url = state.uri.queryParameters['u']!;
-          return SearchPreviewScreen(
-            searchResult: WebSearchResult(
-              title: _sharedLinkTitle(url),
-              sourceUrl: url,
-            ),
-          );
+        redirect: _requireSharedURL,
+        builder: (context, state) => _sharedPreview(state),
+      ),
+
+      // Universal links to the public site. /r?u=<source-url> mirrors the
+      // site's share-link shape; /r/:id carries only the extraction-cache id
+      // and resolves it through the API first.
+      GoRoute(
+        path: '/r',
+        name: 'shared-web-link',
+        redirect: (context, state) {
+          if (state.uri.queryParameters['u'] != null || state.uri.path != '/r') {
+            return null;
+          }
+          return '/home';
         },
+        builder: (context, state) => _sharedPreview(state),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'shared-web-recipe',
+            builder: (context, state) => SharedLinkResolverScreen(
+              canonicalId: state.pathParameters['id']!,
+            ),
+          ),
+        ],
       ),
 
       // Agent search history (outside shell for full-screen)
@@ -302,6 +321,25 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(router.dispose);
   return router;
 });
+
+/// Redirect guard for shared-link routes: without a ?u= there is nothing to
+/// preview, so fall through to home.
+String? _requireSharedURL(BuildContext context, GoRouterState state) =>
+    (state.uri.queryParameters['u'] ?? '').isEmpty ? '/home' : null;
+
+/// Builds the preview screen for a shared link carrying `?u=<source-url>`.
+/// Tolerates a missing parameter (the redirect guard normally prevents it,
+/// but the builder can re-run mid-transition without the query).
+Widget _sharedPreview(GoRouterState state) {
+  final url = state.uri.queryParameters['u'] ?? '';
+  if (url.isEmpty) return const SizedBox.shrink();
+  return SearchPreviewScreen(
+    searchResult: WebSearchResult(
+      title: _sharedLinkTitle(url),
+      sourceUrl: url,
+    ),
+  );
+}
 
 /// AppBar title for a preview opened from a shared link, where all we have is
 /// the URL: the source site's domain reads better than the raw URL.

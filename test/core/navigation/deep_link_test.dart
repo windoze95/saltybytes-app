@@ -139,6 +139,51 @@ void main() {
     expect(find.byType(SearchPreviewScreen), findsNothing);
   });
 
+  testWidgets('universal link /r?u= opens the preview screen', (tester) async {
+    final (container, notifier) = buildHarness();
+    await pumpApp(tester, container);
+    notifier._initial.complete(AuthStatus.authenticated);
+    await settleRoute(tester);
+
+    container.read(routerProvider).go('/r?u=$encoded');
+    await settleRoute(tester);
+
+    expect(find.byType(SearchPreviewScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      'universal link /r/<id> resolves the canonical id to its source URL '
+      'and lands on the preview screen', (tester) async {
+    final (container, notifier) = buildHarness();
+    final api = container.read(apiClientProvider) as MockApiClient;
+    when(() => api.get(ApiEndpoints.canonicalSource('42')))
+        .thenAnswer((_) async => fakeResponse<dynamic>({
+              'title': 'Bang Bang Salmon',
+              'source_url': sourceUrl,
+            }));
+    await pumpApp(tester, container);
+    notifier._initial.complete(AuthStatus.authenticated);
+    await settleRoute(tester);
+
+    container.read(routerProvider).go('/r/42');
+    await settleRoute(tester);
+    await settleRoute(tester); // resolver replaces itself with /preview
+
+    expect(find.byType(SearchPreviewScreen), findsOneWidget);
+  });
+
+  testWidgets('bare /r without a u parameter lands on home', (tester) async {
+    final (container, notifier) = buildHarness();
+    await pumpApp(tester, container);
+    notifier._initial.complete(AuthStatus.authenticated);
+    await settleRoute(tester);
+
+    container.read(routerProvider).go('/r');
+    await settleRoute(tester);
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
   testWidgets(
       'a deep link that arrives signed out is replayed after login instead '
       'of being dropped on /home', (tester) async {

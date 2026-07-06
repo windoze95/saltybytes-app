@@ -45,6 +45,18 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="saltybytes"/>
             </intent-filter>
+            <!-- App Links: https://saltybytes.ai/r/... opens the app directly.
+                 Verified against /.well-known/assetlinks.json on the site;
+                 only the /r recipe paths are claimed. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="saltybytes.ai"/>
+                <data android:scheme="https" android:host="www.saltybytes.ai"/>
+                <data android:path="/r"/>
+                <data android:pathPrefix="/r/"/>
+            </intent-filter>
             <!-- Route deep links through Flutter's router (go_router) instead
                  of only launching the app. -->
             <meta-data
