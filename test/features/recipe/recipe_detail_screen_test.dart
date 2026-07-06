@@ -154,6 +154,28 @@ void main() {
     });
 
     test(
+        'buildRecipeShareText leads with the public web page for recipes '
+        'with a source, and omits it otherwise', () {
+      final withSource = buildRecipeShareText(Recipe.fromJson(testRecipeJson(
+        sourceUrl: 'https://example.com/pizza?ref=1',
+      )));
+      expect(
+        withSource,
+        contains(
+            'https://saltybytes.ai/r?u=https%3A%2F%2Fexample.com%2Fpizza%3Fref%3D1'),
+      );
+      // The web link sits right under the title, before the details.
+      expect(
+        withSource.indexOf('https://saltybytes.ai/r?u='),
+        lessThan(withSource.indexOf('Cook time')),
+      );
+
+      final noSource =
+          buildRecipeShareText(Recipe.fromJson(testRecipeJson()..remove('sourceUrl')));
+      expect(noSource, isNot(contains('saltybytes.ai')));
+    });
+
+    test(
         'buildRecipeShareText matches the in-app ingredient formatting: '
         'no "0" for unquantified amounts, cooking fractions for partials', () {
       final recipe = Recipe.fromJson(testRecipeJson(

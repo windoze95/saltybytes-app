@@ -49,6 +49,24 @@
 	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Shared-recipe deep links: saltybytes://app/preview?u=<url>
+	     (the public site's open-in-app button emits these). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>codes.julian.saltybytes</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>saltybytes</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Route deep links through Flutter's router (go_router). -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SaltyBytes uses the microphone for voice commands during cooking mode, so you can navigate recipes hands-free.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
