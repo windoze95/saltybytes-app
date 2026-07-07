@@ -37,6 +37,54 @@ class TierLimits {
   }
 }
 
+/// The native store subscription backing the current tier, when it came from
+/// an in-app purchase. Mirrors the additive snake_case `store` object the API
+/// returns alongside the (PascalCase) subscription. Null for free accounts and
+/// tiers granted outside the stores (promo/admin).
+class StoreInfo {
+  const StoreInfo({
+    required this.platform,
+    required this.productId,
+    this.status,
+    this.autoRenew,
+    this.expiresAt,
+    this.environment,
+  });
+
+  /// 'apple' or 'google'.
+  final String platform;
+  final String productId;
+  final String? status;
+  final bool? autoRenew;
+  final DateTime? expiresAt;
+
+  /// 'Production' / 'Sandbox' (Apple) or 'Production' / 'Test' (Google).
+  final String? environment;
+
+  bool get isApple => platform == 'apple';
+  bool get isGoogle => platform == 'google';
+
+  factory StoreInfo.fromJson(Map<String, dynamic> json) {
+    bool? toBool(dynamic v) {
+      if (v is bool) return v;
+      if (v is num) return v != 0;
+      if (v is String) return v.toLowerCase() == 'true';
+      return null;
+    }
+
+    final expiresRaw = json['expires_at'];
+    return StoreInfo(
+      platform: (json['platform'] ?? '').toString(),
+      productId: (json['product_id'] ?? '').toString(),
+      status: json['status']?.toString(),
+      autoRenew: toBool(json['auto_renew']),
+      expiresAt:
+          expiresRaw == null ? null : DateTime.tryParse(expiresRaw.toString()),
+      environment: json['environment']?.toString(),
+    );
+  }
+}
+
 class SubscriptionInfo {
   const SubscriptionInfo({
     this.tier = 'free',
@@ -47,6 +95,8 @@ class SubscriptionInfo {
     this.aiImportsUsed = 0,
     this.monthlyResetAt,
     this.limits = const TierLimits(),
+    this.store,
+    this.accountToken,
   });
 
   final String tier;
@@ -58,9 +108,20 @@ class SubscriptionInfo {
   final DateTime? monthlyResetAt;
   final TierLimits limits;
 
+  /// The backing store subscription, when the tier came from a native
+  /// purchase. Drives the "Manage Subscription" affordance.
+  final StoreInfo? store;
+
+  /// Opaque per-account UUID the stores use to bind a purchase to this
+  /// SaltyBytes account (passed as `applicationUserName` on every purchase).
+  final String? accountToken;
+
   bool get isPremium => tier == 'premium';
   bool get isPlus => tier == 'plus';
   bool get isUnlimited => tier == 'unlimited';
+
+  /// True when the current tier is backed by a native store subscription.
+  bool get hasStoreSubscription => store != null;
 
   /// Rank for "can this tier still upgrade" decisions. Unknown tiers rank
   /// highest so the screen never offers a downgrade to something it doesn't
@@ -95,9 +156,15 @@ class SubscriptionInfo {
     }
   }
 
+  /// [storeJson] and [accountToken] are envelope-level siblings of the
+  /// subscription object (`{"subscription": {...}, "store": {...},
+  /// "account_token": "..."}`); they are also read defensively from [json]
+  /// itself so callers that inline them still parse.
   factory SubscriptionInfo.fromJson(
     Map<String, dynamic> json, {
     Map<String, dynamic>? limitsJson,
+    Map<String, dynamic>? storeJson,
+    String? accountToken,
   }) {
     dynamic pick(List<String> keys) {
       for (final key in keys) {
@@ -106,6 +173,13 @@ class SubscriptionInfo {
       }
       return null;
     }
+
+    final storeRaw = storeJson ??
+        (json['store'] is Map<String, dynamic>
+            ? json['store'] as Map<String, dynamic>
+            : null);
+    final resolvedAccountToken = accountToken ??
+        pick(['account_token', 'AccountToken', 'accountToken'])?.toString();
 
     int toInt(dynamic value) {
       if (value is int) return value;
@@ -149,6 +223,11 @@ class SubscriptionInfo {
       limits: limitsJson == null
           ? const TierLimits()
           : TierLimits.fromJson(limitsJson),
+      store: storeRaw != null && (storeRaw['platform'] ?? '') != ''
+          ? StoreInfo.fromJson(storeRaw)
+          : null,
+      accountToken:
+          (resolvedAccountToken?.isEmpty ?? true) ? null : resolvedAccountToken,
     );
   }
 }
