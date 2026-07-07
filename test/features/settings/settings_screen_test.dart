@@ -43,6 +43,12 @@ void main() {
         .thenAnswer((_) async => fakeResponse<dynamic>({
               'user': testUserJson(),
             }));
+    // The subscription card now reads the live tier.
+    when(() => apiClient.get(ApiEndpoints.subscription))
+        .thenAnswer((_) async => fakeResponse<dynamic>({
+              'subscription': testSubscriptionJson(tier: 'free'),
+              'limits': const {'ai_generations': 10},
+            }));
     when(() => apiClient.put(
           ApiEndpoints.userSettings,
           data: any(named: 'data'),
@@ -103,6 +109,35 @@ void main() {
       final seg = tester
           .widget<SegmentedButton<String>>(find.byType(SegmentedButton<String>));
       expect(seg.selected, {'metric'});
+    });
+  });
+
+  group('SettingsScreen subscription', () {
+    testWidgets('shows the live free tier with an Upgrade button',
+        (tester) async {
+      await pumpScreen(tester);
+      // The subscription card mounts after the user loads, then fetches the
+      // tier — let that settle.
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Free Tier'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Upgrade'), findsOneWidget);
+    });
+
+    testWidgets('shows the paid tier name with a Manage button', (tester) async {
+      when(() => apiClient.get(ApiEndpoints.subscription))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'subscription': testSubscriptionJson(tier: 'premium'),
+                'limits': const {'ai_generations': 30},
+              }));
+
+      await pumpScreen(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Premium Tier'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Manage'), findsOneWidget);
     });
   });
 

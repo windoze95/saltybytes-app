@@ -1,12 +1,15 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:in_app_purchase/in_app_purchase.dart' show PurchaseStatus;
 import 'package:mocktail/mocktail.dart';
 
+import 'package:saltybytes_app/core/iap/iap_products.dart';
+import 'package:saltybytes_app/core/iap/purchase_controller.dart';
+import 'package:saltybytes_app/core/iap/store_platform.dart';
 import 'package:saltybytes_app/core/network/api_client.dart';
 import 'package:saltybytes_app/core/network/api_endpoints.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saltybytes_app/core/providers/auth_provider.dart';
 import 'package:saltybytes_app/core/providers/subscription_provider.dart';
 import 'package:saltybytes_app/features/settings/subscription_screen.dart';
@@ -22,12 +25,51 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-/// The upgrade card sits below the fold at the default 800x600 test
-/// viewport; use a taller surface so the whole ListView builds.
+/// The plan cards sit below the fold at the default 800x600 test viewport; use
+/// a taller surface so the whole ListView builds.
 void _useTallViewport(WidgetTester tester) {
-  tester.view.physicalSize = const Size(800, 2200);
+  tester.view.physicalSize = const Size(800, 3000);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+}
+
+/// Products the paywall renders localized prices from.
+StoreProducts _fakeStoreProducts() => StoreProducts(
+      available: true,
+      byId: {
+        IapProducts.plusMonthly: fakeProductDetails(
+          id: IapProducts.plusMonthly,
+          price: r'$1.49',
+          rawPrice: 1.49,
+        ),
+        IapProducts.premiumMonthly: fakeProductDetails(
+          id: IapProducts.premiumMonthly,
+          price: r'$5.49',
+          rawPrice: 5.49,
+        ),
+        IapProducts.premiumYearly: fakeProductDetails(
+          id: IapProducts.premiumYearly,
+          price: r'$39.99',
+          rawPrice: 39.99,
+        ),
+      },
+    );
+
+List<Override> _overrides({
+  required MockApiClient apiClient,
+  FakeIapGateway? gateway,
+  StorePlatform platform =
+      const StorePlatform(kind: StoreKind.apple, canPurchase: true),
+  StoreProducts? products,
+}) {
+  return [
+    apiClientProvider.overrideWithValue(apiClient),
+    authStateProvider.overrideWith(FakeAuthNotifier.new),
+    iapGatewayProvider.overrideWithValue(gateway ?? FakeIapGateway()),
+    storePlatformProvider.overrideWithValue(platform),
+    if (products != null)
+      storeProductsProvider.overrideWith((ref) async => products),
+  ];
 }
 
 void main() {
@@ -66,9 +108,51 @@ void main() {
       expect(sub.webSearchesUsed, 2);
       expect(sub.aiGenerationsUsed, 3);
     });
+
+    test('parses the additive store + account_token envelope siblings', () {
+      final sub = SubscriptionInfo.fromJson(
+        testSubscriptionJson(tier: 'premium'),
+        storeJson: testStoreJson(
+          platform: 'apple',
+          productId: IapProducts.premiumMonthly,
+          autoRenew: true,
+        ),
+        accountToken: 'acct-xyz',
+      );
+
+      expect(sub.hasStoreSubscription, isTrue);
+      expect(sub.store!.isApple, isTrue);
+      expect(sub.store!.productId, IapProducts.premiumMonthly);
+      expect(sub.store!.autoRenew, isTrue);
+      expect(sub.store!.expiresAt, isNotNull);
+      expect(sub.accountToken, 'acct-xyz');
+    });
+
+    test('reads store + account_token inlined in the subscription object', () {
+      final sub = SubscriptionInfo.fromJson(testSubscriptionJson(
+        tier: 'premium',
+        store: testStoreJson(
+          platform: 'google',
+          productId: IapProducts.premiumYearly,
+          autoRenew: false,
+        ),
+        accountToken: 'acct-embedded',
+      ));
+
+      expect(sub.store!.isGoogle, isTrue);
+      expect(sub.store!.autoRenew, isFalse);
+      expect(sub.accountToken, 'acct-embedded');
+    });
+
+    test('tolerates a missing store / account_token (free accounts)', () {
+      final sub = SubscriptionInfo.fromJson(testSubscriptionJson(tier: 'free'));
+      expect(sub.hasStoreSubscription, isFalse);
+      expect(sub.store, isNull);
+      expect(sub.accountToken, isNull);
+    });
   });
 
-  group('subscriptionProvider auth scoping', () {
+  group('subscriptionProvider', () {
     test('returns defaults without fetching when signed out, so a previous '
         "user's tier/usage cannot leak into the next session", () async {
       final apiClient = MockApiClient();
@@ -86,6 +170,31 @@ void main() {
       expect(sub.allergenAnalysesUsed, 0);
       verifyNever(() => apiClient.get(ApiEndpoints.subscription));
     });
+
+    test('threads store + account_token from the GET envelope', () async {
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.subscription))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'subscription': testSubscriptionJson(tier: 'premium'),
+                'limits': const {'ai_generations': 30},
+                'store': testStoreJson(
+                  platform: 'apple',
+                  productId: IapProducts.premiumMonthly,
+                ),
+                'account_token': 'acct-999',
+              }));
+      final container = ProviderContainer(overrides: [
+        apiClientProvider.overrideWithValue(apiClient),
+        authStateProvider.overrideWith(FakeAuthNotifier.new),
+      ]);
+      addTearDown(container.dispose);
+
+      await container.read(authStateProvider.future);
+      final sub = await container.read(subscriptionProvider.future);
+
+      expect(sub.store!.productId, IapProducts.premiumMonthly);
+      expect(sub.accountToken, 'acct-999');
+    });
   });
 
   group('SubscriptionScreen', () {
@@ -101,7 +210,7 @@ void main() {
                   webSearchesUsed: 7,
                   aiGenerationsUsed: 9,
                 ),
-                'limits': {
+                'limits': const {
                   'ai_generations': 10,
                   'web_searches': 10,
                   'allergen_analyses': 3,
@@ -112,12 +221,7 @@ void main() {
 
       await tester.pumpWidget(testAppScaffold(
         const SubscriptionScreen(),
-        overrides: [
-          apiClientProvider.overrideWithValue(apiClient),
-          // subscriptionProvider is auth-scoped; report a signed-in user so
-          // it actually fetches.
-          authStateProvider.overrideWith(FakeAuthNotifier.new),
-        ],
+        overrides: _overrides(apiClient: apiClient, products: _fakeStoreProducts()),
       ));
       await _settle(tester);
 
@@ -125,118 +229,187 @@ void main() {
       expect(find.text('2 / 3'), findsOneWidget); // allergen analyses
       expect(find.text('7 / 10'), findsOneWidget); // agent searches
       expect(find.text('9 / 10'), findsOneWidget); // AI generations
-      // Free accounts see both upgrade paths — and never the hidden tier.
       expect(find.text('Get Plus'), findsOneWidget);
       expect(find.text('Upgrade to Premium'), findsOneWidget);
       expect(find.textContaining('Unlimited Plan'), findsNothing);
     });
 
-    testWidgets('premium tier shows its real caps and no upgrade cards',
-        (tester) async {
-      final apiClient = MockApiClient();
-      when(() => apiClient.get(ApiEndpoints.subscription))
-          .thenAnswer((_) async => fakeResponse<dynamic>({
-                'subscription': testSubscriptionJson(
-                  tier: 'premium',
-                  aiGenerationsUsed: 12,
-                ),
-                'limits': {
-                  'ai_generations': 30,
-                  'web_searches': 50,
-                  'allergen_analyses': 12,
-                  'video_imports': 20,
-                  'ai_imports': 60,
-                },
-              }));
-
-      await tester.pumpWidget(testAppScaffold(
-        const SubscriptionScreen(),
-        overrides: [
-          apiClientProvider.overrideWithValue(apiClient),
-          authStateProvider.overrideWith(FakeAuthNotifier.new),
-        ],
-      ));
-      await _settle(tester);
-
-      expect(find.text('Premium Plan'), findsOneWidget);
-      expect(find.text('12 / 30'), findsOneWidget); // premium is capped now
-      expect(find.text('Upgrade to Premium'), findsNothing);
-      expect(find.text('Get Plus'), findsNothing);
-    });
-
-    testWidgets('the hidden unlimited tier renders uncapped with no upgrade '
-        'cards', (tester) async {
-      final apiClient = MockApiClient();
-      when(() => apiClient.get(ApiEndpoints.subscription))
-          .thenAnswer((_) async => fakeResponse<dynamic>({
-                'subscription': testSubscriptionJson(
-                  tier: 'unlimited',
-                  aiGenerationsUsed: 500,
-                ),
-                'limits': {
-                  'ai_generations': -1,
-                  'web_searches': -1,
-                  'allergen_analyses': -1,
-                  'video_imports': -1,
-                  'ai_imports': -1,
-                },
-              }));
-
-      await tester.pumpWidget(testAppScaffold(
-        const SubscriptionScreen(),
-        overrides: [
-          apiClientProvider.overrideWithValue(apiClient),
-          authStateProvider.overrideWith(FakeAuthNotifier.new),
-        ],
-      ));
-      await _settle(tester);
-
-      expect(find.text('Unlimited Plan'), findsOneWidget);
-      expect(find.text('500 / Unlimited'), findsOneWidget);
-      expect(find.text('Upgrade to Premium'), findsNothing);
-      expect(find.text('Get Plus'), findsNothing);
-    });
-
-    testWidgets('upgrade surfaces the 501 "not yet available" message',
+    testWidgets('renders localized store prices, restore, and legal links',
         (tester) async {
       _useTallViewport(tester);
       final apiClient = MockApiClient();
       when(() => apiClient.get(ApiEndpoints.subscription))
           .thenAnswer((_) async => fakeResponse<dynamic>({
                 'subscription': testSubscriptionJson(tier: 'free'),
+                'limits': const {'ai_generations': 10},
               }));
-      when(() => apiClient.post(ApiEndpoints.subscriptionUpgrade)).thenAnswer(
-        (_) async => throw DioException(
-          requestOptions:
-              RequestOptions(path: ApiEndpoints.subscriptionUpgrade),
-          response: Response(
-            requestOptions:
-                RequestOptions(path: ApiEndpoints.subscriptionUpgrade),
-            statusCode: 501,
-          ),
-          error: const ApiError(
-            message: 'paid plans are not yet available',
-            statusCode: 501,
-          ),
-        ),
-      );
 
       await tester.pumpWidget(testAppScaffold(
         const SubscriptionScreen(),
-        overrides: [
-          apiClientProvider.overrideWithValue(apiClient),
-          // subscriptionProvider is auth-scoped; report a signed-in user so
-          // it actually fetches.
-          authStateProvider.overrideWith(FakeAuthNotifier.new),
-        ],
+        overrides:
+            _overrides(apiClient: apiClient, products: _fakeStoreProducts()),
       ));
       await _settle(tester);
 
-      await tester.tap(find.text('Upgrade to Premium'));
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 100));
+      // Prices come from ProductDetails, not the hardcoded fallbacks.
+      expect(find.text('\$1.49/mo'), findsOneWidget); // Plus
+      expect(find.text('\$5.49/mo'), findsOneWidget); // Premium monthly default
+      // App Store requirements: restore + legal links.
+      expect(find.text('Restore Purchases'), findsOneWidget);
+      expect(find.text('Privacy Policy'), findsOneWidget);
+      expect(find.text('Terms of Use'), findsOneWidget);
+    });
 
-      expect(find.text('paid plans are not yet available'), findsOneWidget);
+    testWidgets('premium period toggle switches the displayed price',
+        (tester) async {
+      _useTallViewport(tester);
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.subscription))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'subscription': testSubscriptionJson(tier: 'free'),
+                'limits': const {'ai_generations': 10},
+              }));
+
+      await tester.pumpWidget(testAppScaffold(
+        const SubscriptionScreen(),
+        overrides:
+            _overrides(apiClient: apiClient, products: _fakeStoreProducts()),
+      ));
+      await _settle(tester);
+
+      expect(find.text('\$5.49/mo'), findsOneWidget);
+      expect(find.text('\$39.99/yr'), findsNothing);
+
+      await tester.tap(find.text('Yearly'));
+      await _settle(tester);
+
+      expect(find.text('\$39.99/yr'), findsOneWidget);
+    });
+
+    testWidgets('tapping Get Plus starts a purchase for the plus product',
+        (tester) async {
+      _useTallViewport(tester);
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.subscription))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'subscription': testSubscriptionJson(tier: 'free'),
+                'limits': const {'ai_generations': 10},
+                'account_token': 'acct-1',
+              }));
+      final gateway = FakeIapGateway();
+
+      await tester.pumpWidget(testAppScaffold(
+        const SubscriptionScreen(),
+        overrides: _overrides(
+          apiClient: apiClient,
+          gateway: gateway,
+          products: _fakeStoreProducts(),
+        ),
+      ));
+      await _settle(tester);
+
+      await tester.tap(find.text('Get Plus'));
+      await _settle(tester);
+
+      expect(gateway.buyParams.single.productDetails.id,
+          IapProducts.plusMonthly);
+      expect(gateway.buyParams.single.applicationUserName, 'acct-1');
+    });
+
+    testWidgets('buy buttons are disabled while a purchase is in flight',
+        (tester) async {
+      _useTallViewport(tester);
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.subscription))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'subscription': testSubscriptionJson(tier: 'free'),
+                'limits': const {'ai_generations': 10},
+              }));
+      final gateway = FakeIapGateway();
+
+      await tester.pumpWidget(testAppScaffold(
+        const SubscriptionScreen(),
+        overrides: _overrides(
+          apiClient: apiClient,
+          gateway: gateway,
+          products: _fakeStoreProducts(),
+        ),
+      ));
+      await _settle(tester);
+
+      // A pending Plus purchase makes the controller busy.
+      gateway.emit([
+        fakePurchaseDetails(
+          productID: IapProducts.plusMonthly,
+          status: PurchaseStatus.pending,
+        ),
+      ]);
+      await _settle(tester);
+
+      final premiumButton = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'Upgrade to Premium'),
+      );
+      expect(premiumButton.onPressed, isNull);
+    });
+
+    testWidgets('shows Manage Subscription when the tier is store-backed',
+        (tester) async {
+      _useTallViewport(tester);
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.subscription))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'subscription': testSubscriptionJson(tier: 'premium'),
+                'limits': const {'ai_generations': 30},
+                'store': testStoreJson(
+                  platform: 'apple',
+                  productId: IapProducts.premiumMonthly,
+                ),
+                'account_token': 'acct-1',
+              }));
+
+      await tester.pumpWidget(testAppScaffold(
+        const SubscriptionScreen(),
+        overrides:
+            _overrides(apiClient: apiClient, products: _fakeStoreProducts()),
+      ));
+      await _settle(tester);
+
+      expect(find.text('Manage Subscription'), findsOneWidget);
+      // Premium already: no upgrade cards.
+      expect(find.text('Get Plus'), findsNothing);
+      expect(find.text('Upgrade to Premium'), findsNothing);
+    });
+
+    testWidgets('an iOS-too-old device blocks buying with an explanation',
+        (tester) async {
+      _useTallViewport(tester);
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.subscription))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'subscription': testSubscriptionJson(tier: 'free'),
+                'limits': const {'ai_generations': 10},
+              }));
+
+      await tester.pumpWidget(testAppScaffold(
+        const SubscriptionScreen(),
+        overrides: _overrides(
+          apiClient: apiClient,
+          platform: const StorePlatform(
+            kind: StoreKind.apple,
+            canPurchase: false,
+            blockedReason: 'In-app purchases require iOS 15 or newer.',
+          ),
+          // No products override: storeProductsProvider resolves unavailable
+          // from the blocked platform and surfaces the reason.
+        ),
+      ));
+      await _settle(tester);
+
+      expect(find.textContaining('iOS 15'), findsOneWidget);
+      // Fallback prices still shown so the plans read.
+      expect(find.text('\$1.99/mo'), findsOneWidget);
+      // Store unavailable -> no Restore button.
+      expect(find.text('Restore Purchases'), findsNothing);
     });
   });
 }
