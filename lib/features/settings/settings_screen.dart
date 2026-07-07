@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/subscription_provider.dart';
 import '../../core/providers/user_provider.dart';
+import '../../core/utils/external_links.dart';
 import '../../models/user.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -12,7 +14,6 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
@@ -213,17 +214,30 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
         // Subscription
         _SectionHeader(title: 'Subscription'),
         const SizedBox(height: 8),
-        Card(
-          child: ListTile(
-            leading: Icon(Icons.workspace_premium,
-                color: theme.colorScheme.secondary),
-            title: const Text('Current Plan'),
-            subtitle: const Text('Free Tier'),
-            trailing: ElevatedButton(
-              onPressed: () => context.push('/settings/subscription'),
-              child: const Text('Upgrade'),
-            ),
-          ),
+        Consumer(
+          builder: (context, ref, _) {
+            final subscription = ref.watch(subscriptionProvider);
+            final tierLabel = subscription.maybeWhen(
+              data: (s) => '${s.displayName} Tier',
+              orElse: () => 'Free Tier',
+            );
+            final isPaid = subscription.maybeWhen(
+              data: (s) => s.tierRank >= 1,
+              orElse: () => false,
+            );
+            return Card(
+              child: ListTile(
+                leading: Icon(Icons.workspace_premium,
+                    color: theme.colorScheme.secondary),
+                title: const Text('Current Plan'),
+                subtitle: Text(tierLabel),
+                trailing: ElevatedButton(
+                  onPressed: () => context.push('/settings/subscription'),
+                  child: Text(isPaid ? 'Manage' : 'Upgrade'),
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 24),
 
@@ -261,14 +275,14 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                 leading: const Icon(Icons.description_outlined),
                 title: const Text('Terms of Service'),
                 trailing: const Icon(Icons.open_in_new, size: 16),
-                onTap: () {},
+                onTap: () => openExternalUrl(ExternalLinks.termsOfUse),
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 leading: const Icon(Icons.privacy_tip_outlined),
                 title: const Text('Privacy Policy'),
                 trailing: const Icon(Icons.open_in_new, size: 16),
-                onTap: () {},
+                onTap: () => openExternalUrl(ExternalLinks.privacyPolicy),
               ),
             ],
           ),
