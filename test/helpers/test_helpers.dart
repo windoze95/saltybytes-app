@@ -4,8 +4,10 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:saltybytes_app/core/iap/iap_gateway.dart' show IapGateway;
 import 'package:saltybytes_app/core/network/api_client.dart';
 import 'package:saltybytes_app/core/network/websocket_client.dart';
 import 'package:saltybytes_app/core/providers/auth_provider.dart';
@@ -234,5 +236,111 @@ ResponseBody jsonResponseBody(Object? data, {int statusCode = 200}) {
     headers: {
       Headers.contentTypeHeader: [Headers.jsonContentType],
     },
+  );
+}
+
+/// Fake [IapGateway] for driving the purchase controller offline.
+///
+/// Push store updates with [emit]; inspect [buyParams], [completed],
+/// [restoreCalled] to assert the flow. [onCompletePurchase] lets a test weave
+/// completion into a shared ordering log to prove verify-before-complete.
+class FakeIapGateway implements IapGateway {
+  FakeIapGateway({this.available = true});
+
+  bool available;
+  bool buyResult = true;
+
+  final _purchases = StreamController<List<PurchaseDetails>>.broadcast();
+
+  /// Builds the response for [queryProductDetails]; defaults to "none found".
+  ProductDetailsResponse Function(Set<String> ids)? productsResponder;
+
+  final List<PurchaseParam> buyParams = [];
+  final List<PurchaseDetails> completed = [];
+  bool restoreCalled = false;
+  String? restoredWithAccountToken;
+
+  /// Invoked after each [completePurchase]; use to record ordering.
+  void Function(PurchaseDetails purchase)? onCompletePurchase;
+
+  @override
+  Future<bool> isAvailable() async => available;
+
+  @override
+  Stream<List<PurchaseDetails>> get purchaseStream => _purchases.stream;
+
+  @override
+  Future<ProductDetailsResponse> queryProductDetails(Set<String> identifiers) async =>
+      productsResponder?.call(identifiers) ??
+      ProductDetailsResponse(
+        productDetails: const [],
+        notFoundIDs: identifiers.toList(),
+      );
+
+  @override
+  Future<bool> buyNonConsumable({required PurchaseParam purchaseParam}) async {
+    buyParams.add(purchaseParam);
+    return buyResult;
+  }
+
+  @override
+  Future<void> restorePurchases({String? applicationUserName}) async {
+    restoreCalled = true;
+    restoredWithAccountToken = applicationUserName;
+  }
+
+  @override
+  Future<void> completePurchase(PurchaseDetails purchase) async {
+    completed.add(purchase);
+    onCompletePurchase?.call(purchase);
+  }
+
+  /// Emits a purchase-stream update, as the plugin would.
+  void emit(List<PurchaseDetails> purchases) => _purchases.add(purchases);
+
+  void dispose() => _purchases.close();
+}
+
+/// Builds a [PurchaseDetails] for tests. [serverVerificationData] stands in for
+/// the StoreKit 2 JWS (iOS) or Play purchase token (Android).
+PurchaseDetails fakePurchaseDetails({
+  required String productID,
+  required PurchaseStatus status,
+  String serverVerificationData = 'jws-or-token',
+  String? purchaseID = 'txn-1',
+  IAPError? error,
+  bool pendingCompletePurchase = true,
+}) {
+  final details = PurchaseDetails(
+    productID: productID,
+    purchaseID: purchaseID,
+    verificationData: PurchaseVerificationData(
+      localVerificationData: 'local',
+      serverVerificationData: serverVerificationData,
+      source: 'test_store',
+    ),
+    transactionDate: '1700000000000',
+    status: status,
+  );
+  details.error = error;
+  details.pendingCompletePurchase = pendingCompletePurchase;
+  return details;
+}
+
+/// Builds a [ProductDetails] with a localized [price] for paywall tests.
+ProductDetails fakeProductDetails({
+  required String id,
+  required String price,
+  double rawPrice = 0,
+  String currencyCode = 'USD',
+  String title = 'SaltyBytes',
+}) {
+  return ProductDetails(
+    id: id,
+    title: title,
+    description: 'SaltyBytes subscription',
+    price: price,
+    rawPrice: rawPrice,
+    currencyCode: currencyCode,
   );
 }

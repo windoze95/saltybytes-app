@@ -89,7 +89,9 @@ class ApiEndpoints {
 
   // Subscription
   static const String subscription = '$apiVersion/subscription';
-  static const String subscriptionUpgrade = '$apiVersion/subscription/upgrade';
+
+  // In-app purchases (native store billing)
+  static const String iapVerify = '$apiVersion/iap/verify';
 
   // Images
   static const String imageUpload = '$apiVersion/images/upload';

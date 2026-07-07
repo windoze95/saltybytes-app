@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/iap/purchase_controller.dart';
 import 'core/navigation/app_router.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/theme/app_theme.dart';
@@ -29,6 +30,13 @@ class SaltyBytesApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+
+    // Bring the purchase controller up for the app's lifetime so it starts
+    // listening to the store's purchase stream immediately — catching queued,
+    // interrupted, or Ask-to-Buy transactions the OS delivers at launch, on
+    // whatever screen the user lands. The no-op listener just keeps it alive
+    // (its own state changes are consumed by the paywall, not here).
+    ref.listen(purchaseControllerProvider, (_, __) {});
     final brightness =
         MediaQuery.platformBrightnessOf(context);
     final isDark = themeMode == ThemeMode.dark ||

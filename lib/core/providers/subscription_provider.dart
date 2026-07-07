@@ -27,33 +27,11 @@ final subscriptionProvider = FutureProvider<SubscriptionInfo>((ref) async {
       limitsJson: data['limits'] is Map<String, dynamic>
           ? data['limits'] as Map<String, dynamic>
           : null,
+      storeJson: data['store'] is Map<String, dynamic>
+          ? data['store'] as Map<String, dynamic>
+          : null,
+      accountToken: data['account_token']?.toString(),
     );
   }
   return const SubscriptionInfo();
 });
-
-final subscriptionActionsProvider = Provider<SubscriptionActions>((ref) {
-  return SubscriptionActions(apiClient: ref.watch(apiClientProvider));
-});
-
-class SubscriptionActions {
-  const SubscriptionActions({required ApiClient apiClient})
-      : _apiClient = apiClient;
-
-  final ApiClient _apiClient;
-
-  /// POST /v1/subscription/upgrade.
-  ///
-  /// Currently returns 501 ("paid plans are not yet available") from the
-  /// backend; the DioException's [ApiError] carries that message.
-  Future<SubscriptionInfo> upgrade() async {
-    final response = await _apiClient.post(ApiEndpoints.subscriptionUpgrade);
-    final data = response.data;
-    if (data is Map<String, dynamic> &&
-        data['subscription'] is Map<String, dynamic>) {
-      return SubscriptionInfo.fromJson(
-          data['subscription'] as Map<String, dynamic>);
-    }
-    return const SubscriptionInfo(tier: 'premium');
-  }
-}

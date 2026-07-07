@@ -440,6 +440,14 @@ class ApiError {
       case 'at_capacity':
         return "This feature is taking a quick breather — we're working on "
             'it. Try again soon!';
+      case 'verification_failed':
+        return 'Purchase verification failed. If you were charged, tap '
+            'Restore Purchases or contact support.';
+      case 'subscription_linked_to_other_account':
+        return 'This subscription is already linked to another SaltyBytes '
+            'account.';
+      case 'iap_unavailable':
+        return 'Purchases are temporarily unavailable. Try again later.';
     }
     if (statusCode == 429) {
       return "We're getting a lot of love right now — please try again in "

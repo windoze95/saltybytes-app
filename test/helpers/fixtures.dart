@@ -337,12 +337,20 @@ Map<String, dynamic> testFamilyJson({
 
 /// Mirrors GET /v1/subscription: models.Subscription has no json tags, so
 /// Go serializes its field names (PascalCase) verbatim.
+///
+/// [store] and [accountToken] are the additive envelope siblings; when passed
+/// they're embedded here so a direct `SubscriptionInfo.fromJson(...)` (which
+/// reads them defensively) picks them up. In envelope form
+/// (`{'subscription': ..., 'store': ..., 'account_token': ...}`) put them at
+/// the top level instead — see [testStoreJson].
 Map<String, dynamic> testSubscriptionJson({
   String tier = 'free',
   int allergenAnalysesUsed = 2,
   int webSearchesUsed = 7,
   int aiGenerationsUsed = 12,
   String monthlyResetAt = '2026-07-01T00:00:00Z',
+  Map<String, dynamic>? store,
+  String? accountToken,
 }) =>
     {
       'ID': 1,
@@ -356,6 +364,27 @@ Map<String, dynamic> testSubscriptionJson({
       'WebSearchesUsed': webSearchesUsed,
       'AIGenerationsUsed': aiGenerationsUsed,
       'MonthlyResetAt': monthlyResetAt,
+      if (store != null) 'store': store,
+      if (accountToken != null) 'account_token': accountToken,
+    };
+
+/// The additive snake_case `store` object GET /v1/subscription and
+/// POST /v1/iap/verify return when the tier is backed by a native purchase.
+Map<String, dynamic> testStoreJson({
+  String platform = 'apple',
+  String productId = 'sb_premium_monthly',
+  String status = 'active',
+  bool autoRenew = true,
+  String? expiresAt = '2026-08-01T00:00:00Z',
+  String environment = 'Production',
+}) =>
+    {
+      'platform': platform,
+      'product_id': productId,
+      'status': status,
+      'auto_renew': autoRenew,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      'environment': environment,
     };
 
 /// Mirrors a GET /v1/recipes/finder/sessions item / detail. `results` are flat

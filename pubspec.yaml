@@ -28,6 +28,13 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.2
   share_plus: ^10.1.4
+  # Native store billing (App Store StoreKit 2 + Google Play Billing).
+  in_app_purchase: ^3.3.0
+  # Direct dep for Play plan-change types (GooglePlayPurchaseParam,
+  # ChangeSubscriptionParam, ReplacementMode); otherwise transitive.
+  in_app_purchase_android: ^0.5.0
+  # Opening store-management / legal pages in the platform browser.
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
