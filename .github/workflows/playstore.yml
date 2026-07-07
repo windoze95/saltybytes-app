@@ -37,11 +37,14 @@ on:
         options: [completed, draft]
         default: completed
 
-# Serialize Play runs. The version code is max(track version codes) + 1, so two
-# concurrent runs compute the SAME code and the second upload is rejected as a
+# Serialize every process that opens a Google Play "edit" transaction. This group
+# is SHARED with the Sync Store Listings workflow (its play-listing job) — both call
+# upload_to_play_store, and the Play API allows only one edit at a time: when one
+# commits, the other's edit is invalidated ("This Edit has been deleted"). Two AAB
+# uploads also compute the same version code (max+1), so the second is rejected as a
 # duplicate. Queue instead of racing, and never cancel an in-flight upload.
 concurrency:
-  group: playstore-deploy
+  group: play-publisher-edit
   cancel-in-progress: false
 
 jobs:

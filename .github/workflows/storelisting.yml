@@ -27,6 +27,14 @@ jobs:
   play-listing:
     if: github.event_name == 'push' || inputs.platform == 'both' || inputs.platform == 'android'
     runs-on: ubuntu-latest
+    # Shared with the Deploy to Play Store workflow: the Play API allows only one
+    # open "edit" transaction at a time, so a listing push must not run while an AAB
+    # deploy is committing (and vice versa) or one deletes the other's edit
+    # ("This Edit has been deleted"). Job-level so the iOS appstore-listing job below
+    # stays unaffected.
+    concurrency:
+      group: play-publisher-edit
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: android
