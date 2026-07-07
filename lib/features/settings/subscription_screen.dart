@@ -97,7 +97,9 @@ class _SubscriptionBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isPremium = subscription.isPremium;
+    final limits = subscription.limits;
+    final hasPaidLook =
+        subscription.tierRank >= 1; // plus and up get the branded icon color
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -111,13 +113,13 @@ class _SubscriptionBody extends StatelessWidget {
                 Icon(
                   Icons.workspace_premium,
                   size: 48,
-                  color: isPremium
+                  color: hasPaidLook
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  isPremium ? 'Premium' : 'Free Tier',
+                  '${subscription.displayName} Plan',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -148,35 +150,106 @@ class _SubscriptionBody extends StatelessWidget {
 
         // Usage / limits
         _LimitCard(
-          title: 'Allergen Analyses',
-          current: subscription.allergenAnalysesUsed,
-          limit: isPremium
-              ? null
-              : SubscriptionInfo.freeAllergenAnalysesLimit,
+          title: 'AI Generations',
+          current: subscription.aiGenerationsUsed,
+          limit: limits.aiGenerations < 0 ? null : limits.aiGenerations,
           unit: 'per month',
-          icon: Icons.warning_amber,
-          color: theme.colorScheme.error,
+          icon: Icons.auto_awesome,
+          color: theme.colorScheme.secondary,
         ),
         const SizedBox(height: 8),
         _LimitCard(
-          title: 'Web Searches',
+          title: 'Recipe Agent Searches',
           current: subscription.webSearchesUsed,
-          limit: isPremium ? null : SubscriptionInfo.freeWebSearchesLimit,
+          limit: limits.webSearches < 0 ? null : limits.webSearches,
           unit: 'per month',
           icon: Icons.search,
           color: theme.colorScheme.primary,
         ),
         const SizedBox(height: 8),
         _LimitCard(
-          title: 'AI Generations',
-          current: subscription.aiGenerationsUsed,
-          limit: isPremium ? null : SubscriptionInfo.freeAiGenerationsLimit,
+          title: 'Allergen Analyses',
+          current: subscription.allergenAnalysesUsed,
+          limit: limits.allergenAnalyses < 0 ? null : limits.allergenAnalyses,
           unit: 'per month',
-          icon: Icons.auto_awesome,
+          icon: Icons.warning_amber,
+          color: theme.colorScheme.error,
+        ),
+        const SizedBox(height: 8),
+        _LimitCard(
+          title: 'Video Imports',
+          current: subscription.videoImportsUsed,
+          limit: limits.videoImports < 0 ? null : limits.videoImports,
+          unit: 'per month',
+          icon: Icons.play_circle_outline,
+          color: theme.colorScheme.tertiary,
+        ),
+        const SizedBox(height: 8),
+        _LimitCard(
+          title: 'AI Imports (photo, voice, text)',
+          current: subscription.aiImportsUsed,
+          limit: limits.aiImports < 0 ? null : limits.aiImports,
+          unit: 'per month',
+          icon: Icons.document_scanner_outlined,
           color: theme.colorScheme.secondary,
         ),
 
-        if (!isPremium) ...[
+        if (subscription.tierRank < 1) ...[
+          const SizedBox(height: 32),
+
+          // Plus plan — the budget step up
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.add_circle_outline,
+                          color: theme.colorScheme.primary, size: 26),
+                      const SizedBox(width: 10),
+                      Text(
+                        'SaltyBytes Plus',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '\$1.99/mo',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const _PlanFeature(label: '15 AI generations a month'),
+                  const _PlanFeature(label: '20 recipe agent searches'),
+                  const _PlanFeature(label: '25 AI imports'),
+                  const _PlanFeature(label: '5 allergen analyses'),
+                  const _PlanFeature(label: '2 video imports'),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: isUpgrading ? null : onUpgrade,
+                      child: const Text('Get Plus'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+              .animate()
+              .fadeIn(duration: 400.ms, delay: 100.ms)
+              .slideY(begin: 0.1, end: 0, duration: 400.ms, delay: 100.ms),
+        ],
+
+        if (subscription.tierRank < 2) ...[
           const SizedBox(height: 32),
 
           // Premium plan
@@ -208,18 +281,23 @@ class _SubscriptionBody extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+                      const Spacer(),
+                      Text(
+                        '\$4.99/mo',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const _PremiumFeature(label: 'Unlimited allergen analyses'),
-                  const _PremiumFeature(label: 'Unlimited web searches'),
+                  const _PremiumFeature(label: '30 AI generations a month'),
+                  const _PremiumFeature(label: '50 recipe agent searches'),
+                  const _PremiumFeature(label: '60 AI imports'),
+                  const _PremiumFeature(label: '20 video imports'),
                   const _PremiumFeature(
-                      label: 'Unlimited AI recipe generations'),
-                  const _PremiumFeature(label: 'Priority AI processing'),
-                  const _PremiumFeature(label: 'Advanced dietary interview'),
-                  const _PremiumFeature(label: 'Recipe version history'),
-                  const _PremiumFeature(
-                      label: 'Family sharing (up to 10 members)'),
+                      label: 'Deeper allergen analysis (12 a month)'),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -320,6 +398,28 @@ class _LimitCard extends StatelessWidget {
             Text(unit, style: theme.textTheme.labelSmall),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PlanFeature extends StatelessWidget {
+  const _PlanFeature({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle,
+              color: theme.colorScheme.primary, size: 18),
+          const SizedBox(width: 10),
+          Text(label, style: theme.textTheme.bodyMedium),
+        ],
       ),
     );
   }

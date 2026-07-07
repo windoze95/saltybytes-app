@@ -23,7 +23,11 @@ final subscriptionProvider = FutureProvider<SubscriptionInfo>((ref) async {
   if (data is Map<String, dynamic> &&
       data['subscription'] is Map<String, dynamic>) {
     return SubscriptionInfo.fromJson(
-        data['subscription'] as Map<String, dynamic>);
+      data['subscription'] as Map<String, dynamic>,
+      limitsJson: data['limits'] is Map<String, dynamic>
+          ? data['limits'] as Map<String, dynamic>
+          : null,
+    );
   }
   return const SubscriptionInfo();
 });
