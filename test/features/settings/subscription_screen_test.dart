@@ -99,8 +99,15 @@ void main() {
                   tier: 'free',
                   allergenAnalysesUsed: 2,
                   webSearchesUsed: 7,
-                  aiGenerationsUsed: 12,
+                  aiGenerationsUsed: 9,
                 ),
+                'limits': {
+                  'ai_generations': 10,
+                  'web_searches': 10,
+                  'allergen_analyses': 3,
+                  'video_imports': 1,
+                  'ai_imports': 10,
+                },
               }));
 
       await tester.pumpWidget(testAppScaffold(
@@ -114,38 +121,80 @@ void main() {
       ));
       await _settle(tester);
 
-      expect(find.text('Free Tier'), findsOneWidget);
-      expect(find.text('2 / 5'), findsOneWidget); // allergen analyses
-      expect(find.text('7 / 20'), findsOneWidget); // web searches
-      expect(find.text('12 / 50'), findsOneWidget); // AI generations
+      expect(find.text('Free Plan'), findsOneWidget);
+      expect(find.text('2 / 3'), findsOneWidget); // allergen analyses
+      expect(find.text('7 / 10'), findsOneWidget); // agent searches
+      expect(find.text('9 / 10'), findsOneWidget); // AI generations
+      // Free accounts see both upgrade paths — and never the hidden tier.
+      expect(find.text('Get Plus'), findsOneWidget);
       expect(find.text('Upgrade to Premium'), findsOneWidget);
+      expect(find.textContaining('Unlimited Plan'), findsNothing);
     });
 
-    testWidgets('premium tier shows unlimited usage and no upgrade card',
+    testWidgets('premium tier shows its real caps and no upgrade cards',
         (tester) async {
       final apiClient = MockApiClient();
       when(() => apiClient.get(ApiEndpoints.subscription))
           .thenAnswer((_) async => fakeResponse<dynamic>({
                 'subscription': testSubscriptionJson(
                   tier: 'premium',
-                  aiGenerationsUsed: 120,
+                  aiGenerationsUsed: 12,
                 ),
+                'limits': {
+                  'ai_generations': 30,
+                  'web_searches': 50,
+                  'allergen_analyses': 12,
+                  'video_imports': 20,
+                  'ai_imports': 60,
+                },
               }));
 
       await tester.pumpWidget(testAppScaffold(
         const SubscriptionScreen(),
         overrides: [
           apiClientProvider.overrideWithValue(apiClient),
-          // subscriptionProvider is auth-scoped; report a signed-in user so
-          // it actually fetches.
           authStateProvider.overrideWith(FakeAuthNotifier.new),
         ],
       ));
       await _settle(tester);
 
-      expect(find.text('Premium'), findsOneWidget);
-      expect(find.text('120 / Unlimited'), findsOneWidget);
+      expect(find.text('Premium Plan'), findsOneWidget);
+      expect(find.text('12 / 30'), findsOneWidget); // premium is capped now
       expect(find.text('Upgrade to Premium'), findsNothing);
+      expect(find.text('Get Plus'), findsNothing);
+    });
+
+    testWidgets('the hidden unlimited tier renders uncapped with no upgrade '
+        'cards', (tester) async {
+      final apiClient = MockApiClient();
+      when(() => apiClient.get(ApiEndpoints.subscription))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'subscription': testSubscriptionJson(
+                  tier: 'unlimited',
+                  aiGenerationsUsed: 500,
+                ),
+                'limits': {
+                  'ai_generations': -1,
+                  'web_searches': -1,
+                  'allergen_analyses': -1,
+                  'video_imports': -1,
+                  'ai_imports': -1,
+                },
+              }));
+
+      await tester.pumpWidget(testAppScaffold(
+        const SubscriptionScreen(),
+        overrides: [
+          apiClientProvider.overrideWithValue(apiClient),
+          authStateProvider.overrideWith(FakeAuthNotifier.new),
+        ],
+      ));
+      await _settle(tester);
+
+      expect(find.text('Unlimited Plan'), findsOneWidget);
+      expect(find.text('500 / Unlimited'), findsOneWidget);
+      expect(find.text('Upgrade to Premium'), findsNothing);
+      expect(find.text('Get Plus'), findsNothing);
     });
 
     testWidgets('upgrade surfaces the 501 "not yet available" message',
