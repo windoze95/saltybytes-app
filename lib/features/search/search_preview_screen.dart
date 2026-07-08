@@ -468,6 +468,11 @@ class _PreviewBody extends StatelessWidget {
                         ),
                       ],
 
+                      // Similar recipes from around the web
+                      if (preview.sourceUrl != null &&
+                          preview.sourceUrl!.isNotEmpty)
+                        _PreviewSimilar(sourceUrl: preview.sourceUrl!),
+
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -543,6 +548,112 @@ class _MetadataChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "You might also like" — recipes from the extraction pool similar to the
+/// previewed page. Quietly hides while loading, on error, or when empty, so
+/// it never adds noise to a preview the user is deciding whether to import.
+/// Tapping a card opens that recipe's own preview.
+class _PreviewSimilar extends ConsumerWidget {
+  const _PreviewSimilar({required this.sourceUrl});
+
+  final String sourceUrl;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final similar = ref.watch(similarByUrlProvider(sourceUrl));
+
+    return similar.maybeWhen(
+      orElse: () => const SizedBox.shrink(),
+      data: (recipes) {
+        if (recipes.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            Text(
+              'You might also like',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 108,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: recipes.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) => _SimilarWebCard(
+                  recipe: recipes[index],
+                  onTap: () => context.push(
+                    '/preview?u=${Uri.encodeQueryComponent(recipes[index].sourceUrl)}',
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SimilarWebCard extends StatelessWidget {
+  const _SimilarWebCard({required this.recipe, required this.onTap});
+
+  final SimilarWebRecipe recipe;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 168,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (recipe.sourceDomain.isNotEmpty)
+              Text(
+                recipe.sourceDomain,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: Text(
+                recipe.title,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  height: 1.25,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

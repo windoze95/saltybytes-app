@@ -77,12 +77,28 @@ void main() {
         )).thenAnswer((_) async => fakeResponse<dynamic>(
         {'recipe': testRecipeJson(id: 'r-imported-1', title: 'Classic Margherita Pizza')}));
 
+    // Default: no similar recipes, so the "You might also like" strip hides.
+    // Individual tests override this to exercise the populated case.
+    when(() => apiClient.get(any())).thenAnswer(
+        (_) async => fakeResponse<dynamic>({'similar_recipes': []}));
+
     router = GoRouter(
       initialLocation: '/search/preview',
       routes: [
         GoRoute(
           path: '/search/preview',
           builder: (_, __) => SearchPreviewScreen(searchResult: searchResult),
+        ),
+        // Mirror the real app's shared-link preview route so tapping a
+        // "similar" card opens that recipe's own preview.
+        GoRoute(
+          path: '/preview',
+          builder: (_, state) => SearchPreviewScreen(
+            searchResult: WebSearchResult(
+              title: state.uri.queryParameters['u'] ?? '',
+              sourceUrl: state.uri.queryParameters['u'],
+            ),
+          ),
         ),
         GoRoute(
           path: '/recipe/:id',
@@ -132,6 +148,50 @@ void main() {
             options: any(named: 'options'),
           )).captured.single as Map<String, dynamic>;
       expect(captured['url'], sourceUrl);
+    });
+
+    testWidgets(
+        'shows a "You might also like" strip of similar recipes and opens '
+        'one on tap', (tester) async {
+      when(() => apiClient.get(ApiEndpoints.similarByUrl(sourceUrl)))
+          .thenAnswer((_) async => fakeResponse<dynamic>({
+                'similar_recipes': [
+                  {
+                    'title': 'Detroit-Style Pan Pizza',
+                    'source_url': 'https://www.seriouseats.com/detroit-pizza',
+                    'source_domain': 'seriouseats.com',
+                  },
+                ],
+              }));
+
+      await pumpScreen(tester);
+      // Let the similar FutureProvider resolve.
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('You might also like'), findsOneWidget);
+      expect(find.text('Detroit-Style Pan Pizza'), findsOneWidget);
+
+      await tester.tap(find.text('Detroit-Style Pan Pizza'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Tapping a card opens that recipe's own preview (a new preview POST).
+      final captured = verify(() => apiClient.post(
+            ApiEndpoints.previewFromUrl,
+            data: captureAny(named: 'data'),
+            options: any(named: 'options'),
+          )).captured;
+      expect(
+        captured.any((d) =>
+            (d as Map)['url'] == 'https://www.seriouseats.com/detroit-pizza'),
+        isTrue,
+      );
+    });
+
+    testWidgets('hides the similar strip when there are none', (tester) async {
+      await pumpScreen(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('You might also like'), findsNothing);
     });
 
     testWidgets('shows a saved-recipe badge on a cache hit', (tester) async {
