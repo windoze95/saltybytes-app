@@ -32,6 +32,11 @@ class ApiEndpoints {
   // Recipe Similarity
   static String recipeSimilar(String id) => '$apiVersion/recipes/similar/$id';
 
+  /// Similar recipes for a not-yet-saved page (the preview screen), matched
+  /// against the extraction pool by source URL.
+  static String similarByUrl(String sourceUrl) =>
+      '$apiVersion/recipes/similar-by-url?u=${Uri.encodeQueryComponent(sourceUrl)}';
+
   // Recipe Import
   static const String importFromUrl = '$apiVersion/recipes/import/url';
   static const String importFromPhoto = '$apiVersion/recipes/import/photo';

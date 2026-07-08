@@ -105,7 +105,7 @@ class RecipeListNotifier extends AsyncNotifier<List<Recipe>> {
   }
 }
 
-// Similar recipes provider
+// Similar recipes provider (for a saved recipe on the detail screen)
 final similarRecipesProvider =
     FutureProvider.family<List<Recipe>, String>((ref, recipeId) async {
   final apiClient = ref.watch(apiClientProvider);
@@ -115,6 +115,44 @@ final similarRecipesProvider =
   if (data is Map<String, dynamic> && data['similar_recipes'] is List) {
     return (data['similar_recipes'] as List)
         .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
+        .toList();
+  }
+  return [];
+});
+
+/// A lightweight "recipe from around the web" surfaced next to a preview.
+/// It isn't a saved recipe — tapping it opens that page's own preview.
+class SimilarWebRecipe {
+  const SimilarWebRecipe({
+    required this.title,
+    required this.sourceUrl,
+    required this.sourceDomain,
+  });
+
+  final String title;
+  final String sourceUrl;
+  final String sourceDomain;
+
+  factory SimilarWebRecipe.fromJson(Map<String, dynamic> json) =>
+      SimilarWebRecipe(
+        title: json['title'] as String? ?? '',
+        sourceUrl: json['source_url'] as String? ?? '',
+        sourceDomain: json['source_domain'] as String? ?? '',
+      );
+}
+
+/// Similar recipes for a previewed (not-yet-saved) page, keyed by its source
+/// URL. Matched against the extraction pool server-side; a miss returns an
+/// empty list so the preview's section quietly hides.
+final similarByUrlProvider =
+    FutureProvider.family<List<SimilarWebRecipe>, String>((ref, sourceUrl) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.get(ApiEndpoints.similarByUrl(sourceUrl));
+  final data = response.data;
+  if (data is Map<String, dynamic> && data['similar_recipes'] is List) {
+    return (data['similar_recipes'] as List)
+        .map((r) => SimilarWebRecipe.fromJson(r as Map<String, dynamic>))
+        .where((r) => r.sourceUrl.isNotEmpty)
         .toList();
   }
   return [];
