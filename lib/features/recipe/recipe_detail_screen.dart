@@ -389,12 +389,25 @@ class _ActionBar extends StatelessWidget {
             children: [
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () => context.pushNamed(
-                    'cooking-mode',
-                    pathParameters: {'id': recipe.id},
-                  ),
+                  onPressed: () {
+                    if (recipe.instructions.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Add at least one instruction before starting cook mode.',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      return;
+                    }
+                    context.pushNamed(
+                      'cooking-mode',
+                      pathParameters: {'id': recipe.id},
+                    );
+                  },
                   icon: const Icon(Icons.local_fire_department, size: 20),
-                  label: const Text('Cook'),
+                  label: const Text('Start cooking'),
                 ),
               ),
               const SizedBox(width: 8),

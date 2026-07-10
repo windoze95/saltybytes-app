@@ -8,6 +8,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../core/network/websocket_client.dart';
 import '../../core/providers/cooking_provider.dart';
 import '../../core/providers/recipe_provider.dart';
+import '../../models/recipe.dart';
 
 class CookingModeScreen extends ConsumerStatefulWidget {
   const CookingModeScreen({super.key, required this.recipeId});
@@ -20,6 +21,8 @@ class CookingModeScreen extends ConsumerStatefulWidget {
 
 class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
   final _chatController = TextEditingController();
+  String? _startupError;
+  bool _startupErrorCanRetry = true;
 
   @override
   void initState() {
@@ -30,8 +33,36 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
   }
 
   Future<void> _initSession() async {
-    final recipe = await ref.read(recipeDetailProvider(widget.recipeId).future);
-    ref.read(cookingProvider.notifier).startSession(recipe);
+    try {
+      final recipe =
+          await ref.read(recipeDetailProvider(widget.recipeId).future);
+      if (!mounted) return;
+      if (recipe.instructions.isEmpty) {
+        setState(() {
+          _startupError =
+              'This recipe has no instructions yet. Add at least one instruction before starting cook mode.';
+          _startupErrorCanRetry = false;
+        });
+        return;
+      }
+      ref.read(cookingProvider.notifier).startSession(recipe);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _startupError =
+            'Could not load this recipe for cooking. Check your connection and try again.';
+        _startupErrorCanRetry = true;
+      });
+    }
+  }
+
+  void _retrySession() {
+    setState(() {
+      _startupError = null;
+      _startupErrorCanRetry = true;
+    });
+    ref.invalidate(recipeDetailProvider(widget.recipeId));
+    _initSession();
   }
 
   @override
@@ -104,6 +135,52 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
       }
     });
 
+    if (_startupError != null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF1A1210),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _startupErrorCanRetry
+                        ? Icons.cloud_off_outlined
+                        : Icons.menu_book_outlined,
+                    color: Colors.white54,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    _startupError!,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.white70,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: _startupErrorCanRetry
+                        ? _retrySession
+                        : () => context.pop(),
+                    icon: Icon(
+                      _startupErrorCanRetry ? Icons.refresh : Icons.arrow_back,
+                    ),
+                    label: Text(
+                      _startupErrorCanRetry ? 'Try again' : 'Back to recipe',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (recipe == null) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -153,6 +230,45 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                             textAlign: TextAlign.center,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: !cookState.voiceAvailable
+                              ? 'Voice input unavailable'
+                              : switch (cookState.handsFreePhase) {
+                                  HandsFreePhase.off =>
+                                    'Tap to enable hands-free',
+                                  HandsFreePhase.passive =>
+                                    'Listening for "Gordon" - tap to mute',
+                                  HandsFreePhase.active => 'Listening...',
+                                },
+                          onPressed: () => ref
+                              .read(cookingProvider.notifier)
+                              .toggleHandsFree(),
+                          style: IconButton.styleFrom(
+                            backgroundColor: switch (cookState.handsFreePhase) {
+                              HandsFreePhase.active =>
+                                theme.colorScheme.primary,
+                              HandsFreePhase.passive => theme
+                                  .colorScheme.primary
+                                  .withValues(alpha: 0.25),
+                              HandsFreePhase.off => Colors.white12,
+                            },
+                          ),
+                          icon: Icon(
+                            !cookState.voiceAvailable
+                                ? Icons.mic_off
+                                : switch (cookState.handsFreePhase) {
+                                    HandsFreePhase.active => Icons.mic,
+                                    HandsFreePhase.passive => Icons.hearing,
+                                    HandsFreePhase.off => Icons.mic_none,
+                                  },
+                            color: !cookState.voiceAvailable
+                                ? Colors.white24
+                                : cookState.handsFreePhase == HandsFreePhase.off
+                                    ? Colors.white54
+                                    : Colors.white,
+                            size: 20,
                           ),
                         ),
                         // Ephemeral edit
@@ -327,11 +443,18 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
                                 ?.copyWith(color: Colors.white54),
                           ),
                         ),
-                        const SizedBox(width: 24),
-                        Text(
-                          'Swipe to navigate',
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: Colors.white30),
+                        const SizedBox(width: 12),
+                        TextButton.icon(
+                          onPressed: () => ref
+                              .read(cookingProvider.notifier)
+                              .showIngredients(),
+                          icon: const Icon(Icons.shopping_basket_outlined,
+                              size: 18, color: Colors.white54),
+                          label: Text(
+                            'Ingredients',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: Colors.white54),
+                          ),
                         ),
                       ],
                     ),
@@ -341,54 +464,12 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
             ),
           ),
 
-          // Voice indicator in corner
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            right: 16,
-            child: Tooltip(
-              message: !cookState.voiceAvailable
-                  ? 'Voice input unavailable'
-                  : switch (cookState.handsFreePhase) {
-                      HandsFreePhase.off => 'Tap to enable hands-free',
-                      HandsFreePhase.passive =>
-                        'Listening for "Gordon" — tap to mute',
-                      HandsFreePhase.active => 'Listening…',
-                    },
-              child: GestureDetector(
-                onTap: () =>
-                    ref.read(cookingProvider.notifier).toggleHandsFree(),
-                child: AnimatedContainer(
-                  duration: 300.ms,
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: switch (cookState.handsFreePhase) {
-                      HandsFreePhase.active => theme.colorScheme.primary,
-                      HandsFreePhase.passive =>
-                        theme.colorScheme.primary.withValues(alpha: 0.25),
-                      HandsFreePhase.off => Colors.white12,
-                    },
-                  ),
-                  child: Icon(
-                    !cookState.voiceAvailable
-                        ? Icons.mic_off
-                        : switch (cookState.handsFreePhase) {
-                            HandsFreePhase.active => Icons.mic,
-                            HandsFreePhase.passive => Icons.hearing,
-                            HandsFreePhase.off => Icons.mic_none,
-                          },
-                    color: !cookState.voiceAvailable
-                        ? Colors.white24
-                        : cookState.handsFreePhase == HandsFreePhase.off
-                            ? Colors.white54
-                            : Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
+          if (cookState.isIngredientsOpen)
+            _CookingIngredientsOverlay(
+              recipe: recipe,
+              onClose: () =>
+                  ref.read(cookingProvider.notifier).showInstructions(),
             ),
-          ),
 
           // Chat overlay
           if (cookState.isChatOpen)
@@ -399,6 +480,123 @@ class _CookingModeScreenState extends ConsumerState<CookingModeScreen> {
               onClose: () => ref.read(cookingProvider.notifier).toggleChat(),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _CookingIngredientsOverlay extends StatelessWidget {
+  const _CookingIngredientsOverlay({
+    required this.recipe,
+    required this.onClose,
+  });
+
+  final Recipe recipe;
+  final VoidCallback onClose;
+
+  String _ingredientText(Ingredient ingredient) {
+    final original = ingredient.originalText?.trim() ?? '';
+    if (original.isNotEmpty) return original;
+
+    final amount = ingredient.amount;
+    final amountText = amount == null
+        ? ''
+        : amount == amount.roundToDouble()
+            ? amount.toInt().toString()
+            : amount.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+    return [amountText, ingredient.unit ?? '', ingredient.name]
+        .where((part) => part.trim().isNotEmpty)
+        .join(' ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Positioned.fill(
+      child: Material(
+        color: const Color(0xFF1A1210),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: onClose,
+                      icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                      tooltip: 'Back to instructions',
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Ingredients',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 48),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Colors.white12),
+              Expanded(
+                child: recipe.ingredients.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No ingredients listed.',
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(color: Colors.white54),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                        itemCount: recipe.ingredients.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(color: Colors.white12, height: 24),
+                        itemBuilder: (context, index) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 28,
+                                height: 28,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: 0.18),
+                                ),
+                                child: Text(
+                                  '${index + 1}',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _ingredientText(recipe.ingredients[index]),
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: Colors.white,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
