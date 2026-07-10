@@ -33,6 +33,7 @@ class CookingState {
     this.voiceTranscript = '',
     this.handsFreePhase = HandsFreePhase.off,
     this.isChatOpen = false,
+    this.isIngredientsOpen = false,
     this.chatMessages = const [],
     this.wsState = WebSocketConnectionState.disconnected,
     this.ephemeralEdits = const {},
@@ -53,6 +54,7 @@ class CookingState {
   /// Current hands-free voice phase (off / passive wake-word / active command).
   final HandsFreePhase handsFreePhase;
   final bool isChatOpen;
+  final bool isIngredientsOpen;
   final List<ChatMessage> chatMessages;
   final WebSocketConnectionState wsState;
   final Map<int, String> ephemeralEdits;
@@ -76,6 +78,7 @@ class CookingState {
     String? voiceTranscript,
     HandsFreePhase? handsFreePhase,
     bool? isChatOpen,
+    bool? isIngredientsOpen,
     List<ChatMessage>? chatMessages,
     WebSocketConnectionState? wsState,
     Map<int, String>? ephemeralEdits,
@@ -90,6 +93,7 @@ class CookingState {
       voiceTranscript: voiceTranscript ?? this.voiceTranscript,
       handsFreePhase: handsFreePhase ?? this.handsFreePhase,
       isChatOpen: isChatOpen ?? this.isChatOpen,
+      isIngredientsOpen: isIngredientsOpen ?? this.isIngredientsOpen,
       chatMessages: chatMessages ?? this.chatMessages,
       wsState: wsState ?? this.wsState,
       ephemeralEdits: ephemeralEdits ?? this.ephemeralEdits,
@@ -174,6 +178,8 @@ class CookingNotifier extends StateNotifier<CookingState> {
       totalSteps: recipe.instructions.length,
       chatMessages: [],
       ephemeralEdits: {},
+      isChatOpen: false,
+      isIngredientsOpen: false,
     );
 
     _stateSubscription = _wsClient.connectionState.listen((wsState) {
@@ -252,6 +258,7 @@ class CookingNotifier extends StateNotifier<CookingState> {
     if (intentType == 'question' && text.isNotEmpty) {
       state = state.copyWith(
         isChatOpen: true,
+        isIngredientsOpen: false,
         chatMessages: [
           ...state.chatMessages,
           ChatMessage(text: text, isUser: true, timestamp: DateTime.now()),
@@ -279,9 +286,20 @@ class CookingNotifier extends StateNotifier<CookingState> {
   /// (1-based). Only step targets have a surface in cooking mode.
   void _handleNavigateCommand(Map<String, dynamic> payload) {
     final target = payload['target'] as String? ?? '';
+    if (target == 'ingredients') {
+      showIngredients();
+      return;
+    }
+    if (target == 'instructions') {
+      showInstructions();
+      return;
+    }
     if (target.startsWith('step_')) {
       final stepNumber = int.tryParse(target.substring('step_'.length));
-      if (stepNumber != null) goToStep(stepNumber - 1);
+      if (stepNumber != null) {
+        showInstructions();
+        goToStep(stepNumber - 1);
+      }
     }
   }
 
@@ -322,7 +340,22 @@ class CookingNotifier extends StateNotifier<CookingState> {
   }
 
   void toggleChat() {
-    state = state.copyWith(isChatOpen: !state.isChatOpen);
+    final isOpening = !state.isChatOpen;
+    state = state.copyWith(
+      isChatOpen: isOpening,
+      isIngredientsOpen: isOpening ? false : state.isIngredientsOpen,
+    );
+  }
+
+  void showIngredients() {
+    state = state.copyWith(
+      isIngredientsOpen: true,
+      isChatOpen: false,
+    );
+  }
+
+  void showInstructions() {
+    state = state.copyWith(isIngredientsOpen: false);
   }
 
   /// Master hands-free switch (the mic button): off → start listening (passive

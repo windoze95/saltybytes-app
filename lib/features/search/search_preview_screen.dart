@@ -65,7 +65,7 @@ class _SearchPreviewScreenState extends ConsumerState<SearchPreviewScreen> {
     try {
       final recipe = await ref.read(searchProvider.notifier).importPreview(
             preview,
-            imageUrl: widget.searchResult.imageUrl,
+            imageUrl: preview.imageUrl ?? widget.searchResult.imageUrl,
           );
       container.invalidate(recipeListProvider);
       if (mounted) {

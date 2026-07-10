@@ -223,6 +223,7 @@ class RecipePreview {
     this.portions,
     this.portionSize,
     this.sourceUrl,
+    this.imageUrl,
     this.hashtags = const [],
     this.imagePrompt,
     this.linkedSuggestions = const [],
@@ -237,6 +238,7 @@ class RecipePreview {
   final int? portions;
   final String? portionSize;
   final String? sourceUrl;
+  final String? imageUrl;
   final List<String> hashtags;
   final String? imagePrompt;
   final List<String> linkedSuggestions;
@@ -256,7 +258,7 @@ class RecipePreview {
   }
 
   factory RecipePreview.fromJson(Map<String, dynamic> json,
-      {bool fromCache = false}) {
+      {bool fromCache = false, String? imageUrl}) {
     return RecipePreview(
       fromCache: fromCache,
       title: json['title'] as String? ?? 'Untitled',
@@ -273,6 +275,7 @@ class RecipePreview {
       portions: json['portions'] as int?,
       portionSize: json['portion_size'] as String?,
       sourceUrl: json['source_url'] as String?,
+      imageUrl: imageUrl,
       hashtags:
           (json['hashtags'] as List?)?.map((e) => e as String).toList() ?? [],
       imagePrompt: json['image_prompt'] as String?,
@@ -288,6 +291,10 @@ class RecipePreview {
   /// POST /v1/recipes/import/manual, preserving the source's detected
   /// unit system and metric measurements (contract C6).
   Map<String, dynamic> toManualImportJson({String? imageUrl}) {
+    final preferredImageUrl =
+        (this.imageUrl != null && this.imageUrl!.isNotEmpty)
+            ? this.imageUrl
+            : imageUrl;
     return {
       'title': title,
       'ingredients': ingredients
@@ -308,7 +315,8 @@ class RecipePreview {
       if (sourceUrl != null) 'source_url': sourceUrl,
       if (unitSystem != null && unitSystem!.isNotEmpty)
         'unit_system': unitSystem,
-      if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
+      if (preferredImageUrl != null && preferredImageUrl.isNotEmpty)
+        'image_url': preferredImageUrl,
     };
   }
 }
@@ -1030,7 +1038,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
       final recipe = data['recipe'] as Map<String, dynamic>;
       final fromCache = data['from_cache'] as bool? ?? false;
-      return RecipePreview.fromJson(recipe, fromCache: fromCache);
+      return RecipePreview.fromJson(
+        recipe,
+        fromCache: fromCache,
+        imageUrl: data['image_url'] as String?,
+      );
     } on MultiRecipeException {
       rethrow;
     } on DioException catch (e) {
@@ -1179,9 +1191,9 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
   void _maybeStartWarmPoll() {
     if (_warmPolling) return;
-    final extracting = state.results.any(
-            (r) => r.extractionStatus == 'extracting') ||
-        state.topPicks.any((r) => r.extractionStatus == 'extracting');
+    final extracting =
+        state.results.any((r) => r.extractionStatus == 'extracting') ||
+            state.topPicks.any((r) => r.extractionStatus == 'extracting');
     if (!extracting) return;
     _warmPolling = true;
     unawaited(_pollWarmStatuses());
